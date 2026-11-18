@@ -14,6 +14,7 @@ const NPC_IDS := ["NPC-001", "NPC-002"]
 var balances: Dictionary = {1: 10000}
 var documents: Dictionary = {}
 var next_document_number := 1
+var cash_transactions: Dictionary = {}
 
 func _ready() -> void:
 	_load_ledger()
@@ -191,6 +192,51 @@ func rpc_sync_document(doc: Dictionary) -> void:
 	documents[str(doc.get("document_id", ""))] = doc
 	receipt_issued.emit(doc)
 
+func request_player_cash_transfer(target_peer_id: int, amount: int) -> void:
+	if _is_authority():
+		_commit_player_cash_transfer(_local_peer_id(), target_peer_id, amount)
+	else:
+		rpc_id(1, "rpc_request_player_cash_transfer", target_peer_id, amount)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_player_cash_transfer(target_peer_id: int, amount: int) -> void:
+	if multiplayer.is_server():
+		_commit_player_cash_transfer(multiplayer.get_remote_sender_id(), target_peer_id, amount)
+
+func _commit_player_cash_transfer(from_peer: int, target_peer: int, amount: int) -> void:
+	if amount <= 0 or amount > 1000000000:
+		_send_notice(from_peer, "مبلغ انتقال معتبر نیست.")
+		return
+	if target_peer <= 0 or target_peer == from_peer:
+		_send_notice(from_peer, "شناسه مقصد معتبر نیست.")
+		return
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		if target_peer != 1 and not multiplayer.get_peers().has(target_peer):
+			_send_notice(from_peer, "بازیکن مقصد آنلاین نیست.")
+			return
+	var sender_balance := get_balance(from_peer)
+	if sender_balance < amount:
+		_send_notice(from_peer, "موجودی برای این انتقال کافی نیست.")
+		return
+	balances[from_peer] = sender_balance - amount
+	balances[target_peer] = get_balance(target_peer) + amount
+	var transaction_id := "LC-CASH-%06d" % next_document_number
+	next_document_number += 1
+	var transaction := {
+		"transaction_id": transaction_id,
+		"from_peer": from_peer,
+		"to_peer": target_peer,
+		"amount": amount,
+		"time": int(Time.get_unix_time_from_system()),
+		"status": "completed"
+	}
+	cash_transactions[transaction_id] = transaction
+	_save_ledger()
+	_send_balance(from_peer)
+	_send_balance(target_peer)
+	_send_notice(from_peer, "انتقال %d سکه انجام شد؛ رسید %s" % [amount, transaction_id])
+	_send_notice(target_peer, "%d سکه از بازیکن %d دریافت کردی؛ رسید %s" % [amount, from_peer, transaction_id])
+
 func get_balance(peer_id: int) -> int:
 	return int(balances.get(peer_id, 10000))
 
@@ -256,7 +302,7 @@ func _save_ledger() -> void:
 	var saved_balances: Dictionary = {}
 	for peer_key in balances.keys():
 		saved_balances[str(peer_key)] = balances[peer_key]
-	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number}
+	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions}
 	var file := FileAccess.open("user://ownership_ledger.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(payload))
@@ -275,3 +321,4 @@ func _load_ledger() -> void:
 			balances[int(peer_key)] = int(saved_balances[peer_key])
 		documents = parsed.get("documents", documents)
 		next_document_number = int(parsed.get("next_document_number", next_document_number))
+		cash_transactions = parsed.get("cash_transactions", {})
