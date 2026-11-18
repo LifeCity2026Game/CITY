@@ -1,19 +1,18 @@
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-UserSettings/
-.vs/
+# Godot 4
+.godot/
+.import/
+.export/
+export.cfg
+export_presets.cfg.tmp
+*.translation
+
+# Build output
+/build/
+/dist/
+
+# IDE and OS files
+.vscode/
 .idea/
-*.csproj
-*.sln
-*.user
-*.pidb
-*.booproj
-*.svd
-*.pdb
-*.mdb
-*.opendb
-*.VC.db
+*.swp
+.DS_Store
+Thumbs.db
