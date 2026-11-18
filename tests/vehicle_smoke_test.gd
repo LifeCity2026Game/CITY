@@ -24,7 +24,8 @@ func _run_vehicle_checks() -> void:
 	if car.driver != player:
 		_fail("Vehicle driver was not configured with the player")
 		return
-	if car.get_node_or_null("CollisionShape3D") == null:
+	var collision_nodes := car.find_children("*", "CollisionShape3D", true, false)
+	if collision_nodes.is_empty():
 		_fail("Vehicle collision is missing")
 		return
 	if car.wheel_nodes.size() != 4:
