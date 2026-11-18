@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<rect width="256" height="256" rx="48" fill="#172638"/>
+<path d="M30 145 L82 85 L122 128 L164 70 L226 145" fill="none" stroke="#f0c36a" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M40 174 H216" stroke="#7fc7b2" stroke-width="12" stroke-linecap="round"/>
+<path d="M70 174 V142 M105 174 V142 M151 174 V142 M186 174 V142" stroke="#7fc7b2" stroke-width="8" stroke-linecap="round"/>
+<text x="128" y="220" font-family="sans-serif" font-size="25" font-weight="bold" text-anchor="middle" fill="#ffffff">LIFE CITY</text>
+</svg>
