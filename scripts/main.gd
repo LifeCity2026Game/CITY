@@ -2,13 +2,16 @@ extends Node3D
 
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const STAGE2_SCRIPT = preload("res://scripts/city_stage2.gd")
+const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
 var player: CharacterBody3D
+var network_manager: Node
 
 func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_mobile_controls()
 	_build_stage_two()
+	_build_network()
 
 func _material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -44,20 +47,16 @@ func _build_world() -> void:
 	env.ambient_light_energy = 0.7
 	environment.environment = env
 	add_child(environment)
-
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-48, -32, 0)
 	sun.light_energy = 1.15
 	add_child(sun)
-
 	_add_box(self, "City Ground", Vector3(0, -0.3, 0), Vector3(230, 0.5, 230), Color(0.22, 0.34, 0.25))
 	_add_box(self, "Main Road", Vector3(0, 0.0, 0), Vector3(18, 0.08, 230), Color(0.11, 0.12, 0.14), false)
 	_add_box(self, "Cross Road", Vector3(0, 0.01, 0), Vector3(230, 0.08, 18), Color(0.11, 0.12, 0.14), false)
-
 	for i in range(-96, 97, 12):
 		_add_box(self, "Road Marking", Vector3(0, 0.06, i), Vector3(0.18, 0.025, 4.5), Color(0.92, 0.88, 0.62), false)
 		_add_box(self, "Road Marking", Vector3(i, 0.06, 0), Vector3(4.5, 0.025, 0.18), Color(0.92, 0.88, 0.62), false)
-
 	var colors := [Color(0.55, 0.61, 0.68), Color(0.68, 0.58, 0.48), Color(0.46, 0.57, 0.65), Color(0.64, 0.67, 0.58)]
 	for x in range(-4, 5):
 		for z in range(-4, 5):
@@ -69,7 +68,6 @@ func _build_world() -> void:
 			var width := 10.0 + float((abs(x + z) % 3) * 1.5)
 			var color: Color = colors[abs(x * 3 + z * 5) % colors.size()]
 			_add_box(self, "Building_%d_%d" % [x, z], Vector3(px, height / 2.0, pz), Vector3(width, height, 11), color)
-
 	_add_service("BANK CENTRAL", Vector3(-29, 4, 28), Color(0.72, 0.61, 0.25))
 	_add_service("CITY BANK", Vector3(29, 4, 28), Color(0.2, 0.48, 0.76))
 	_add_service("CAR DEALERSHIP", Vector3(0, 4, 50), Color(0.2, 0.62, 0.48))
@@ -122,3 +120,10 @@ func _build_stage_two() -> void:
 	systems.name = "Stage2Systems"
 	systems.set_script(STAGE2_SCRIPT)
 	add_child(systems)
+
+func _build_network() -> void:
+	network_manager = Node.new()
+	network_manager.name = "NetworkManager"
+	network_manager.set_script(NETWORK_SCRIPT)
+	add_child(network_manager)
+	network_manager.set_local_player(player)
