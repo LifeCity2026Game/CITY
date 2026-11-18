@@ -141,7 +141,7 @@ func _on_action(action: String, arg: String = "") -> void:
 	}
 	if private_areas.has(action):
 		var requesting_peer: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-		var ledger_allows := ownership_ledger == null or ownership_ledger.has_owner_access(str(private_areas[action]), requesting_peer)
+		var ledger_allows: bool = ownership_ledger == null or bool(ownership_ledger.has_owner_access(str(private_areas[action]), requesting_peer))
 		if not _is_owner() or not ledger_allows:
 			notice = "دسترسی فقط برای حساب سازنده/میزبان مجاز است."
 			_refresh()
