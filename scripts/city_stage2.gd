@@ -161,7 +161,7 @@ func _on_action(action: String, arg: String = "") -> void:
 			panel.get_child(0).add_child(transfer_target_input)
 			transfer_amount_input = LineEdit.new()
 			transfer_amount_input.placeholder_text = "مبلغ انتقال به سکه"
-			transfer_amount_input.input_mode = LineEdit.INPUT_MODE_NUMERIC
+			transfer_amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 			panel.get_child(0).add_child(transfer_amount_input)
 			_add_action_button("انتقال وجه به بازیکن آنلاین", "cash_transfer")
 		"cash_transfer":
