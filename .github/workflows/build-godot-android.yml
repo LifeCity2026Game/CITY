@@ -43,6 +43,16 @@ jobs:
             exit 1
           fi
 
+      - name: Run headless game smoke test
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --quit-after 10 2>&1 | tee godot-runtime.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" godot-runtime.log; then
+            echo "The game scene reported runtime or script errors."
+            exit 1
+          fi
+
       - name: Export debug APK
         run: |
           mkdir -p build
