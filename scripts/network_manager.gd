@@ -29,7 +29,7 @@ func host_game() -> void:
 		return
 	multiplayer.multiplayer_peer = peer
 	connected = true
-	status_changed.emit("اتاق ساخته شد. برای اتصال دوستت، IP عمومی و UDP پورت 7777 لازم است.")
+	status_changed.emit("اتاق ساخته شد؛ شناسه میزبان: 1. برای اتصال دوستت، IP عمومی و UDP پورت 7777 لازم است.")
 
 func join_game(address: String) -> void:
 	if address.strip_edges().is_empty():
@@ -46,6 +46,7 @@ func join_game(address: String) -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	if not multiplayer.is_server():
 		return
+	status_changed.emit("بازیکن جدید متصل شد؛ شناسه بازیکن: %d" % peer_id)
 	var ledger := get_parent().get_node_or_null("OwnershipLedger")
 	if ledger:
 		ledger.send_snapshot(peer_id)
@@ -57,7 +58,7 @@ func _on_peer_connected(peer_id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	connected = true
-	status_changed.emit("به اتاق متصل شدی.")
+	status_changed.emit("به اتاق متصل شدی؛ شناسه بازیکن تو: %d" % multiplayer.get_unique_id())
 	_spawn_remote(1)
 	for peer_id in multiplayer.get_peers():
 		_spawn_remote(peer_id)
