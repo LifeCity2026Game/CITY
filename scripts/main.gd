@@ -5,15 +5,18 @@ const STAGE2_SCRIPT = preload("res://scripts/city_stage2.gd")
 const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
 const LEDGER_SCRIPT = preload("res://scripts/ownership_ledger.gd")
 const GRAPHICS_SCRIPT = preload("res://scripts/graphics_settings.gd")
+const CITY_FEATURES_SCRIPT = preload("res://scripts/city_features.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
 var world_environment: WorldEnvironment
 var sun: DirectionalLight3D
+var city_features: Node
 
 func _ready() -> void:
 	_build_world()
 	_build_player()
+	_build_city_features()
 	_build_mobile_controls()
 	_build_graphics_settings()
 	_build_stage_two()
@@ -192,6 +195,13 @@ func _add_control_button(parent: HBoxContainer, caption: String, axis: String) -
 	parent.add_child(button)
 	button.button_down.connect(func(): player.set_mobile_axis(axis, true))
 	button.button_up.connect(func(): player.set_mobile_axis(axis, false))
+
+func _build_city_features() -> void:
+	city_features = Node3D.new()
+	city_features.name = "CityFeatures"
+	city_features.set_script(CITY_FEATURES_SCRIPT)
+	add_child(city_features)
+	city_features.configure(player, world_environment, sun)
 
 func _build_graphics_settings() -> void:
 	var graphics_layer := CanvasLayer.new()
