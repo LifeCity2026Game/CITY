@@ -151,6 +151,7 @@ func _commit_npc_sale(peer_id: int, document_id: String, npc_id: String) -> void
 	var resale_value: int = int(CATALOG.get(item_id, 0) * 0.5)
 	balances[peer_id] = int(balances.get(peer_id, 0)) + resale_value
 	_transfer_document(document_id, peer_id, -1, "npc_sale:" + npc_id)
+	_send_balance(peer_id)
 	_send_notice(peer_id, "فروش به %s انجام شد؛ %d سکه دریافت کردی." % [npc_id, resale_value])
 
 func _transfer_document(document_id: String, from_peer: int, to_peer: int, event_name: String) -> void:
@@ -168,7 +169,20 @@ func rpc_sync_document(doc: Dictionary) -> void:
 	documents[str(doc.document_id)] = doc
 	receipt_issued.emit(doc)
 
+func get_balance(peer_id: int) -> int:
+	return int(balances.get(peer_id, 10000))
+
+func _send_balance(peer_id: int) -> void:
+	var current_balance := get_balance(peer_id)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id != 1:
+		rpc_id(peer_id, "rpc_receive_balance", current_balance)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_balance(current_balance: int) -> void:
+	balances[_local_peer_id()] = current_balance
+
 func _send_receipt(peer_id: int, doc: Dictionary) -> void:
+	_send_balance(peer_id)
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id != 1:
 		rpc_id(peer_id, "rpc_receive_receipt", doc)
 	else:
