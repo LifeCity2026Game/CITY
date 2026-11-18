@@ -93,6 +93,12 @@ func _add_streetlight(pos: Vector3) -> void:
 	bulb.material_override = glow
 	bulb.position = Vector3(0.85, 4.75, 0)
 	lamp.add_child(bulb)
+	var lamp_light := OmniLight3D.new()
+	lamp_light.position = Vector3(0.85, 4.55, 0)
+	lamp_light.light_color = Color(1.0, 0.78, 0.48)
+	lamp_light.light_energy = 0.65
+	lamp_light.omni_range = 8.0
+	lamp.add_child(lamp_light)
 
 func _build_city_details() -> void:
 	# Raised pedestrian paths alongside the two main roads.
