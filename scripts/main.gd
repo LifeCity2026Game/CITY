@@ -4,21 +4,25 @@ const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const STAGE2_SCRIPT = preload("res://scripts/city_stage2.gd")
 const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
 const LEDGER_SCRIPT = preload("res://scripts/ownership_ledger.gd")
+const GRAPHICS_SCRIPT = preload("res://scripts/graphics_settings.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
+var world_environment: WorldEnvironment
+var sun: DirectionalLight3D
 
 func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_mobile_controls()
+	_build_graphics_settings()
 	_build_stage_two()
 	_build_network()
 
-func _material(color: Color) -> StandardMaterial3D:
+func _material(color: Color, roughness_value: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
-	material.roughness = 0.82
+	material.roughness = roughness_value
 	return material
 
 func _add_box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color: Color, solid: bool = true) -> void:
@@ -39,19 +43,90 @@ func _add_box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color:
 		collision.shape = shape
 		body.add_child(collision)
 
+func _add_cylinder(parent: Node3D, title: String, pos: Vector3, radius: float, height: float, color: Color) -> MeshInstance3D:
+	var mesh_node := MeshInstance3D.new()
+	mesh_node.name = title
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	mesh_node.mesh = mesh
+	mesh_node.material_override = _material(color)
+	mesh_node.position = pos
+	parent.add_child(mesh_node)
+	return mesh_node
+
+func _add_tree(pos: Vector3) -> void:
+	var tree := Node3D.new()
+	tree.name = "StreetTree"
+	tree.position = pos
+	add_child(tree)
+	_add_cylinder(tree, "TreeTrunk", Vector3(0, 1.0, 0), 0.18, 2.0, Color(0.30, 0.18, 0.10))
+	var crown := MeshInstance3D.new()
+	var crown_mesh := SphereMesh.new()
+	crown_mesh.radius = 1.05
+	crown_mesh.height = 2.0
+	crown.mesh = crown_mesh
+	crown.material_override = _material(Color(0.12, 0.34, 0.16))
+	crown.position.y = 2.35
+	tree.add_child(crown)
+
+func _add_streetlight(pos: Vector3) -> void:
+	var lamp := Node3D.new()
+	lamp.name = "StreetLight"
+	lamp.position = pos
+	add_child(lamp)
+	_add_cylinder(lamp, "LampPole", Vector3(0, 2.5, 0), 0.075, 5.0, Color(0.16, 0.17, 0.19))
+	_add_box(lamp, "LampArm", Vector3(0.45, 4.85, 0), Vector3(0.95, 0.09, 0.09), Color(0.16, 0.17, 0.19), false)
+	var bulb := MeshInstance3D.new()
+	var bulb_mesh := SphereMesh.new()
+	bulb_mesh.radius = 0.18
+	bulb_mesh.height = 0.25
+	bulb.mesh = bulb_mesh
+	var glow := _material(Color(1.0, 0.83, 0.48))
+	glow.emission_enabled = true
+	glow.emission = Color(1.0, 0.66, 0.28)
+	glow.emission_energy_multiplier = 1.4
+	bulb.material_override = glow
+	bulb.position = Vector3(0.85, 4.75, 0)
+	lamp.add_child(bulb)
+
+func _build_city_details() -> void:
+	# Raised pedestrian paths alongside the two main roads.
+	_add_box(self, "Sidewalk_North", Vector3(11.2, 0.12, 0), Vector3(3.8, 0.24, 230), Color(0.48, 0.49, 0.47), false)
+	_add_box(self, "Sidewalk_South", Vector3(-11.2, 0.12, 0), Vector3(3.8, 0.24, 230), Color(0.48, 0.49, 0.47), false)
+	_add_box(self, "Sidewalk_East", Vector3(0, 0.12, 11.2), Vector3(230, 0.24, 3.8), Color(0.48, 0.49, 0.47), false)
+	_add_box(self, "Sidewalk_West", Vector3(0, 0.12, -11.2), Vector3(230, 0.24, 3.8), Color(0.48, 0.49, 0.47), false)
+	for i in range(-90, 91, 30):
+		_add_streetlight(Vector3(14.0, 0.0, float(i)))
+		_add_streetlight(Vector3(-14.0, 0.0, float(i)))
+		_add_streetlight(Vector3(float(i), 0.0, 14.0))
+		_add_streetlight(Vector3(float(i), 0.0, -14.0))
+	for i in range(-84, 85, 28):
+		_add_tree(Vector3(16.5, 0.0, float(i)))
+		_add_tree(Vector3(-16.5, 0.0, float(i)))
+		_add_tree(Vector3(float(i), 0.0, 16.5))
+		_add_tree(Vector3(float(i), 0.0, -16.5))
+	# Small public seating areas beside the central avenue.
+	for side in [-1.0, 1.0]:
+		var bench_pos := Vector3(side * 20.0, 0.0, 0.0)
+		_add_box(self, "ParkBenchSeat", bench_pos + Vector3(0, 0.55, 0), Vector3(1.8, 0.16, 0.55), Color(0.34, 0.20, 0.10), false)
+		_add_box(self, "ParkBenchBack", bench_pos + Vector3(0, 0.95, -0.22), Vector3(1.8, 0.65, 0.12), Color(0.34, 0.20, 0.10), false)
+
 func _build_world() -> void:
-	var environment := WorldEnvironment.new()
+	world_environment = WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = Sky.new()
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.62, 0.69, 0.8)
 	env.ambient_light_energy = 0.7
-	environment.environment = env
-	add_child(environment)
-	var sun := DirectionalLight3D.new()
+	world_environment.environment = env
+	add_child(world_environment)
+	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-48, -32, 0)
 	sun.light_energy = 1.15
+	sun.shadow_enabled = true
 	add_child(sun)
 	_add_box(self, "City Ground", Vector3(0, -0.3, 0), Vector3(230, 0.5, 230), Color(0.22, 0.34, 0.25))
 	_add_box(self, "Main Road", Vector3(0, 0.0, 0), Vector3(18, 0.08, 230), Color(0.11, 0.12, 0.14), false)
@@ -77,6 +152,7 @@ func _build_world() -> void:
 	_add_service("MINISTRY OF INTELLIGENCE", Vector3(-55, 4, -55), Color(0.25, 0.29, 0.38))
 	_add_service("PRESIDENTIAL PALACE", Vector3(55, 4, -55), Color(0.68, 0.57, 0.32))
 	_add_service("ARMED FORCES HQ", Vector3(55, 4, 55), Color(0.30, 0.39, 0.34))
+	_build_city_details()
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	_add_box(self, label_text, pos, Vector3(17, 8, 13), color)
@@ -116,6 +192,13 @@ func _add_control_button(parent: HBoxContainer, caption: String, axis: String) -
 	parent.add_child(button)
 	button.button_down.connect(func(): player.set_mobile_axis(axis, true))
 	button.button_up.connect(func(): player.set_mobile_axis(axis, false))
+
+func _build_graphics_settings() -> void:
+	var graphics_layer := CanvasLayer.new()
+	graphics_layer.name = "GraphicsSettings"
+	graphics_layer.set_script(GRAPHICS_SCRIPT)
+	add_child(graphics_layer)
+	graphics_layer.configure(world_environment, sun)
 
 func _build_stage_two() -> void:
 	ownership_ledger = Node.new()
