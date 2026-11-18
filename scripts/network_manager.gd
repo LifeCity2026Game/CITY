@@ -46,6 +46,9 @@ func join_game(address: String) -> void:
 func _on_peer_connected(peer_id: int) -> void:
 	if not multiplayer.is_server():
 		return
+	var ledger := get_parent().get_node_or_null("OwnershipLedger")
+	if ledger:
+		ledger.send_snapshot(peer_id)
 	_spawn_remote(peer_id)
 	rpc("spawn_remote", peer_id)
 	rpc_id(peer_id, "spawn_remote", 1)
