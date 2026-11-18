@@ -209,7 +209,8 @@ func _on_action(action: String, arg: String = "") -> void:
 			_add_action_button("انتقال سند انتخاب‌شده به بازیکن", "transfer_player")
 		"select_document":
 			selected_document_id = arg
-			notice = "سند انتخاب شد: " + arg
+			var selected_doc: Dictionary = ownership_ledger.get_document(arg) if ownership_ledger else {}
+			notice = "سند مالکیت: %s\nکالا: %s\nمالک: %s\nقیمت خرید: %s\nسابقه انتقال: %s" % [arg, selected_doc.get("item_id", "-"), selected_doc.get("owner_name", "-"), selected_doc.get("purchase_price", 0), str(selected_doc.get("history", []))]
 		"sell_npc":
 			if ownership_ledger and not selected_document_id.is_empty():
 				ownership_ledger.request_npc_sale(selected_document_id)
