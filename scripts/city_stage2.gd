@@ -134,10 +134,18 @@ func _refresh() -> void:
 	details_label.text = "موجودی: %d سکه | پول سیاه: %d" % [visible_balance, player_black_money]
 
 func _on_action(action: String, arg: String = "") -> void:
-	if action in ["intel", "military", "creator"] and not _is_owner():
-		notice = "دسترسی فقط برای سازنده و میزبان مجاز است."
-		_refresh()
-		return
+	var private_areas := {
+		"intel": "intelligence",
+		"military": "military_command",
+		"creator": "creator"
+	}
+	if private_areas.has(action):
+		var requesting_peer: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+		var ledger_allows := ownership_ledger == null or ownership_ledger.has_owner_access(str(private_areas[action]), requesting_peer)
+		if not _is_owner() or not ledger_allows:
+			notice = "دسترسی فقط برای حساب سازنده/میزبان مجاز است."
+			_refresh()
+			return
 	if action not in ["select_document", "sell_npc", "transfer_player", "npc_buy"]:
 		_clear_actions()
 	match action:
