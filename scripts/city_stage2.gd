@@ -37,6 +37,9 @@ func set_ownership_ledger(ledger: Node) -> void:
 		ownership_ledger.ledger_notice.connect(_on_ledger_notice)
 
 func _on_receipt_issued(document: Dictionary) -> void:
+	var local_peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	if int(document.get("owner_peer_id", -999)) != local_peer_id:
+		return
 	var item_id := str(document.get("item_id", ""))
 	owned_items.append(item_id)
 	orders.append({"item": item_id, "status": "سند مالکیت صادر شد", "document_id": document.get("document_id", "")})
@@ -97,8 +100,8 @@ func _build_interface() -> void:
 	owner_only_buttons.append(_add_button(layout, "ستاد کل و هفت نیرو", "military"))
 	_add_button(layout, "پلیس و ساختمان دولت", "civic")
 	owner_only_buttons.append(_add_button(layout, "مدیریت سازنده", "creator"))
-	base_layout_children = layout.get_child_count()
 	_add_button(layout, "راهنمای خدمات", "help")
+	base_layout_children = layout.get_child_count()
 
 func _add_button(parent: VBoxContainer, caption: String, action: String) -> Button:
 	var b := Button.new()
