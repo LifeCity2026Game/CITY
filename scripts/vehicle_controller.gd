@@ -81,7 +81,7 @@ func _build_vehicle() -> void:
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.05, 1.05, 4.35)
 	collision.shape = shape
-	collision.position.y = 0.72
+	collision.position.y = 0.56
 	add_child(collision)
 
 	# Exterior body, hood, trunk, bumpers, trim and glass.
