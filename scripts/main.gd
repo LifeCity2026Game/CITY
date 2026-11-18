@@ -6,16 +6,19 @@ const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
 const LEDGER_SCRIPT = preload("res://scripts/ownership_ledger.gd")
 const GRAPHICS_SCRIPT = preload("res://scripts/graphics_settings.gd")
 const CITY_FEATURES_SCRIPT = preload("res://scripts/city_features.gd")
+const VEHICLE_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
 var world_environment: WorldEnvironment
 var sun: DirectionalLight3D
 var city_features: Node
+var vehicle_controller: CharacterBody3D
 
 func _ready() -> void:
 	_build_world()
 	_build_player()
+	_build_vehicle()
 	_build_city_features()
 	_build_mobile_controls()
 	_build_graphics_settings()
@@ -233,3 +236,11 @@ func _build_network() -> void:
 	network_manager.set_script(NETWORK_SCRIPT)
 	add_child(network_manager)
 	network_manager.set_local_player(player)
+
+func _build_vehicle() -> void:
+	vehicle_controller = CharacterBody3D.new()
+	vehicle_controller.name = "CityVehicle"
+	vehicle_controller.set_script(VEHICLE_SCRIPT)
+	vehicle_controller.position = Vector3(4.0, 0.2, 7.0)
+	add_child(vehicle_controller)
+	vehicle_controller.configure(player)
