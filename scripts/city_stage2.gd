@@ -175,7 +175,7 @@ func _on_action(action: String, arg: String = "") -> void:
 		"buy":
 			var price: int = SHOP.get(arg, 0)
 			var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-			var available_balance := ownership_ledger.get_balance(peer_id) if ownership_ledger else player_balance
+			var available_balance: int = ownership_ledger.get_balance(peer_id) if ownership_ledger != null else player_balance
 			if price > 0 and available_balance >= price:
 				if ownership_ledger:
 					ownership_ledger.request_purchase(arg)
