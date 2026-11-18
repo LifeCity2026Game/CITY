@@ -48,10 +48,10 @@ func _commit_purchase(peer_id: int, item_id: String) -> void:
 		_send_notice(peer_id, "این کالا در فروشگاه وجود ندارد.")
 		return
 	var price: int = CATALOG[item_id]
-	if int(balances.get(peer_id, 10000 if peer_id == 1 else 0)) < price:
+	if int(balances.get(peer_id, 10000)) < price:
 		_send_notice(peer_id, "موجودی کافی نیست.")
 		return
-	balances[peer_id] = int(balances.get(peer_id, 10000 if peer_id == 1 else 0)) - price
+	balances[peer_id] = int(balances.get(peer_id, 10000)) - price
 	var doc := {
 		"document_id": "LC-DOC-%06d" % next_document_number,
 		"item_id": item_id,
@@ -87,11 +87,49 @@ func _commit_player_transfer(from_peer: int, document_id: String, target_peer: i
 	if int(documents[document_id].owner_peer_id) != from_peer:
 		_send_notice(from_peer, "این دارایی متعلق به حساب تو نیست.")
 		return
-	if target_peer == from_peer or (multiplayer.has_multiplayer_peer() and not multiplayer.get_peers().has(target_peer)):
+	if target_peer == from_peer or (multiplayer.has_multiplayer_peer() and target_peer != 1 and not multiplayer.get_peers().has(target_peer)):
 		_send_notice(from_peer, "بازیکن مقصد معتبر یا آنلاین نیست.")
 		return
 	_transfer_document(document_id, from_peer, target_peer, "player_trade")
 	_send_notice(from_peer, "مالکیت با موفقیت به بازیکن %d منتقل شد." % target_peer)
+
+
+func request_npc_purchase(item_id: String, npc_id: String = "NPC-001") -> void:
+	if _is_authority():
+		_commit_npc_purchase(_local_peer_id(), item_id, npc_id)
+	else:
+		rpc_id(1, "rpc_request_npc_purchase", item_id, npc_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_npc_purchase(item_id: String, npc_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	_commit_npc_purchase(multiplayer.get_remote_sender_id(), item_id, npc_id)
+
+func _commit_npc_purchase(peer_id: int, item_id: String, npc_id: String) -> void:
+	if not CATALOG.has(item_id):
+		_send_notice(peer_id, "NPC این کالا را عرضه نمی‌کند.")
+		return
+	var price: int = CATALOG[item_id]
+	var balance := int(balances.get(peer_id, 10000))
+	if balance < price:
+		_send_notice(peer_id, "موجودی کافی نیست.")
+		return
+	balances[peer_id] = balance - price
+	var doc := {"document_id": "LC-DOC-%06d" % next_document_number, "item_id": item_id, "owner_peer_id": peer_id, "owner_name": "بازیکن %d" % peer_id, "purchase_price": price, "created_unix": int(Time.get_unix_time_from_system()), "history": [{"event": "npc_purchase", "from": npc_id, "to": peer_id, "time": int(Time.get_unix_time_from_system())}], "status": "valid"}
+	next_document_number += 1
+	documents[doc.document_id] = doc
+	_save_ledger()
+	_send_receipt(peer_id, doc)
+	_send_notice(peer_id, "خرید از %s انجام شد و سند مالکیت صادر شد." % npc_id)
+
+func simulate_npc_to_npc_trade(document_id: String, buyer_npc_id: String) -> bool:
+	if not _is_authority() or not documents.has(document_id):
+		return false
+	if int(documents[document_id].owner_peer_id) != -1:
+		return false
+	_transfer_document(document_id, -1, -2, "npc_to_npc:" + buyer_npc_id)
+	return true
 
 func request_npc_sale(document_id: String, npc_id: String = "NPC-001") -> void:
 	if _is_authority():
@@ -158,10 +196,25 @@ func get_documents_for(peer_id: int) -> Array[Dictionary]:
 			result.append(doc)
 	return result
 
+
+func send_snapshot(peer_id: int) -> void:
+	if not _is_authority() or not multiplayer.has_multiplayer_peer() or not multiplayer.is_server():
+		return
+	rpc_id(peer_id, "rpc_receive_snapshot", documents, int(balances.get(peer_id, 10000)), next_document_number)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_snapshot(server_documents: Dictionary, own_balance: int, next_number: int) -> void:
+	documents = server_documents.duplicate(true)
+	balances[_local_peer_id()] = own_balance
+	next_document_number = next_number
+
 func _save_ledger() -> void:
 	if not _is_authority():
 		return
-	var payload := {"balances": balances, "documents": documents, "next_document_number": next_document_number}
+	var saved_balances: Dictionary = {}
+	for peer_key in balances.keys():
+		saved_balances[str(peer_key)] = balances[peer_key]
+	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number}
 	var file := FileAccess.open("user://ownership_ledger.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(payload))
@@ -174,6 +227,9 @@ func _load_ledger() -> void:
 		return
 	var parsed = JSON.parse_string(file.get_as_text())
 	if parsed is Dictionary:
-		balances = parsed.get("balances", balances)
+		var saved_balances: Dictionary = parsed.get("balances", {})
+		balances.clear()
+		for peer_key in saved_balances.keys():
+			balances[int(peer_key)] = int(saved_balances[peer_key])
 		documents = parsed.get("documents", documents)
 		next_document_number = int(parsed.get("next_document_number", next_document_number))
