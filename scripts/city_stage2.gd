@@ -32,6 +32,20 @@ const SERVICES := [
 
 func set_ownership_ledger(ledger: Node) -> void:
 	ownership_ledger = ledger
+	if ownership_ledger:
+		ownership_ledger.receipt_issued.connect(_on_receipt_issued)
+		ownership_ledger.ledger_notice.connect(_on_ledger_notice)
+
+func _on_receipt_issued(document: Dictionary) -> void:
+	var item_id := str(document.get("item_id", ""))
+	owned_items.append(item_id)
+	orders.append({"item": item_id, "status": "سند مالکیت صادر شد", "document_id": document.get("document_id", "")})
+	notice = "سند مالکیت صادر شد: " + str(document.get("document_id", ""))
+	_refresh()
+
+func _on_ledger_notice(message: String) -> void:
+	notice = message
+	_refresh()
 
 func _is_owner() -> bool:
 	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
@@ -110,14 +124,19 @@ func _clear_actions() -> void:
 
 func _refresh() -> void:
 	status_label.text = notice
-	details_label.text = "موجودی: %d سکه | پول سیاه: %d" % [player_balance, player_black_money]
+	var visible_balance := player_balance
+	if ownership_ledger:
+		var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+		visible_balance = ownership_ledger.get_balance(peer_id)
+	details_label.text = "موجودی: %d سکه | پول سیاه: %d" % [visible_balance, player_black_money]
 
 func _on_action(action: String, arg: String = "") -> void:
 	if action in ["intel", "military", "creator"] and not _is_owner():
 		notice = "دسترسی فقط برای سازنده و میزبان مجاز است."
 		_refresh()
 		return
-	_clear_actions()
+	if action not in ["select_document", "sell_npc", "transfer_player", "npc_buy"]:
+		_clear_actions()
 	match action:
 		"bank":
 			notice = "بانک آزمایشی | انتقال فقط با موجودی کافی"
@@ -152,13 +171,17 @@ func _on_action(action: String, arg: String = "") -> void:
 			_add_action_button("اسناد مالکیت و معاملات", "documents")
 		"buy":
 			var price: int = SHOP.get(arg, 0)
-			if price > 0 and player_balance >= price:
-				player_balance -= price
-				owned_items.append(arg)
-				orders.append({"item": arg, "status": "در انتظار تحویل"})
+			var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+			var available_balance := ownership_ledger.get_balance(peer_id) if ownership_ledger else player_balance
+			if price > 0 and available_balance >= price:
 				if ownership_ledger:
 					ownership_ledger.request_purchase(arg)
-				notice = "سفارش ثبت شد: " + arg + " | درخواست صدور سند مالکیت ارسال شد."
+					notice = "درخواست خرید ثبت شد؛ پس از تأیید میزبان سند صادر می‌شود."
+				else:
+					player_balance -= price
+					owned_items.append(arg)
+					orders.append({"item": arg, "status": "در انتظار تحویل"})
+					notice = "سفارش ثبت شد: " + arg
 			else:
 				notice = "خرید انجام نشد: موجودی کافی نیست"
 		"orders":
