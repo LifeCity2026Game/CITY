@@ -53,6 +53,20 @@ jobs:
             exit 1
           fi
 
+      - name: Test vehicle entry, acceleration and exit
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/vehicle_smoke_test.gd 2>&1 | tee vehicle-test.log
+          if ! grep -q "VEHICLE_SMOKE_TEST_PASS" vehicle-test.log; then
+            echo "Vehicle interaction smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-test.log; then
+            echo "Vehicle test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Export debug APK
         run: |
           mkdir -p build
