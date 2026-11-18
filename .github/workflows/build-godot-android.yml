@@ -20,6 +20,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Java and system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends openjdk-17-jdk-headless fontconfig unzip wget
+          echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(command -v javac))))" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Install matching Godot export templates
+        run: |
+          VERSION="4.7.2"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          wget -q "https://github.com/godotengine/godot/releases/download/${VERSION}-stable/Godot_v${VERSION}-stable_export_templates.tpz" -O /tmp/godot-templates.tpz
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          find /tmp/godot-templates -type f \( -name "android_debug.apk" -o -name "android_release.apk" \) -exec cp {} "$TEMPLATE_DIR/" \;
+          test -s "$TEMPLATE_DIR/android_debug.apk"
+          test -s "$TEMPLATE_DIR/android_release.apk"
+
       - name: Check Godot project
         run: |
           godot --version
@@ -29,6 +47,7 @@ jobs:
         run: |
           mkdir -p build
           godot --headless --path . --export-debug "Android" build/LIFE_CITY.apk
+          test -s build/LIFE_CITY.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
