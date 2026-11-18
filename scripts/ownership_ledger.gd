@@ -165,7 +165,10 @@ func _transfer_document(document_id: String, from_peer: int, to_peer: int, event
 	if _is_authority():
 		receipt_issued.emit(doc)
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-		rpc("rpc_sync_document", doc)
+		if from_peer != 1:
+			rpc_id(from_peer, "rpc_sync_document", doc)
+		if to_peer > 0 and to_peer != 1 and to_peer != from_peer:
+			rpc_id(to_peer, "rpc_sync_document", doc)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_document(doc: Dictionary) -> void:
@@ -220,7 +223,11 @@ func get_documents_for(peer_id: int) -> Array[Dictionary]:
 func send_snapshot(peer_id: int) -> void:
 	if not _is_authority() or not multiplayer.has_multiplayer_peer() or not multiplayer.is_server():
 		return
-	rpc_id(peer_id, "rpc_receive_snapshot", documents, int(balances.get(peer_id, 10000)), next_document_number)
+	var private_documents: Dictionary = {}
+	for document_id in documents.keys():
+		if int(documents[document_id].owner_peer_id) == peer_id:
+			private_documents[document_id] = documents[document_id]
+	rpc_id(peer_id, "rpc_receive_snapshot", private_documents, int(balances.get(peer_id, 10000)), next_document_number)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_receive_snapshot(server_documents: Dictionary, own_balance: int, next_number: int) -> void:
