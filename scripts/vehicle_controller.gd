@@ -32,6 +32,8 @@ var right_door: Node3D
 var headlamps: Array[SpotLight3D] = []
 var tail_lamps: Array[MeshInstance3D] = []
 var brake_material: StandardMaterial3D
+var tail_material: StandardMaterial3D
+var brake_lights_active := false
 var dashboard_label: Label3D
 var controls_layer: CanvasLayer
 
@@ -156,7 +158,7 @@ func _build_vehicle() -> void:
 		_box(self, "HeadlampLens", Vector3(side * 0.69, 0.86, -2.06), Vector3(0.42, 0.20, 0.055), Color(0.92, 0.88, 0.68), 0.1)
 		var lamp := SpotLight3D.new()
 		lamp.position = Vector3(side * 0.69, 0.88, -2.02)
-		lamp.rotation_degrees = Vector3(-8, 180, 0)
+		lamp.rotation_degrees = Vector3(-8, 0, 0)
 		lamp.spot_range = 28.0
 		lamp.spot_angle = 34.0
 		lamp.light_energy = 2.0
@@ -165,7 +167,8 @@ func _build_vehicle() -> void:
 		headlamps.append(lamp)
 		var tail := _box(self, "BrakeTailLamp", Vector3(side * 0.69, 0.86, 2.06), Vector3(0.42, 0.20, 0.055), Color(0.30, 0.025, 0.02))
 		tail_lamps.append(tail)
-	brake_material = _mat(Color(0.30, 0.025, 0.02), 0.1)
+	tail_material = _mat(Color(0.30, 0.025, 0.02), 0.1)
+	brake_material = _mat(Color(1.0, 0.025, 0.015), 0.1)
 	# Exhaust outlet.
 	_cylinder(self, "Exhaust", Vector3(0.62, 0.38, 2.12), 0.075, 0.18, Color(0.24, 0.25, 0.27), 0.8).rotation.x = PI / 2.0
 
@@ -384,8 +387,10 @@ func _physics_process(delta: float) -> void:
 	if steering_wheel:
 		steering_wheel.rotation.z = -active_steer * 0.65
 	var braking := active_throttle < 0.0 or handbrake
-	for tail in tail_lamps:
-		tail.material_override = _mat(Color(1.0, 0.025, 0.015) if braking else Color(0.30, 0.025, 0.02), 0.1)
+	if braking != brake_lights_active:
+		brake_lights_active = braking
+		for tail in tail_lamps:
+			tail.material_override = brake_material if braking else tail_material
 	if speed_label:
 		speed_label.text = "سرعت: %d km/h" % int(absf(current_speed) * 3.6)
 	_update_gear_label()
