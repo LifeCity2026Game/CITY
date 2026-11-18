@@ -3,8 +3,10 @@ extends Node3D
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const STAGE2_SCRIPT = preload("res://scripts/city_stage2.gd")
 const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
+const LEDGER_SCRIPT = preload("res://scripts/ownership_ledger.gd")
 var player: CharacterBody3D
 var network_manager: Node
+var ownership_ledger: Node
 
 func _ready() -> void:
 	_build_world()
@@ -116,10 +118,15 @@ func _add_control_button(parent: HBoxContainer, caption: String, axis: String) -
 	button.button_up.connect(func(): player.set_mobile_axis(axis, false))
 
 func _build_stage_two() -> void:
+	ownership_ledger = Node.new()
+	ownership_ledger.name = "OwnershipLedger"
+	ownership_ledger.set_script(LEDGER_SCRIPT)
+	add_child(ownership_ledger)
 	var systems := Node.new()
 	systems.name = "Stage2Systems"
 	systems.set_script(STAGE2_SCRIPT)
 	add_child(systems)
+	systems.set_ownership_ledger(ownership_ledger)
 
 func _build_network() -> void:
 	network_manager = Node.new()
