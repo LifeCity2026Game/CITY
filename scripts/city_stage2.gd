@@ -12,6 +12,10 @@ var orders: Array[Dictionary] = []
 var reports: Array[String] = []
 var ownership_ledger: Node
 var creator_mode := false
+var owner_only_buttons: Array[Button] = []
+var base_layout_children := 0
+var selected_document_id := ""
+var transfer_target_input: LineEdit
 var panel: PanelContainer
 var status_label: Label
 var details_label: Label
@@ -42,6 +46,10 @@ func _seed_npcs() -> void:
 		var id := "NPC" + str(1000 + i)
 		npc_accounts[id] = {"name": "شهروند " + str(i + 1), "balance": 1200 + i * 275, "job": "شهروند"}
 
+func _process(_delta: float) -> void:
+	for owner_button in owner_only_buttons:
+		owner_button.visible = _is_owner()
+
 func _build_interface() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "Stage2Interface"
@@ -70,22 +78,21 @@ func _build_interface() -> void:
 	layout.add_child(details_label)
 	_add_button(layout, "بانک و انتقال وجه", "bank")
 	_add_button(layout, "فروشگاه و سفارش‌ها", "shop")
-	if _is_owner():
-		_add_button(layout, "وزارت اطلاعات و پرونده‌ها", "intel")
+	owner_only_buttons.append(_add_button(layout, "وزارت اطلاعات و پرونده‌ها", "intel"))
 	_add_button(layout, "کاخ ریاست جمهوری", "palace")
-	if _is_owner():
-		_add_button(layout, "ستاد کل و هفت نیرو", "military")
+	owner_only_buttons.append(_add_button(layout, "ستاد کل و هفت نیرو", "military"))
 	_add_button(layout, "پلیس و ساختمان دولت", "civic")
-	if _is_owner():
-		_add_button(layout, "مدیریت سازنده", "creator")
+	owner_only_buttons.append(_add_button(layout, "مدیریت سازنده", "creator"))
+	base_layout_children = layout.get_child_count()
 	_add_button(layout, "راهنمای خدمات", "help")
 
-func _add_button(parent: VBoxContainer, caption: String, action: String) -> void:
+func _add_button(parent: VBoxContainer, caption: String, action: String) -> Button:
 	var b := Button.new()
 	b.text = caption
 	b.custom_minimum_size = Vector2(290, 38)
 	b.pressed.connect(_on_action.bind(action))
 	parent.add_child(b)
+	return b
 
 func _add_action_button(caption: String, action: String, arg: String = "") -> void:
 	var b := Button.new()
@@ -96,7 +103,7 @@ func _add_action_button(caption: String, action: String, arg: String = "") -> vo
 
 func _clear_actions() -> void:
 	var layout := panel.get_child(0) as VBoxContainer
-	while layout.get_child_count() > 10:
+	while layout.get_child_count() > base_layout_children:
 		var child := layout.get_child(layout.get_child_count() - 1)
 		layout.remove_child(child)
 		child.queue_free()
@@ -142,6 +149,7 @@ func _on_action(action: String, arg: String = "") -> void:
 			for item in SHOP:
 				_add_action_button("خرید %s | %d" % [item, SHOP[item]], "buy", item)
 			_add_action_button("نمایش سفارش‌ها", "orders")
+			_add_action_button("اسناد مالکیت و معاملات", "documents")
 		"buy":
 			var price: int = SHOP.get(arg, 0)
 			if price > 0 and player_balance >= price:
@@ -161,7 +169,37 @@ func _on_action(action: String, arg: String = "") -> void:
 			_add_action_button("بازگشت", "help")
 		"documents":
 			var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-			notice = "اسناد مالکیت: " + str(ownership_ledger.get_documents_for(peer_id)) if ownership_ledger else "دفتر اسناد در دسترس نیست"
+			var owned_docs: Array[Dictionary] = ownership_ledger.get_documents_for(peer_id) if ownership_ledger else []
+			_clear_actions()
+			notice = "اسناد مالکیت معتبر: %d" % owned_docs.size()
+			for document in owned_docs:
+				var doc_id := str(document.document_id)
+				_add_action_button("%s | %s" % [doc_id, document.item_id], "select_document", doc_id)
+			_add_action_button("فروش سند انتخاب‌شده به NPC", "sell_npc")
+			_add_action_button("خرید کالای انتخاب‌شده از NPC", "npc_buy", "لباس رسمی")
+			transfer_target_input = LineEdit.new()
+			transfer_target_input.placeholder_text = "شناسه بازیکن مقصد (مثلاً 2)"
+			panel.get_child(0).add_child(transfer_target_input)
+			_add_action_button("انتقال سند انتخاب‌شده به بازیکن", "transfer_player")
+		"select_document":
+			selected_document_id = arg
+			notice = "سند انتخاب شد: " + arg
+		"sell_npc":
+			if ownership_ledger and not selected_document_id.is_empty():
+				ownership_ledger.request_npc_sale(selected_document_id)
+				notice = "درخواست فروش به NPC ارسال شد."
+			else:
+				notice = "ابتدا یک سند را انتخاب کن."
+		"npc_buy":
+			if ownership_ledger:
+				ownership_ledger.request_npc_purchase(arg)
+				notice = "درخواست خرید از NPC ارسال شد."
+		"transfer_player":
+			if ownership_ledger and not selected_document_id.is_empty() and transfer_target_input:
+				ownership_ledger.request_player_transfer(selected_document_id, int(transfer_target_input.text))
+				notice = "درخواست انتقال مالکیت ارسال شد."
+			else:
+				notice = "سند و شناسه بازیکن مقصد را مشخص کن."
 		"intel":
 			notice = "وزارت اطلاعات | پرونده‌های کاملاً خیالی"
 			_add_action_button("ثبت گزارش مالی مشکوک", "report")
