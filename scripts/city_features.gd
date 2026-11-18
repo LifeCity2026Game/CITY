@@ -9,6 +9,9 @@ var traffic_cars: Array[Node3D] = []
 var traffic_origins: Array[Vector3] = []
 var interior_positions: Dictionary = {}
 var inside_building := false
+var previous_position := Vector3.ZERO
+var pedestrians: Array[Node3D] = []
+var pedestrian_origins: Array[Vector3] = []
 var day_clock := 0.28
 var weather_mode := "sunny"
 var weather_panel: PanelContainer
@@ -29,6 +32,7 @@ func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_nod
 	sun = sun_node
 	_build_facades()
 	_build_traffic()
+	_build_pedestrians()
 	_build_interiors()
 	_build_weather()
 	_build_controls()
@@ -41,6 +45,12 @@ func _process(delta: float) -> void:
 		car.position.z += delta * (7.0 + float(i % 3) * 1.8)
 		if car.position.z > 112.0:
 			car.position.z = -112.0
+	for i in range(pedestrians.size()):
+		var walker := pedestrians[i]
+		walker.position.x += sin(Time.get_ticks_msec() * 0.0004 + float(i)) * delta * 0.7
+		walker.position.z += delta * (0.45 + float(i % 2) * 0.2)
+		if walker.position.z > 18.0:
+			walker.position = pedestrian_origins[i]
 	if rain:
 		rain.emitting = weather_mode == "rain"
 
@@ -107,6 +117,43 @@ func _build_traffic() -> void:
 				car.add_child(wheel)
 		traffic_cars.append(car)
 
+func _build_pedestrians() -> void:
+	for i in range(6):
+		var walker := Node3D.new()
+		walker.name = "CityPedestrian_%d" % i
+		var start := Vector3(-10.0 + float(i) * 3.8, 0.0, -16.0 - float(i % 2) * 2.0)
+		walker.position = start
+		add_child(walker)
+		var body := MeshInstance3D.new()
+		var body_mesh := CapsuleMesh.new()
+		body_mesh.radius = 0.27
+		body_mesh.height = 1.15
+		body.mesh = body_mesh
+		body.position.y = 0.95
+		body.material_override = _mat([Color(0.15, 0.32, 0.62), Color(0.55, 0.22, 0.16), Color(0.18, 0.42, 0.28)][i % 3])
+		walker.add_child(body)
+		var head := MeshInstance3D.new()
+		var head_mesh := SphereMesh.new()
+		head_mesh.radius = 0.19
+		head_mesh.height = 0.38
+		head.mesh = head_mesh
+		head.position.y = 1.68
+		head.material_override = _mat(Color(0.72, 0.52, 0.39))
+		walker.add_child(head)
+		pedestrians.append(walker)
+		pedestrian_origins.append(start)
+
+func _add_floor_collision(parent: Node3D, pos: Vector3, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = "InteriorCollision"
+	body.position = pos
+	var shape_node := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	shape_node.shape = shape
+	body.add_child(shape_node)
+	parent.add_child(body)
+
 func _build_interiors() -> void:
 	for i in range(SERVICE_BUILDINGS.size()):
 		var entry: Dictionary = SERVICE_BUILDINGS[i]
@@ -117,6 +164,10 @@ func _build_interiors() -> void:
 		room.position = room_pos
 		add_child(room)
 		_box(room, "InteriorFloor", Vector3(0, -0.12, 0), Vector3(13, 0.24, 11), Color(0.42, 0.40, 0.36))
+		_add_floor_collision(room, Vector3(0, -0.12, 0), Vector3(13, 0.24, 11))
+		_add_floor_collision(room, Vector3(0, 2.0, -5.5), Vector3(13, 4.0, 0.25))
+		_add_floor_collision(room, Vector3(-6.5, 2.0, 0), Vector3(0.25, 4.0, 11))
+		_add_floor_collision(room, Vector3(6.5, 2.0, 0), Vector3(0.25, 4.0, 11))
 		_box(room, "BackWall", Vector3(0, 2.0, -5.5), Vector3(13, 4.0, 0.25), Color(0.72, 0.70, 0.64))
 		_box(room, "LeftWall", Vector3(-6.5, 2.0, 0), Vector3(0.25, 4.0, 11), Color(0.66, 0.66, 0.62))
 		_box(room, "RightWall", Vector3(6.5, 2.0, 0), Vector3(0.25, 4.0, 11), Color(0.66, 0.66, 0.62))
@@ -253,6 +304,7 @@ func _enter_nearest_building() -> void:
 			nearest_id = str(SERVICE_BUILDINGS[i].id)
 	if nearest_distance > 24.0:
 		return
+	previous_position = player.global_position
 	player.global_position = interior_positions[nearest_id] + Vector3(0, 1.2, 2.8)
 	player.velocity = Vector3.ZERO
 	inside_building = true
@@ -260,6 +312,6 @@ func _enter_nearest_building() -> void:
 func _exit_building() -> void:
 	if player == null or not inside_building:
 		return
-	player.global_position = Vector3(0, 1.2, 12)
+	player.global_position = previous_position if previous_position != Vector3.ZERO else Vector3(0, 1.2, 12)
 	player.velocity = Vector3.ZERO
 	inside_building = false
