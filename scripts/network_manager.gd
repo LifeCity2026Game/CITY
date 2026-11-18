@@ -101,6 +101,8 @@ func submit_state(peer_id: int, pos: Vector3, yaw: float) -> void:
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
+	if remote_players.has(peer_id):
+		remote_players[peer_id].set_remote_state(pos, yaw)
 	rpc("relay_state", peer_id, pos, yaw)
 
 @rpc("authority", "call_remote", "unreliable")
