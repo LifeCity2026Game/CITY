@@ -16,6 +16,7 @@ var owner_only_buttons: Array[Button] = []
 var base_layout_children := 0
 var selected_document_id := ""
 var transfer_target_input: LineEdit
+var transfer_amount_input: LineEdit
 var panel: PanelContainer
 var status_label: Label
 var details_label: Label
@@ -146,7 +147,7 @@ func _on_action(action: String, arg: String = "") -> void:
 			notice = "دسترسی فقط برای حساب سازنده/میزبان مجاز است."
 			_refresh()
 			return
-	if action not in ["select_document", "sell_npc", "transfer_player", "npc_buy"]:
+	if action not in ["select_document", "sell_npc", "transfer_player", "npc_buy", "cash_transfer"]:
 		_clear_actions()
 	match action:
 		"bank":
@@ -155,6 +156,22 @@ func _on_action(action: String, arg: String = "") -> void:
 			_add_action_button("انتقال ۵۰۰ سکه به NPC1000", "transfer", "NPC1000")
 			_add_action_button("دریافت ۳۰۰ سکه از NPC1000", "withdraw", "NPC1000")
 			_add_action_button("تراکنش با حساب ناموجود (آزمایش)", "resolve", "UNKNOWN")
+			transfer_target_input = LineEdit.new()
+			transfer_target_input.placeholder_text = "شناسه بازیکن آنلاین مقصد (مثلاً 2)"
+			panel.get_child(0).add_child(transfer_target_input)
+			transfer_amount_input = LineEdit.new()
+			transfer_amount_input.placeholder_text = "مبلغ انتقال به سکه"
+			transfer_amount_input.input_mode = LineEdit.INPUT_MODE_NUMERIC
+			panel.get_child(0).add_child(transfer_amount_input)
+			_add_action_button("انتقال وجه به بازیکن آنلاین", "cash_transfer")
+		"cash_transfer":
+			if ownership_ledger and transfer_target_input and transfer_amount_input:
+				var target_peer := int(transfer_target_input.text)
+				var amount := int(transfer_amount_input.text)
+				ownership_ledger.request_player_cash_transfer(target_peer, amount)
+				notice = "درخواست انتقال وجه برای بررسی میزبان ارسال شد."
+			else:
+				notice = "سیستم حسابداری آنلاین در دسترس نیست."
 		"resolve":
 			if npc_accounts.has(arg):
 				notice = "حساب پیدا شد: %s | موجودی: %d" % [npc_accounts[arg].name, npc_accounts[arg].balance]
