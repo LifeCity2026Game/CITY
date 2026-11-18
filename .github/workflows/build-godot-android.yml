@@ -2,7 +2,9 @@ name: Build LIFE CITY Godot Android APK
 
 on:
   push:
-    branches: ["godot-migration"]
+    branches: ["main", "godot-migration"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
