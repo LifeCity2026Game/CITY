@@ -33,9 +33,15 @@ jobs:
           echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> "$GITHUB_PATH"
 
       - name: Check Godot project
+        shell: bash
         run: |
+          set -o pipefail
           godot --version
-          godot --headless --path . --editor --quit
+          godot --headless --path . --editor --quit 2>&1 | tee godot-check.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" godot-check.log; then
+            echo "Godot reported script or project errors."
+            exit 1
+          fi
 
       - name: Export debug APK
         run: |
