@@ -10,6 +10,8 @@ var npc_accounts: Dictionary = {}
 var owned_items: Array[String] = []
 var orders: Array[Dictionary] = []
 var reports: Array[String] = []
+var ownership_ledger: Node
+var creator_mode := false
 var panel: PanelContainer
 var status_label: Label
 var details_label: Label
@@ -23,6 +25,12 @@ const SERVICES := [
 	"بانک مرکزی", "بانک شهر", "فروشگاه اینترنتی", "وزارت اطلاعات",
 	"کاخ ریاست جمهوری", "ستاد کل نیروهای مسلح", "پلیس و کلانتری", "ساختمان دولت"
 ]
+
+func set_ownership_ledger(ledger: Node) -> void:
+	ownership_ledger = ledger
+
+func _is_owner() -> bool:
+	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
 
 func _ready() -> void:
 	_seed_npcs()
@@ -62,10 +70,14 @@ func _build_interface() -> void:
 	layout.add_child(details_label)
 	_add_button(layout, "بانک و انتقال وجه", "bank")
 	_add_button(layout, "فروشگاه و سفارش‌ها", "shop")
-	_add_button(layout, "وزارت اطلاعات و پرونده‌ها", "intel")
+	if _is_owner():
+		_add_button(layout, "وزارت اطلاعات و پرونده‌ها", "intel")
 	_add_button(layout, "کاخ ریاست جمهوری", "palace")
-	_add_button(layout, "ستاد کل و هفت نیرو", "military")
+	if _is_owner():
+		_add_button(layout, "ستاد کل و هفت نیرو", "military")
 	_add_button(layout, "پلیس و ساختمان دولت", "civic")
+	if _is_owner():
+		_add_button(layout, "مدیریت سازنده", "creator")
 	_add_button(layout, "راهنمای خدمات", "help")
 
 func _add_button(parent: VBoxContainer, caption: String, action: String) -> void:
@@ -94,6 +106,10 @@ func _refresh() -> void:
 	details_label.text = "موجودی: %d سکه | پول سیاه: %d" % [player_balance, player_black_money]
 
 func _on_action(action: String, arg: String = "") -> void:
+	if action in ["intel", "military", "creator"] and not _is_owner():
+		notice = "دسترسی فقط برای سازنده و میزبان مجاز است."
+		_refresh()
+		return
 	_clear_actions()
 	match action:
 		"bank":
@@ -122,7 +138,7 @@ func _on_action(action: String, arg: String = "") -> void:
 			else:
 				notice = "برداشت ناموفق: موجودی NPC کافی نیست"
 		"shop":
-			notice = "فروشگاه اینترنتی | خرید با پول داخل بازی"
+			notice = "فروشگاه اینترنتی | خرید با پول داخل بازی و صدور سند مالکیت"
 			for item in SHOP:
 				_add_action_button("خرید %s | %d" % [item, SHOP[item]], "buy", item)
 			_add_action_button("نمایش سفارش‌ها", "orders")
@@ -132,11 +148,20 @@ func _on_action(action: String, arg: String = "") -> void:
 				player_balance -= price
 				owned_items.append(arg)
 				orders.append({"item": arg, "status": "در انتظار تحویل"})
-				notice = "سفارش ثبت شد: " + arg
+				if ownership_ledger:
+					ownership_ledger.request_purchase(arg)
+				notice = "سفارش ثبت شد: " + arg + " | درخواست صدور سند مالکیت ارسال شد."
 			else:
 				notice = "خرید انجام نشد: موجودی کافی نیست"
 		"orders":
 			notice = "سفارش‌های ثبت‌شده: " + str(orders)
+		"creator":
+			notice = "پنل سازنده | فقط میزبان: مدیریت دسترسی‌ها و تنظیمات خصوصی."
+			_add_action_button("نمایش اسناد مالکیت من", "documents")
+			_add_action_button("بازگشت", "help")
+		"documents":
+			var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+			notice = "اسناد مالکیت: " + str(ownership_ledger.get_documents_for(peer_id)) if ownership_ledger else "دفتر اسناد در دسترس نیست"
 		"intel":
 			notice = "وزارت اطلاعات | پرونده‌های کاملاً خیالی"
 			_add_action_button("ثبت گزارش مالی مشکوک", "report")
