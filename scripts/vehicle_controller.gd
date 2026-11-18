@@ -1,46 +1,75 @@
 extends CharacterBody3D
-## First playable drivable city vehicle prototype for LIFE CITY.
+## LIFE CITY detailed procedural vehicle. Replaceable with licensed/imported meshes later.
 
-@export var acceleration: float = 13.0
-@export var brake_strength: float = 22.0
-@export var max_forward_speed: float = 25.0
-@export var max_reverse_speed: float = 8.0
-@export var steering_speed: float = 1.55
-@export var gravity: float = 18.0
+@export var vehicle_name: String = "City Sedan"
+@export var acceleration: float = 11.0
+@export var brake_strength: float = 24.0
+@export var max_forward_speed: float = 34.0
+@export var max_reverse_speed: float = 9.0
+@export var steering_speed: float = 1.65
+@export var gravity: float = 22.0
 
 var driver: CharacterBody3D
 var occupied := false
 var throttle := 0.0
 var steering := 0.0
 var current_speed := 0.0
+var gear := "P"
+var lights_on := false
+var handbrake := false
+var indicators := 0
+var interior_camera_on := false
 var vehicle_camera: Camera3D
+var interior_camera: Camera3D
 var player_camera: Camera3D
 var speed_label: Label
+var gear_label: Label
 var enter_button: Button
 var wheel_nodes: Array[Node3D] = []
+var steering_wheel: Node3D
+var left_door: Node3D
+var right_door: Node3D
+var headlamps: Array[SpotLight3D] = []
+var tail_lamps: Array[MeshInstance3D] = []
+var brake_material: StandardMaterial3D
+var dashboard_label: Label3D
+var controls_layer: CanvasLayer
 
 func _ready() -> void:
 	_build_vehicle()
-	_build_camera()
+	_build_cameras()
 	_build_controls()
 
 func configure(player_node: CharacterBody3D) -> void:
 	driver = player_node
 
-func _material(color: Color, metallic: float = 0.0) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.metallic = metallic
-	material.roughness = 0.42
-	return material
+func _mat(color: Color, metallic: float = 0.0, roughness: float = 0.42) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.metallic = metallic
+	m.roughness = roughness
+	return m
 
-func _box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color: Color) -> MeshInstance3D:
+func _box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color: Color, metallic: float = 0.0) -> MeshInstance3D:
 	var item := MeshInstance3D.new()
 	item.name = title
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	item.mesh = mesh
-	item.material_override = _material(color)
+	item.material_override = _mat(color, metallic)
+	item.position = pos
+	parent.add_child(item)
+	return item
+
+func _cylinder(parent: Node3D, title: String, pos: Vector3, radius: float, height: float, color: Color, metallic: float = 0.0) -> MeshInstance3D:
+	var item := MeshInstance3D.new()
+	item.name = title
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	item.mesh = mesh
+	item.material_override = _mat(color, metallic)
 	item.position = pos
 	parent.add_child(item)
 	return item
@@ -48,82 +77,180 @@ func _box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color: Col
 func _build_vehicle() -> void:
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.05, 1.05, 4.1)
+	shape.size = Vector3(2.05, 1.05, 4.35)
 	collision.shape = shape
 	collision.position.y = 0.72
 	add_child(collision)
-	_box(self, "VehicleBody", Vector3(0, 0.72, 0), Vector3(2.0, 0.68, 4.0), Color(0.68, 0.12, 0.09))
-	_box(self, "VehicleHood", Vector3(0, 1.02, -1.25), Vector3(1.88, 0.24, 1.25), Color(0.74, 0.16, 0.12))
-	_box(self, "VehicleCabin", Vector3(0, 1.34, 0.15), Vector3(1.58, 0.78, 1.9), Color(0.10, 0.18, 0.24))
-	_box(self, "FrontGlass", Vector3(0, 1.48, -0.78), Vector3(1.42, 0.48, 0.06), Color(0.28, 0.43, 0.52))
-	_box(self, "RearGlass", Vector3(0, 1.48, 1.08), Vector3(1.42, 0.48, 0.06), Color(0.24, 0.38, 0.46))
-	_box(self, "FrontBumper", Vector3(0, 0.48, -2.04), Vector3(2.04, 0.2, 0.16), Color(0.16, 0.17, 0.18))
-	_box(self, "RearBumper", Vector3(0, 0.48, 2.04), Vector3(2.04, 0.2, 0.16), Color(0.16, 0.17, 0.18))
+
+	# Exterior body, hood, trunk, bumpers, trim and glass.
+	_box(self, "LowerChassis", Vector3(0, 0.54, 0), Vector3(1.92, 0.35, 3.95), Color(0.12, 0.13, 0.15), 0.55)
+	_box(self, "BodyShell", Vector3(0, 0.78, 0), Vector3(2.0, 0.62, 4.0), Color(0.12, 0.30, 0.66), 0.62)
+	_box(self, "Hood", Vector3(0, 1.04, -1.32), Vector3(1.91, 0.18, 1.25), Color(0.15, 0.36, 0.76), 0.58)
+	_box(self, "Trunk", Vector3(0, 1.00, 1.55), Vector3(1.88, 0.20, 0.82), Color(0.12, 0.30, 0.66), 0.58)
+	_box(self, "Roof", Vector3(0, 1.78, 0.10), Vector3(1.62, 0.16, 1.92), Color(0.10, 0.25, 0.54), 0.55)
+	_box(self, "FrontWindshield", Vector3(0, 1.48, -0.82), Vector3(1.52, 0.55, 0.055), Color(0.12, 0.22, 0.29), 0.25)
+	_box(self, "RearWindshield", Vector3(0, 1.48, 1.08), Vector3(1.50, 0.52, 0.055), Color(0.12, 0.22, 0.29), 0.25)
+	for side in [-1.0, 1.0]:
+		_box(self, "SideWindow", Vector3(side * 0.81, 1.48, 0.12), Vector3(0.045, 0.48, 1.55), Color(0.12, 0.22, 0.29), 0.2)
+		_box(self, "SideSkirt", Vector3(side * 0.96, 0.48, 0), Vector3(0.12, 0.20, 2.65), Color(0.08, 0.09, 0.11), 0.5)
+		_box(self, "Mirror", Vector3(side * 1.02, 1.30, -0.67), Vector3(0.20, 0.14, 0.28), Color(0.10, 0.12, 0.15), 0.6)
+	_box(self, "FrontBumper", Vector3(0, 0.48, -2.08), Vector3(2.02, 0.22, 0.18), Color(0.09, 0.10, 0.12), 0.45)
+	_box(self, "RearBumper", Vector3(0, 0.48, 2.08), Vector3(2.02, 0.22, 0.18), Color(0.09, 0.10, 0.12), 0.45)
+	_box(self, "FrontGrille", Vector3(0, 0.77, -2.035), Vector3(0.72, 0.22, 0.035), Color(0.025, 0.03, 0.04), 0.7)
+	_box(self, "FrontPlate", Vector3(0, 0.48, -2.18), Vector3(0.55, 0.15, 0.025), Color(0.88, 0.88, 0.82))
+	_box(self, "RearPlate", Vector3(0, 0.52, 2.18), Vector3(0.55, 0.15, 0.025), Color(0.88, 0.88, 0.82))
+
+	# Four tires, alloy hubs and wheel rotation.
 	for side in [-1.0, 1.0]:
 		for axle in [-1.0, 1.0]:
-			var wheel := MeshInstance3D.new()
-			var wheel_mesh := CylinderMesh.new()
-			wheel_mesh.top_radius = 0.39
-			wheel_mesh.bottom_radius = 0.39
-			wheel_mesh.height = 0.24
-			wheel.mesh = wheel_mesh
-			wheel.rotation.z = PI / 2.0
-			wheel.position = Vector3(side * 1.02, 0.42, axle * 1.28)
-			wheel.material_override = _material(Color(0.035, 0.035, 0.04))
+			var wheel := Node3D.new()
+			wheel.name = "Wheel_%s_%s" % [str(side), str(axle)]
+			wheel.position = Vector3(side * 1.02, 0.43, axle * 1.32)
 			add_child(wheel)
+			var tire := _cylinder(wheel, "RubberTire", Vector3.ZERO, 0.39, 0.25, Color(0.025, 0.027, 0.03))
+			tire.rotation.z = PI / 2.0
+			var hub := _cylinder(wheel, "AlloyRim", Vector3(side * -0.13, 0, 0), 0.23, 0.035, Color(0.58, 0.60, 0.64), 0.85)
+			hub.rotation.z = PI / 2.0
 			wheel_nodes.append(wheel)
-	for side in [-1.0, 1.0]:
-		var headlight := _box(self, "Headlight", Vector3(side * 0.68, 0.82, -2.03), Vector3(0.42, 0.18, 0.06), Color(1.0, 0.88, 0.58))
-		headlight.material_override.emission_enabled = true
-		headlight.material_override.emission = Color(1.0, 0.82, 0.48)
-		_box(self, "TailLight", Vector3(side * 0.68, 0.82, 2.03), Vector3(0.38, 0.18, 0.06), Color(0.72, 0.035, 0.025))
 
-func _build_camera() -> void:
+	# Detailed cabin: seats, dashboard, steering wheel, console and pedals.
+	var cabin := Node3D.new()
+	cabin.name = "CabinInterior"
+	add_child(cabin)
+	var dark := Color(0.055, 0.065, 0.075)
+	var leather := Color(0.16, 0.17, 0.19)
+	_box(cabin, "FloorCarpet", Vector3(0, 0.69, 0.12), Vector3(1.66, 0.08, 2.65), dark)
+	_box(cabin, "Dashboard", Vector3(0, 1.22, -0.78), Vector3(1.62, 0.28, 0.35), dark)
+	_box(cabin, "InstrumentCluster", Vector3(-0.38, 1.36, -0.59), Vector3(0.55, 0.13, 0.08), Color(0.015, 0.025, 0.035))
+	_box(cabin, "CenterDisplay", Vector3(0.20, 1.37, -0.61), Vector3(0.38, 0.20, 0.045), Color(0.025, 0.12, 0.17))
+	_box(cabin, "CenterConsole", Vector3(0.0, 0.91, -0.02), Vector3(0.40, 0.20, 1.0), Color(0.09, 0.10, 0.12), 0.35)
+	for side in [-1.0, 1.0]:
+		_box(cabin, "SeatBase", Vector3(side * 0.43, 0.91, 0.25), Vector3(0.57, 0.20, 0.72), leather)
+		_box(cabin, "SeatBack", Vector3(side * 0.43, 1.27, 0.56), Vector3(0.57, 0.72, 0.20), leather)
+		_box(cabin, "HeadRest", Vector3(side * 0.43, 1.72, 0.59), Vector3(0.38, 0.25, 0.18), leather)
+		_box(cabin, "DoorCard", Vector3(side * 0.79, 1.02, 0.10), Vector3(0.06, 0.44, 1.42), dark)
+	# Steering column and visible wheel ring approximation.
+	steering_wheel = Node3D.new()
+	steering_wheel.name = "SteeringWheel"
+	steering_wheel.position = Vector3(-0.40, 1.40, -0.47)
+	cabin.add_child(steering_wheel)
+	var rim := _cylinder(steering_wheel, "SteeringRim", Vector3.ZERO, 0.22, 0.045, Color(0.025, 0.03, 0.035))
+	rim.rotation.x = PI / 2.0
+	_box(steering_wheel, "SteeringSpoke", Vector3(0, 0, 0), Vector3(0.04, 0.34, 0.035), Color(0.45, 0.46, 0.48), 0.6)
+	_box(cabin, "GearSelector", Vector3(0.20, 1.07, 0.05), Vector3(0.10, 0.28, 0.10), Color(0.32, 0.33, 0.35), 0.7)
+	for x in [-0.34, -0.12, 0.12]:
+		_box(cabin, "Pedal", Vector3(x, 0.79, -0.60), Vector3(0.10, 0.045, 0.16), Color(0.35, 0.36, 0.38), 0.6)
+	dashboard_label = Label3D.new()
+	dashboard_label.text = "0 km/h   P"
+	dashboard_label.font_size = 32
+	dashboard_label.position = Vector3(-0.39, 1.43, -0.52)
+	dashboard_label.modulate = Color(0.35, 0.95, 0.70)
+	cabin.add_child(dashboard_label)
+
+	# Hinged doors that can be opened while parked.
+	left_door = _make_door(-1.0)
+	right_door = _make_door(1.0)
+
+	# Headlamps and brake/tail lamps.
+	for side in [-1.0, 1.0]:
+		_box(self, "HeadlampLens", Vector3(side * 0.69, 0.86, -2.06), Vector3(0.42, 0.20, 0.055), Color(0.92, 0.88, 0.68), 0.1)
+		var lamp := SpotLight3D.new()
+		lamp.position = Vector3(side * 0.69, 0.88, -2.02)
+		lamp.rotation_degrees = Vector3(-8, 180, 0)
+		lamp.spot_range = 28.0
+		lamp.spot_angle = 34.0
+		lamp.light_energy = 2.0
+		lamp.visible = false
+		add_child(lamp)
+		headlamps.append(lamp)
+		var tail := _box(self, "BrakeTailLamp", Vector3(side * 0.69, 0.86, 2.06), Vector3(0.42, 0.20, 0.055), Color(0.30, 0.025, 0.02))
+		tail_lamps.append(tail)
+	brake_material = _mat(Color(0.30, 0.025, 0.02), 0.1)
+	# Exhaust outlet.
+	_cylinder(self, "Exhaust", Vector3(0.62, 0.38, 2.12), 0.075, 0.18, Color(0.24, 0.25, 0.27), 0.8).rotation.x = PI / 2.0
+
+func _make_door(side: float) -> Node3D:
+	var hinge := Node3D.new()
+	hinge.name = "DoorHinge"
+	hinge.position = Vector3(side * 0.82, 1.0, -0.55)
+	add_child(hinge)
+	_box(hinge, "DoorPanel", Vector3(side * 0.40, 0, 0.48), Vector3(0.10, 0.56, 1.18), Color(0.12, 0.29, 0.62), 0.55)
+	_box(hinge, "DoorWindow", Vector3(side * 0.40, 0.38, 0.48), Vector3(0.055, 0.34, 1.05), Color(0.12, 0.22, 0.29), 0.2)
+	return hinge
+
+func _build_cameras() -> void:
 	vehicle_camera = Camera3D.new()
-	vehicle_camera.name = "VehicleCamera"
-	vehicle_camera.position = Vector3(0, 3.3, 7.8)
+	vehicle_camera.name = "ChaseCamera"
+	vehicle_camera.position = Vector3(0, 3.7, 8.2)
 	add_child(vehicle_camera)
-	vehicle_camera.look_at(global_position + Vector3(0, 0.9, 0), Vector3.UP)
+	vehicle_camera.look_at(global_position + Vector3(0, 1.0, 0), Vector3.UP)
 	vehicle_camera.current = false
+	interior_camera = Camera3D.new()
+	interior_camera.name = "DriverCamera"
+	interior_camera.position = Vector3(-0.38, 1.62, -0.28)
+	interior_camera.rotation_degrees = Vector3(-4, 0, 0)
+	add_child(interior_camera)
+	interior_camera.current = false
 
 func _build_controls() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "VehicleControls"
-	add_child(layer)
+	controls_layer = CanvasLayer.new()
+	controls_layer.name = "VehicleControls"
+	add_child(controls_layer)
 	var panel := PanelContainer.new()
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
-	panel.offset_left = -210
-	panel.offset_right = -12
-	panel.offset_top = 210
-	panel.offset_bottom = 470
-	layer.add_child(panel)
-	var column := VBoxContainer.new()
-	panel.add_child(column)
-	enter_button = Button.new()
-	enter_button.text = "سوار خودرو"
-	enter_button.custom_minimum_size = Vector2(180, 44)
-	column.add_child(enter_button)
-	enter_button.pressed.connect(_toggle_vehicle)
-	var row_one := HBoxContainer.new()
-	column.add_child(row_one)
-	_add_drive_button(row_one, "چپ", "left")
-	_add_drive_button(row_one, "گاز", "accelerate")
-	var row_two := HBoxContainer.new()
-	column.add_child(row_two)
-	_add_drive_button(row_two, "راست", "right")
-	_add_drive_button(row_two, "ترمز / عقب", "brake")
+	panel.offset_left = -250
+	panel.offset_right = -10
+	panel.offset_top = 125
+	panel.offset_bottom = 560
+	controls_layer.add_child(panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 5)
+	panel.add_child(col)
+	enter_button = _button(col, "سوار خودرو", _toggle_vehicle)
+	var row := HBoxContainer.new()
+	col.add_child(row)
+	_hold_button(row, "◀ فرمان", "left")
+	_hold_button(row, "گاز", "accelerate")
+	var row2 := HBoxContainer.new()
+	col.add_child(row2)
+	_hold_button(row2, "فرمان ▶", "right")
+	_hold_button(row2, "ترمز", "brake")
+	var row3 := HBoxContainer.new()
+	col.add_child(row3)
+	_hold_button(row3, "ترمز دستی", "handbrake")
+	_button(row3, "دنده", _cycle_gear)
+	var row4 := HBoxContainer.new()
+	col.add_child(row4)
+	_button(row4, "دوربین", _toggle_camera)
+	_button(row4, "چراغ", _toggle_lights)
+	var row5 := HBoxContainer.new()
+	col.add_child(row5)
+	_button(row5, "درها", _toggle_doors)
+	_button(row5, "راهنما", _cycle_indicators)
 	speed_label = Label.new()
-	speed_label.text = "سرعت: ۰"
-	column.add_child(speed_label)
+	speed_label.text = "سرعت: ۰ km/h"
+	col.add_child(speed_label)
+	gear_label = Label.new()
+	gear_label.text = "دنده: P"
+	col.add_child(gear_label)
+	controls_layer.visible = false
 
-func _add_drive_button(parent: HBoxContainer, caption: String, action: String) -> void:
-	var button := Button.new()
-	button.text = caption
-	button.custom_minimum_size = Vector2(86, 54)
-	parent.add_child(button)
-	button.button_down.connect(_set_control.bind(action, true))
-	button.button_up.connect(_set_control.bind(action, false))
+func _button(parent: Node, caption: String, callback: Callable) -> Button:
+	var b := Button.new()
+	b.text = caption
+	b.custom_minimum_size = Vector2(100, 42)
+	parent.add_child(b)
+	b.pressed.connect(callback)
+	return b
+
+func _hold_button(parent: Node, caption: String, action: String) -> void:
+	var b := Button.new()
+	b.text = caption
+	b.custom_minimum_size = Vector2(105, 48)
+	parent.add_child(b)
+	b.button_down.connect(_set_control.bind(action, true))
+	b.button_up.connect(_set_control.bind(action, false))
 
 func _set_control(action: String, pressed: bool) -> void:
 	match action:
@@ -131,14 +258,14 @@ func _set_control(action: String, pressed: bool) -> void:
 		"brake": throttle = -1.0 if pressed else 0.0
 		"left": steering = -1.0 if pressed else 0.0
 		"right": steering = 1.0 if pressed else 0.0
+		"handbrake": handbrake = pressed
 
 func _toggle_vehicle() -> void:
 	if driver == null:
 		return
 	if not occupied:
 		if global_position.distance_to(driver.global_position) > 7.0:
-			if speed_label:
-				speed_label.text = "برای سوار شدن نزدیک خودرو شو"
+			speed_label.text = "برای سوار شدن نزدیک خودرو شو"
 			return
 		var pivot: Node3D = driver.get("camera_pivot")
 		if pivot and pivot.get_child_count() > 0:
@@ -150,48 +277,100 @@ func _toggle_vehicle() -> void:
 		occupied = true
 		vehicle_camera.current = true
 		enter_button.text = "پیاده شدن"
-		throttle = 0.0
-		steering = 0.0
+		controls_layer.visible = true
 	else:
+		if absf(current_speed) > 1.0:
+			speed_label.text = "برای پیاده شدن توقف کن"
+			return
 		occupied = false
 		current_speed = 0.0
 		velocity = Vector3.ZERO
-		driver.global_position = global_position + global_transform.basis.x * 2.4 + Vector3(0, 0.25, 0)
+		driver.global_position = global_position + global_transform.basis.x * 2.5 + Vector3(0, 0.25, 0)
 		driver.show()
 		driver.set_physics_process(true)
 		vehicle_camera.current = false
+		interior_camera.current = false
 		if player_camera:
 			player_camera.current = true
 		enter_button.text = "سوار خودرو"
+		controls_layer.visible = false
 		throttle = 0.0
 		steering = 0.0
+		gear = "P"
+		_update_gear_label()
+
+func _cycle_gear() -> void:
+	if not occupied or absf(current_speed) > 1.0:
+		return
+	var gears := ["P", "R", "N", "D"]
+	var idx := gears.find(gear)
+	gear = gears[(idx + 1) % gears.size()]
+	_update_gear_label()
+
+func _update_gear_label() -> void:
+	if gear_label:
+		gear_label.text = "دنده: " + gear
+	if dashboard_label:
+		dashboard_label.text = "%d km/h   %s" % [int(absf(current_speed) * 3.6), gear]
+
+func _toggle_camera() -> void:
+	if not occupied:
+		return
+	interior_camera_on = not interior_camera_on
+	vehicle_camera.current = not interior_camera_on
+	interior_camera.current = interior_camera_on
+
+func _toggle_lights() -> void:
+	lights_on = not lights_on
+	for lamp in headlamps:
+		lamp.visible = lights_on
+
+func _toggle_doors() -> void:
+	if absf(current_speed) > 0.5:
+		return
+	var open_now := absf(left_door.rotation.y) < 0.1
+	left_door.rotation.y = -0.95 if open_now else 0.0
+	right_door.rotation.y = 0.95 if open_now else 0.0
+
+func _cycle_indicators() -> void:
+	indicators = (indicators + 1) % 3
+	# 0 off, 1 left, 2 right. Indicator meshes are represented by their state in UI.
+	if speed_label:
+		var suffix := "خاموش" if indicators == 0 else ("چپ" if indicators == 1 else "راست")
+		speed_label.text = "راهنما: " + suffix
 
 func _physics_process(delta: float) -> void:
 	if not occupied:
 		return
-	var keyboard_throttle := 0.0
+	var key_throttle := 0.0
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
-		keyboard_throttle += 1.0
+		key_throttle = 1.0
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
-		keyboard_throttle -= 1.0
-	var active_throttle := keyboard_throttle if keyboard_throttle != 0.0 else throttle
-	var keyboard_steering := 0.0
+		key_throttle = -1.0
+	var active_throttle := key_throttle if key_throttle != 0.0 else throttle
+	var key_steer := 0.0
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
-		keyboard_steering -= 1.0
+		key_steer -= 1.0
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
-		keyboard_steering += 1.0
-	var active_steering := keyboard_steering if keyboard_steering != 0.0 else steering
+		key_steer += 1.0
+	var active_steer := key_steer if key_steer != 0.0 else steering
+	if gear == "P" or gear == "N" or handbrake:
+		active_throttle = 0.0
+	elif gear == "R":
+		active_throttle = -absf(active_throttle)
+	elif gear == "D":
+		active_throttle = maxf(active_throttle, 0.0)
 	if active_throttle > 0.0:
 		current_speed = move_toward(current_speed, max_forward_speed, acceleration * delta)
 	elif active_throttle < 0.0:
 		if current_speed > 0.5:
 			current_speed = move_toward(current_speed, 0.0, brake_strength * delta)
 		else:
-			current_speed = move_toward(current_speed, -max_reverse_speed, acceleration * 0.55 * delta)
+			current_speed = move_toward(current_speed, -max_reverse_speed, acceleration * 0.6 * delta)
 	else:
-		current_speed = move_toward(current_speed, 0.0, 3.5 * delta)
-	if absf(current_speed) > 0.15:
-		rotation.y += active_steering * steering_speed * delta * clampf(absf(current_speed) / 7.0, 0.25, 1.0) * signf(current_speed)
+		current_speed = move_toward(current_speed, 0.0, (brake_strength if handbrake else 3.2) * delta)
+	if absf(current_speed) > 0.12:
+		rotation.y += active_steer * steering_speed * delta * clampf(absf(current_speed) / 7.0, 0.2, 1.0) * signf(current_speed)
 	var forward := -global_transform.basis.z
 	velocity.x = forward.x * current_speed
 	velocity.z = forward.z * current_speed
@@ -202,5 +381,11 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	for wheel in wheel_nodes:
 		wheel.rotate_x(current_speed * delta / 0.39)
+	if steering_wheel:
+		steering_wheel.rotation.z = -active_steer * 0.65
+	var braking := active_throttle < 0.0 or handbrake
+	for tail in tail_lamps:
+		tail.material_override = _mat(Color(1.0, 0.025, 0.015) if braking else Color(0.30, 0.025, 0.02), 0.1)
 	if speed_label:
 		speed_label.text = "سرعت: %d km/h" % int(absf(current_speed) * 3.6)
+	_update_gear_label()
