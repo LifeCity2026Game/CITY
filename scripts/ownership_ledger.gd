@@ -206,6 +206,9 @@ func _send_notice(peer_id: int, message: String) -> void:
 func rpc_receive_notice(message: String) -> void:
 	ledger_notice.emit(message)
 
+func get_document(document_id: String) -> Dictionary:
+	return documents.get(document_id, {})
+
 func get_documents_for(peer_id: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for doc in documents.values():
