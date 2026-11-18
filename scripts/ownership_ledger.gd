@@ -162,6 +162,8 @@ func _transfer_document(document_id: String, from_peer: int, to_peer: int, event
 	doc.history.append({"event": event_name, "from": from_peer, "to": to_peer, "time": int(Time.get_unix_time_from_system())})
 	documents[document_id] = doc
 	_save_ledger()
+	if _is_authority():
+		receipt_issued.emit(doc)
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc("rpc_sync_document", doc)
 
