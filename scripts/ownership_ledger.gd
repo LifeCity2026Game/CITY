@@ -151,6 +151,7 @@ func _commit_npc_sale(peer_id: int, document_id: String, npc_id: String) -> void
 	var resale_value: int = int(CATALOG.get(item_id, 0) * 0.5)
 	balances[peer_id] = int(balances.get(peer_id, 0)) + resale_value
 	_transfer_document(document_id, peer_id, -1, "npc_sale:" + npc_id)
+	simulate_npc_to_npc_trade(document_id, "NPC-002")
 	_send_balance(peer_id)
 	_send_notice(peer_id, "فروش به %s انجام شد؛ %d سکه دریافت کردی." % [npc_id, resale_value])
 
