@@ -1,12 +1,14 @@
 extends Node3D
 
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
+const STAGE2_SCRIPT = preload("res://scripts/city_stage2.gd")
 var player: CharacterBody3D
 
 func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_mobile_controls()
+	_build_stage_two()
 
 func _material(color: Color) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -72,6 +74,9 @@ func _build_world() -> void:
 	_add_service("CITY BANK", Vector3(29, 4, 28), Color(0.2, 0.48, 0.76))
 	_add_service("CAR DEALERSHIP", Vector3(0, 4, 50), Color(0.2, 0.62, 0.48))
 	_add_service("GOVERNMENT", Vector3(0, 4, -50), Color(0.36, 0.4, 0.52))
+	_add_service("MINISTRY OF INTELLIGENCE", Vector3(-55, 4, -55), Color(0.25, 0.29, 0.38))
+	_add_service("PRESIDENTIAL PALACE", Vector3(55, 4, -55), Color(0.68, 0.57, 0.32))
+	_add_service("ARMED FORCES HQ", Vector3(55, 4, 55), Color(0.30, 0.39, 0.34))
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	_add_box(self, label_text, pos, Vector3(17, 8, 13), color)
@@ -111,3 +116,9 @@ func _add_control_button(parent: HBoxContainer, caption: String, axis: String) -
 	parent.add_child(button)
 	button.button_down.connect(func(): player.set_mobile_axis(axis, true))
 	button.button_up.connect(func(): player.set_mobile_axis(axis, false))
+
+func _build_stage_two() -> void:
+	var systems := Node.new()
+	systems.name = "Stage2Systems"
+	systems.set_script(STAGE2_SCRIPT)
+	add_child(systems)
