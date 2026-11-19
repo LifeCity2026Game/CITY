@@ -58,6 +58,17 @@ jobs:
             exit 1
           fi
 
+      - name: Test military command, aircraft strikes and city hall
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/military_smoke_test.gd 2>&1 | tee military-test.log
+          if ! grep -q "MILITARY_SMOKE_TEST_PASS" military-test.log; then
+            echo "Military command smoke test did not pass."
+            exit 1
+          fi
+
       - name: Test vehicle entry, acceleration and exit
         timeout-minutes: 3
         shell: bash
