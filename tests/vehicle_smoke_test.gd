@@ -285,6 +285,25 @@ func _run_vehicle_checks() -> void:
 		return
 	brake_button.button_up.emit()
 	car.current_speed = 0.0
+	var obstacle := StaticBody3D.new()
+	obstacle.name = "VehicleCollisionTestObstacle"
+	obstacle.position = Vector3(4.0, 0.2, 2.5)
+	var obstacle_shape := CollisionShape3D.new()
+	var obstacle_box := BoxShape3D.new()
+	obstacle_box.size = Vector3(4.0, 3.0, 1.0)
+	obstacle_shape.shape = obstacle_box
+	obstacle.add_child(obstacle_shape)
+	game.add_child(obstacle)
+	car.gear = "D"
+	var health_before_collision: float = car.vehicle_health
+	accelerator_button.button_down.emit()
+	for collision_frame in range(60):
+		await physics_frame
+	accelerator_button.button_up.emit()
+	if car.vehicle_health >= health_before_collision:
+		_fail("Physical collision with an obstacle did not damage the vehicle")
+		return
+	car.current_speed = 0.0
 	car.gear = "P"
 	car.enter_button.pressed.emit()
 	if car.occupied:
