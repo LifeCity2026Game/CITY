@@ -119,6 +119,7 @@ func _make_leg(pos: Vector3, pants_mat: Material, shoe_mat: Material) -> Node3D:
 
 func _build_camera() -> void:
 	camera_pivot = Node3D.new()
+	camera_pivot.top_level = true
 	camera_pivot.position = global_position + Vector3(0, 1.55, 0)
 	add_child(camera_pivot)
 	var camera := Camera3D.new()
