@@ -969,22 +969,24 @@ func can_access_permission(actor_peer: int, permission: String) -> bool:
 	return _actor_has_permission(actor_peer, permission)
 
 func get_central_bank_snapshot(actor_peer: int) -> Dictionary:
-	if not _actor_has_permission(actor_peer, "view_central_bank"):
-		return {}
-	var safe_accounts: Dictionary = {}
-	for number in bank_accounts.keys():
-		var safe_account: Dictionary = bank_accounts[number].duplicate(true)
-		safe_account.erase("pin_hash")
-		safe_account["pin_security"] = "رمز محرمانه و هش‌شده؛ قابل مشاهده نیست"
-		safe_accounts[number] = safe_account
-	return {
-		"treasury": central_bank_treasury,
-		"accounts": safe_accounts,
-		"cheques": cheque_book.duplicate(true),
-		"prison_records": prison_records.duplicate(true),
-		"transactions": cash_transactions.duplicate(true),
-		"citizens": citizen_registry.duplicate(true)
-	}
+	var snapshot: Dictionary = {}
+	if _actor_has_permission(actor_peer, "view_central_bank"):
+		var safe_accounts: Dictionary = {}
+		for number in bank_accounts.keys():
+			var safe_account: Dictionary = bank_accounts[number].duplicate(true)
+			safe_account.erase("pin_hash")
+			safe_account["pin_security"] = "رمز محرمانه و هش‌شده؛ قابل مشاهده نیست"
+			safe_accounts[number] = safe_account
+		snapshot["treasury"] = central_bank_treasury
+		snapshot["accounts"] = safe_accounts
+		snapshot["cheques"] = cheque_book.duplicate(true)
+		snapshot["transactions"] = cash_transactions.duplicate(true)
+	if _actor_has_permission(actor_peer, "view_prison_records"):
+		snapshot["prison_records"] = prison_records.duplicate(true)
+	if _actor_has_permission(actor_peer, "view_citizen_records"):
+		snapshot["citizens"] = citizen_registry.duplicate(true)
+	return snapshot
+
 
 func _save_ledger() -> void:
 	if not _is_authority():
