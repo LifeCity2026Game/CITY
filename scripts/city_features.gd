@@ -23,7 +23,8 @@ const SERVICE_BUILDINGS := [
 	{"name": "ساختمان دولت", "id": "government", "color": Color(0.36, 0.40, 0.52)},
 	{"name": "وزارت اطلاعات", "id": "intelligence", "color": Color(0.25, 0.29, 0.38)},
 	{"name": "کاخ ریاست جمهوری", "id": "palace", "color": Color(0.68, 0.57, 0.32)},
-	{"name": "ستاد کل نیروهای مسلح", "id": "military", "color": Color(0.30, 0.39, 0.34)}
+	{"name": "ستاد کل نیروهای مسلح", "id": "military", "color": Color(0.30, 0.39, 0.34)},
+	{"name": "تعمیرگاه خودرو", "id": "repair_garage", "color": Color(0.34, 0.38, 0.42)}
 ]
 
 func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_node: DirectionalLight3D) -> void:
@@ -74,7 +75,8 @@ func _build_facades() -> void:
 	# Decorative windows and cornices on the seven public buildings.
 	var positions := [
 		Vector3(-29, 4, 28), Vector3(29, 4, 28), Vector3(0, 4, 50),
-		Vector3(0, 4, -50), Vector3(-55, 4, -55), Vector3(55, 4, -55), Vector3(55, 4, 55)
+		Vector3(0, 4, -50), Vector3(-55, 4, -55), Vector3(55, 4, -55), Vector3(55, 4, 55),
+		Vector3(-55, 4, 55)
 	]
 	for i in range(positions.size()):
 		var p: Vector3 = positions[i]
