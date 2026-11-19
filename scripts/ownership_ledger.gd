@@ -767,6 +767,15 @@ func _settle_due_cheques() -> void:
 		for citizen_id in citizen_registry.keys():
 			citizen_record_changed.emit(str(citizen_id))
 
+func send_prison_status(peer_id: int) -> void:
+	if not _is_authority():
+		return
+	for record_id in prison_records.keys():
+		var record: Dictionary = prison_records[record_id]
+		if int(record.get("peer_id", -999)) == peer_id and str(record.get("status", "")) == "زندانی":
+			_notify_prison_state(peer_id, str(record_id), true)
+			return
+
 func _notify_prison_state(peer_id: int, record_id: String, imprisoned: bool) -> void:
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "rpc_receive_prison_state", record_id, imprisoned)
