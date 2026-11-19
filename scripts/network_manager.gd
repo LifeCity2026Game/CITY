@@ -71,6 +71,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		ledger.register_online_player(peer_id)
 		ledger.send_snapshot(peer_id)
 		ledger.send_permission_snapshot(peer_id)
+		ledger.send_prison_status(peer_id)
 	var services := get_parent().get_node_or_null("LifeCityServices")
 	if services:
 		for role_peer_id in services.roles.keys():
