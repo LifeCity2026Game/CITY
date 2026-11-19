@@ -47,6 +47,44 @@ func _run_vehicle_checks() -> void:
 	if player.mobile_direction.length() > 0.01:
 		_fail("Character joystick did not release movement")
 		return
+	var services := game.get_node_or_null("LifeCityServices")
+	if services == null or services.sim_cards.size() != 2:
+		_fail("Mobile services or two-SIM configuration is missing")
+		return
+	if services.ONLINE_PRODUCTS.size() < 10 or services.HOME_CATALOG.size() < 4 or services.CAR_PRICES.size() != 9:
+		_fail("Online shop, physical property store or vehicle catalog is incomplete")
+		return
+	if game.get_node("Stage2Systems").get("player_black_money") != null:
+		_fail("Black money field should be removed")
+		return
+	if game.ownership_ledger.get_balance(2) != 0:
+		_fail("New online citizen must start with zero balance")
+		return
+	services._create_account(0)
+	services._create_account(0)
+	services._create_account(0)
+	services._create_account(0)
+	if services.sim_cards[0].accounts.size() != 3:
+		_fail("A SIM must allow at most three bank accounts")
+		return
+	services._assign_role(2)
+	if not services.roles.has(2):
+		_fail("Creator could not assign a citizen role")
+		return
+	game.ownership_ledger.balances[2] = 1000
+	if not game.ownership_ledger.owner_withdraw(2, 200) or game.ownership_ledger.get_balance(2) != 800:
+		_fail("Creator-only withdrawal did not update citizen balance")
+		return
+	services.order_list.append({"item":"مبل", "remaining":1.0, "delivered":false})
+	services._process(1.1)
+	if not bool(services.order_list[0].delivered):
+		_fail("Online order did not deliver after one in-game day timer")
+		return
+	services.owned_vehicles.append("دنا")
+	services._spawn_car("دنا")
+	if car.global_position.distance_to(player.global_position) < 3.0:
+		_fail("Garage spawn did not place owned vehicle near the player")
+		return
 	var city := game.get_node_or_null("CityFeatures")
 	if city == null or not city.interior_positions.has("repair_garage"):
 		_fail("Vehicle repair garage or its enterable interior is missing")
