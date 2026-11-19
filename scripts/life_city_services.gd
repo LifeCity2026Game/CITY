@@ -7,6 +7,7 @@ var player: CharacterBody3D
 var vehicle: CharacterBody3D
 var network: Node
 var phone_panel: PanelContainer
+var content_layout: VBoxContainer
 var notice_label: Label
 var details_label: Label
 var target_input: LineEdit
@@ -107,6 +108,7 @@ func _build_ui() -> void:
 	layout.name = "Content"
 	layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(layout)
+	content_layout = layout
 	var heading := Label.new()
 	heading.text = "LIFE CITY | موبایل و خدمات شهر"
 	layout.add_child(heading)
@@ -126,7 +128,7 @@ func _build_ui() -> void:
 	notice_changed.connect(func(message: String): notice_label.text = message)
 
 func _content() -> VBoxContainer:
-	return phone_panel.get_node("ScrollContainer/Content") as VBoxContainer
+	return content_layout
 
 func _clear_dynamic() -> void:
 	var layout := _content()
