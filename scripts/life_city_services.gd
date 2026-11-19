@@ -15,6 +15,11 @@ var amount_input: LineEdit
 var pin_input: LineEdit
 var account_input: LineEdit
 var reason_input: LineEdit
+var prison_release_id_input: LineEdit
+var prison_release_reason_input: LineEdit
+var prison_extend_id_input: LineEdit
+var prison_extend_days_input: LineEdit
+var prison_extend_reason_input: LineEdit
 var permissions_draft: Dictionary = {}
 var own_accounts_cache: Array = []
 var own_cheques_cache: Array = []
@@ -399,10 +404,11 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "pardon_ban":
 		if ledger and target_input and reason_input: ledger.request_pardon_cheque_ban(int(target_input.text), reason_input.text)
 	elif action == "release_prisoner":
-		if ledger and target_input and reason_input: ledger.request_release_prisoner(target_input.text.strip_edges(), reason_input.text)
+		if ledger and prison_release_id_input and prison_release_reason_input:
+			ledger.request_release_prisoner(prison_release_id_input.text.strip_edges(), prison_release_reason_input.text)
 	elif action == "extend_prison_sentence":
-		if ledger and target_input and amount_input and reason_input:
-			ledger.request_extend_prison_sentence(target_input.text.strip_edges(), int(amount_input.text), reason_input.text)
+		if ledger and prison_extend_id_input and prison_extend_days_input and prison_extend_reason_input:
+			ledger.request_extend_prison_sentence(prison_extend_id_input.text.strip_edges(), int(prison_extend_days_input.text), prison_extend_reason_input.text)
 	elif action == "withdraw_treasury":
 		if ledger and account_input and amount_input and reason_input: ledger.request_central_bank_withdraw(account_input.text.strip_edges(), int(amount_input.text), reason_input.text)
 	elif action == "save_permissions":
@@ -665,13 +671,13 @@ func _render_page() -> void:
 			else:
 				ledger.request_central_bank_snapshot()
 			if ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "release_prisoner"):
-				target_input = _add_input("کد پرونده برای عفو (JAIL-...)")
-				reason_input = _add_input("دلیل عفو")
+				prison_release_id_input = _add_input("کد پرونده برای عفو (JAIL-...)")
+				prison_release_reason_input = _add_input("دلیل عفو")
 				_add_button(layout, "عفو و آزادی زندانی", "release_prisoner")
-				target_input = _add_input("کد پرونده برای تمدید حبس")
-				amount_input = _add_input("تعداد روزهای اضافه")
-				amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-				reason_input = _add_input("دلیل تمدید حبس")
+				prison_extend_id_input = _add_input("کد پرونده برای تمدید حبس")
+				prison_extend_days_input = _add_input("تعداد روزهای اضافه")
+				prison_extend_days_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+				prison_extend_reason_input = _add_input("دلیل تمدید حبس")
 				_add_button(layout, "تمدید مدت حبس", "extend_prison_sentence")
 		"citizen_search":
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_citizen_records"):
