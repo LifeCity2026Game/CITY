@@ -167,7 +167,7 @@ func _build_world() -> void:
 			var height := float(9 + ((abs(x * 7 + z * 11) * 13) % 20))
 			var width := 10.0 + float((abs(x + z) % 3) * 1.5)
 			var color: Color = colors[abs(x * 3 + z * 5) % colors.size()]
-			_add_box(self, "Building_%d_%d" % [x, z], Vector3(px, height / 2.0, pz), Vector3(width, height, 11), color)
+			_add_city_building(x, z, Vector3(px, 0.0, pz), width, height, color)
 	_add_service("BANK CENTRAL", Vector3(-29, 4, 28), Color(0.72, 0.61, 0.25))
 	_add_service("CITY BANK", Vector3(29, 4, 28), Color(0.2, 0.48, 0.76))
 	_add_service("CAR DEALERSHIP", Vector3(0, 4, 50), Color(0.2, 0.62, 0.48))
@@ -186,6 +186,73 @@ func _build_world() -> void:
 	_decorate_ceremony_building("MARRIAGE REGISTRY", Vector3(-55, 4, 92), Color(0.82, 0.72, 0.48), false)
 	_decorate_ceremony_building("WEDDING HALL", Vector3(0, 4, -92), Color(0.88, 0.73, 0.76), true)
 	_build_city_details()
+
+
+func _add_city_building(grid_x: int, grid_z: int, pos: Vector3, width: float, height: float, facade_color: Color) -> void:
+	var building := StaticBody3D.new()
+	building.name = "Building_%d_%d" % [grid_x, grid_z]
+	building.position = pos
+	building.add_to_group("city_buildings")
+	add_child(building)
+	var body_mesh := MeshInstance3D.new()
+	var body_shape := BoxMesh.new()
+	body_shape.size = Vector3(width, height, 11.0)
+	body_mesh.mesh = body_shape
+	body_mesh.position.y = height * 0.5
+	body_mesh.material_override = _material(facade_color)
+	building.add_child(body_mesh)
+	var collision := CollisionShape3D.new()
+	var collision_shape := BoxShape3D.new()
+	collision_shape.size = Vector3(width, height, 11.0)
+	collision.shape = collision_shape
+	collision.position.y = height * 0.5
+	building.add_child(collision)
+	var floors := maxi(2, int(floor(height / 3.2)))
+	var category_index := abs(grid_x * 7 + grid_z * 11) % 8
+	var is_shop := category_index == 1 or category_index == 6
+	var is_apartment := category_index == 0 or category_index == 5 or category_index == 7
+	var trim := facade_color.darkened(0.28)
+	var glass := Color(0.12, 0.27, 0.36)
+	var frame := Color(0.83, 0.82, 0.75)
+	# Ground-floor storefront and a clearly readable pedestrian entrance.
+	if is_shop:
+		_add_box(building, "ShopfrontGlass", Vector3(0, 1.65, 5.53), Vector3(width * 0.68, 2.65, 0.09), Color(0.16, 0.34, 0.42), false)
+		_add_box(building, "ShopSignBoard", Vector3(0, 3.25, 5.62), Vector3(width * 0.82, 0.65, 0.22), trim, false)
+		var shop_sign := Label3D.new()
+		shop_sign.text = "MARKET" if category_index == 6 else "STORE"
+		shop_sign.position = Vector3(0, 3.22, 5.78)
+		shop_sign.font_size = 24
+		building.add_child(shop_sign)
+	else:
+		_add_box(building, "EntranceDoor", Vector3(0, 1.2, 5.56), Vector3(1.35, 2.4, 0.12), Color(0.20, 0.15, 0.11), false)
+		_add_box(building, "EntranceCanopy", Vector3(0, 2.55, 5.9), Vector3(2.5, 0.18, 1.0), trim, false)
+	for floor_index in range(floors):
+		var y := 3.6 + float(floor_index) * 3.05
+		if y > height - 0.7:
+			continue
+		var columns := 3 if width < 12.0 else 4
+		for window_index in range(columns):
+			var wx := -width * 0.34 + float(window_index) * (width * 0.68 / float(columns - 1))
+			var window_height := 1.35 if is_apartment else 1.15
+			var window_width := 1.55 if is_apartment else 1.75
+			_add_box(building, "WindowFrame", Vector3(wx, y, 5.56), Vector3(window_width + 0.18, window_height + 0.18, 0.10), frame, false)
+			_add_box(building, "WindowGlass", Vector3(wx, y, 5.63), Vector3(window_width, window_height, 0.06), glass, false)
+			if is_apartment and floor_index < floors - 1:
+				_add_box(building, "BalconySlab", Vector3(wx, y - 0.95, 6.05), Vector3(2.0, 0.12, 1.0), trim, false)
+				_add_box(building, "BalconyRail", Vector3(wx, y - 0.55, 6.48), Vector3(1.9, 0.65, 0.07), frame, false)
+		# Side-facing windows break up the long blank elevations.
+		for side in [-1.0, 1.0]:
+			_add_box(building, "SideWindow", Vector3(side * (width * 0.5 + 0.06), y, -1.8), Vector3(0.08, 1.1, 1.6), glass, false)
+	# Vertical pilasters, roof parapet, rooftop equipment and exterior AC units.
+	for side in [-1.0, 1.0]:
+		_add_box(building, "FacadePilaster", Vector3(side * (width * 0.46), height * 0.5, 5.57), Vector3(0.22, height, 0.18), trim, false)
+		_add_box(building, "RoofParapet", Vector3(side * (width * 0.5 - 0.1), height + 0.35, 0), Vector3(0.2, 0.7, 11.0), trim, false)
+		_add_box(building, "ExteriorAC", Vector3(side * (width * 0.31), 3.1, 5.8), Vector3(0.8, 0.48, 0.45), Color(0.70, 0.72, 0.73), false)
+	_add_box(building, "RoofFrontParapet", Vector3(0, height + 0.35, 5.4), Vector3(width, 0.7, 0.2), trim, false)
+	_add_box(building, "RoofRearParapet", Vector3(0, height + 0.35, -5.4), Vector3(width, 0.7, 0.2), trim, false)
+	if height > 18.0:
+		_add_cylinder(building, "RooftopWaterTank", Vector3(width * 0.25, height + 1.1, -3.3), 0.85, 1.7, Color(0.35, 0.40, 0.43))
+		_add_box(building, "RooftopServiceRoom", Vector3(-width * 0.22, height + 0.65, -3.2), Vector3(2.2, 1.3, 2.4), facade_color.darkened(0.12), false)
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	var building := Node3D.new()
