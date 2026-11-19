@@ -126,7 +126,7 @@ func _physics_process(delta: float) -> void:
 			continue
 		var speed := float(car.get_meta("traffic_speed", 7.0))
 		car.velocity = Vector3(0.0, -2.0, speed)
-		var collision := car.move_and_collide(car.velocity * delta)
+		var collision: KinematicCollision3D = car.move_and_collide(car.velocity * delta)
 		if collision:
 			car.velocity = Vector3.ZERO
 			car.set_meta("traffic_blocked", true)
