@@ -46,6 +46,9 @@ func _run_vehicle_checks() -> void:
 	if car.VEHICLE_CATALOG.size() != 9:
 		_fail("The requested nine vehicle presets are not registered")
 		return
+	if car.vehicle_name != "دنا" or car.style_root == null:
+		_fail("Default Dena exterior profile was not initialized")
+		return
 	if car.hood_hinge == null or car.trunk_hinge == null:
 		_fail("Interactive hood or trunk hinge is missing")
 		return
@@ -58,8 +61,8 @@ func _run_vehicle_checks() -> void:
 		return
 	for model_step in range(8):
 		car._cycle_vehicle_model()
-	if car.vehicle_name != "دنا":
-		_fail("Vehicle model selector did not cycle back to Dena")
+	if car.vehicle_name != "دنا" or car.style_root == null:
+		_fail("Vehicle model selector did not cycle back to Dena with a style profile")
 		return
 
 	if car.global_position.distance_to(player.global_position) > 7.0:
