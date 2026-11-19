@@ -202,6 +202,20 @@ func _build_interiors() -> void:
 		light.light_energy = 1.1
 		light.omni_range = 14.0
 		room.add_child(light)
+		if str(entry.id) == "prison":
+			for cell_index in range(3):
+				var cell_x := -4.2 + float(cell_index) * 4.2
+				_box(room, "PrisonCellBack_%d" % cell_index, Vector3(cell_x, 1.5, -4.0), Vector3(3.6, 3.0, 0.18), Color(0.25, 0.27, 0.29))
+				for bar_index in range(6):
+					_box(room, "PrisonBar_%d_%d" % [cell_index, bar_index], Vector3(cell_x - 1.5 + float(bar_index) * 0.6, 1.5, -2.0), Vector3(0.07, 3.0, 0.07), Color(0.12, 0.13, 0.14))
+			_box(room, "PrisonGuardDesk", Vector3(0, 0.7, 2.6), Vector3(4.2, 1.4, 1.0), Color(0.22, 0.24, 0.27))
+		elif str(entry.id) == "central_bank":
+			_box(room, "CentralBankVault", Vector3(4.5, 1.4, -3.4), Vector3(2.8, 2.8, 2.2), Color(0.42, 0.43, 0.46))
+			_box(room, "CentralBankVaultDoor", Vector3(4.5, 1.4, -2.25), Vector3(1.5, 2.2, 0.12), Color(0.70, 0.66, 0.52))
+		elif str(entry.id) == "palace":
+			_box(room, "PresidentialCouncilTable", Vector3(0, 0.55, 1.2), Vector3(5.2, 0.18, 2.0), Color(0.30, 0.19, 0.10))
+		elif str(entry.id) == "military":
+			_box(room, "MilitaryCommandMap", Vector3(0, 1.8, -4.7), Vector3(4.8, 2.5, 0.12), Color(0.12, 0.30, 0.22))
 		var door_marker := MeshInstance3D.new()
 		var door_mesh := BoxMesh.new()
 		door_mesh.size = Vector3(2.0, 2.8, 0.18)
