@@ -1,7 +1,7 @@
 extends SceneTree
 
 const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
-const GAME_PORT := 17777
+const GAME_PORT := 7777
 const TEST_TIMEOUT := 12.0
 
 var manager: Node
