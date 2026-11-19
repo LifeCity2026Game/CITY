@@ -9,6 +9,8 @@ var local_player: CharacterBody3D
 var remote_players: Dictionary = {}
 var sync_clock := 0.0
 var connected := false
+var upnp: UPNP
+var upnp_mapped := false
 
 func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
@@ -21,6 +23,10 @@ func _ready() -> void:
 func set_local_player(player: CharacterBody3D) -> void:
 	local_player = player
 
+func _exit_tree() -> void:
+	if upnp and upnp_mapped:
+		upnp.delete_port_mapping(GAME_PORT, "UDP")
+
 func host_game() -> void:
 	var peer := ENetMultiplayerPeer.new()
 	var error := peer.create_server(GAME_PORT, MAX_PLAYERS - 1)
@@ -29,7 +35,20 @@ func host_game() -> void:
 		return
 	multiplayer.multiplayer_peer = peer
 	connected = true
-	status_changed.emit("اتاق ساخته شد؛ شناسه میزبان: 1. برای اتصال دوستت، IP عمومی و UDP پورت 7777 لازم است.")
+	var network_hint := "برای اتصال دوستت، آدرس عمومی و UDP پورت 7777 لازم است."
+	upnp = UPNP.new()
+	var discover_result := upnp.discover(1200, 2)
+	if discover_result == UPNP.UPNP_RESULT_SUCCESS:
+		var map_result := upnp.add_port_mapping(GAME_PORT, GAME_PORT, "LIFE CITY", "UDP")
+		if map_result == UPNP.UPNP_RESULT_SUCCESS:
+			upnp_mapped = true
+			var external_ip := upnp.query_external_address()
+			network_hint = "آدرس میزبان: %s:%d | این آدرس را برای دوستت بفرست." % [external_ip, GAME_PORT]
+		else:
+			network_hint = "UPnP پیدا شد اما بازکردن پورت ناموفق بود؛ UDP 7777 را دستی باز کن."
+	else:
+		network_hint = "روتر UPnP پیدا نشد؛ UDP 7777 را دستی باز کن. اینترنت موبایل با CGNAT ممکن است اتصال مستقیم را مسدود کند."
+	status_changed.emit("اتاق ساخته شد؛ شناسه میزبان: 1. " + network_hint)
 
 func join_game(address: String) -> void:
 	if address.strip_edges().is_empty():
