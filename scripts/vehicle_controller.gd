@@ -31,6 +31,8 @@ var left_door: Node3D
 var right_door: Node3D
 var headlamps: Array[SpotLight3D] = []
 var tail_lamps: Array[MeshInstance3D] = []
+var left_indicator_lamps: Array[MeshInstance3D] = []
+var right_indicator_lamps: Array[MeshInstance3D] = []
 var brake_material: StandardMaterial3D
 var tail_material: StandardMaterial3D
 var brake_lights_active := false
@@ -204,6 +206,16 @@ func _build_vehicle() -> void:
 		headlamps.append(lamp)
 		var tail := _box(self, "BrakeTailLamp", Vector3(side * 0.69, 0.86, 2.06), Vector3(0.42, 0.20, 0.055), Color(0.30, 0.025, 0.02))
 		tail_lamps.append(tail)
+		var front_indicator := _box(self, "FrontIndicator", Vector3(side * 0.91, 0.76, -2.075), Vector3(0.16, 0.10, 0.045), Color(1.0, 0.48, 0.04))
+		var rear_indicator := _box(self, "RearIndicator", Vector3(side * 0.91, 0.76, 2.075), Vector3(0.16, 0.10, 0.045), Color(1.0, 0.48, 0.04))
+		front_indicator.visible = false
+		rear_indicator.visible = false
+		if side < 0.0:
+			left_indicator_lamps.append(front_indicator)
+			left_indicator_lamps.append(rear_indicator)
+		else:
+			right_indicator_lamps.append(front_indicator)
+			right_indicator_lamps.append(rear_indicator)
 	tail_material = _mat(Color(0.30, 0.025, 0.02), 0.1)
 	brake_material = _mat(Color(1.0, 0.025, 0.015), 0.1)
 	# Exhaust outlet.
@@ -493,10 +505,16 @@ func _toggle_doors() -> void:
 
 func _cycle_indicators() -> void:
 	indicators = (indicators + 1) % 3
-	# 0 off, 1 left, 2 right. Indicator meshes are represented by their state in UI.
 	if speed_label:
 		var suffix := "خاموش" if indicators == 0 else ("چپ" if indicators == 1 else "راست")
 		speed_label.text = "راهنما: " + suffix
+
+func _process(_delta: float) -> void:
+	var blink_on := (Time.get_ticks_msec() / 450) % 2 == 0
+	for lamp in left_indicator_lamps:
+		lamp.visible = indicators == 1 and blink_on
+	for lamp in right_indicator_lamps:
+		lamp.visible = indicators == 2 and blink_on
 
 func apply_impact(impact_speed: float) -> void:
 	current_speed = move_toward(current_speed, 0.0, impact_speed * 1.8)
