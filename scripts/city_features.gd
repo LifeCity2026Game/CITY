@@ -8,9 +8,15 @@ var rain: GPUParticles3D
 var traffic_cars: Array[Node3D] = []
 var traffic_origins: Array[Vector3] = []
 var interior_positions: Dictionary = {}
+var service_floor_positions: Dictionary = {}
 var generic_interior_positions: Array[Dictionary] = []
 var inside_building := false
 var previous_position := Vector3.ZERO
+var current_interior_base := Vector3.ZERO
+var current_building_id := ""
+var current_floor := 0
+var current_floor_count := 1
+var floor_status_label: Label
 var pedestrians: Array[Node3D] = []
 var pedestrian_origins: Array[Vector3] = []
 var day_clock := 0.28
@@ -360,6 +366,42 @@ func _build_interiors() -> void:
 		door_marker.position = Vector3(0, 1.3, 5.35)
 		room.add_child(door_marker)
 
+		var floor_count := _service_floor_count(str(entry.id))
+		service_floor_positions[str(entry.id)] = {"base": room_pos, "count": floor_count}
+		var floor_sign := Label3D.new()
+		floor_sign.name = "FloorSign"
+		floor_sign.text = "طبقه ۱ از %d" % floor_count
+		floor_sign.font_size = 22
+		floor_sign.position = Vector3(0, 2.35, 5.2)
+		room.add_child(floor_sign)
+		for floor_index in range(1, floor_count):
+			var upper_floor := room.duplicate() as Node3D
+			upper_floor.name = "Interior_%s_Floor_%02d" % [str(entry.id), floor_index + 1]
+			upper_floor.position = room_pos + Vector3(0, float(floor_index) * 4.4, 0)
+			var upper_sign := upper_floor.get_node_or_null("FloorSign") as Label3D
+			if upper_sign:
+				upper_sign.text = "طبقه %d از %d" % [floor_index + 1, floor_count]
+			add_child(upper_floor)
+
+
+func _service_floor_count(building_id: String) -> int:
+	match building_id:
+		"military": return 10
+		"central_bank", "city_bank": return 5
+		"government", "intelligence", "palace", "city_hall": return 6
+		"dealership", "repair_garage", "real_estate", "telecom": return 4
+		"prison": return 5
+		"marriage_office", "wedding_hall": return 3
+	return 3
+
+func _change_floor(step: int) -> void:
+	if not inside_building or player == null:
+		return
+	current_floor = clampi(current_floor + step, 0, current_floor_count - 1)
+	player.global_position = current_interior_base + Vector3(0, 1.2 + float(current_floor) * (4.4 if not current_building_id.is_empty() else 4.0), 2.8)
+	player.velocity = Vector3.ZERO
+	if floor_status_label:
+		floor_status_label.text = "طبقه %d از %d" % [current_floor + 1, current_floor_count]
 
 func _build_generic_interiors() -> void:
 	# Every procedural city block gets a matching enterable interior.
@@ -390,7 +432,23 @@ func _build_generic_interiors() -> void:
 			sign.font_size = 24
 			sign.position = Vector3(0, 2.7, -4.28)
 			room.add_child(sign)
-			generic_interior_positions.append({"world": world_pos, "interior": room_pos, "category": category, "node": room})
+			var building_height := float(9 + ((abs(gx * 7 + gz * 11) * 13) % 20))
+			var floor_count := clampi(int(ceil(building_height / 3.05)), 3, 10)
+			var floor_sign := Label3D.new()
+			floor_sign.name = "FloorSign"
+			floor_sign.text = "طبقه ۱ از %d" % floor_count
+			floor_sign.font_size = 20
+			floor_sign.position = Vector3(0, 2.45, 4.2)
+			room.add_child(floor_sign)
+			for floor_index in range(1, floor_count):
+				var upper_floor := room.duplicate() as Node3D
+				upper_floor.name = "GenericInterior_%02d_%02d_Floor_%02d" % [gx, gz, floor_index + 1]
+				upper_floor.position = room_pos + Vector3(0, float(floor_index) * 4.0, 0)
+				var upper_sign := upper_floor.get_node_or_null("FloorSign") as Label3D
+				if upper_sign:
+					upper_sign.text = "طبقه %d از %d" % [floor_index + 1, floor_count]
+				add_child(upper_floor)
+			generic_interior_positions.append({"world": world_pos, "interior": room_pos, "category": category, "node": room, "floors": floor_count})
 			index += 1
 
 func _generic_building_category(gx: int, gz: int) -> String:
@@ -498,6 +556,21 @@ func _build_controls() -> void:
 	enter_button.custom_minimum_size = Vector2(160, 46)
 	layer.add_child(enter_button)
 	enter_button.pressed.connect(_enter_nearest_building)
+	var floor_down := Button.new()
+	floor_down.text = "طبقه پایین"
+	floor_down.position = Vector2(18, 72)
+	floor_down.custom_minimum_size = Vector2(130, 42)
+	layer.add_child(floor_down)
+	floor_down.pressed.connect(func(): _change_floor(-1))
+	var floor_up := Button.new()
+	floor_up.text = "طبقه بالا"
+	floor_up.position = Vector2(154, 72)
+	floor_up.custom_minimum_size = Vector2(130, 42)
+	layer.add_child(floor_up)
+	floor_status_label = Label.new()
+	floor_status_label.position = Vector2(292, 78)
+	floor_status_label.add_theme_color_override("font_color", Color.WHITE)
+	layer.add_child(floor_status_label)
 	var exit_button := Button.new()
 	exit_button.text = "خروج از ساختمان"
 	exit_button.position = Vector2(318, 18)
@@ -551,6 +624,7 @@ func _enter_nearest_building() -> void:
 	var nearest_id := ""
 	var nearest_distance := 999999.0
 	var destination := Vector3.ZERO
+	var floor_count := 1
 	var positions := [
 		Vector3(-29, 4, 28), Vector3(29, 4, 28), Vector3(0, 4, 50),
 		Vector3(0, 4, -50), Vector3(-55, 4, -55), Vector3(55, 4, -55), Vector3(55, 4, 55),
@@ -563,17 +637,43 @@ func _enter_nearest_building() -> void:
 			nearest_distance = distance
 			nearest_id = str(SERVICE_BUILDINGS[i].id)
 			destination = interior_positions[nearest_id]
+			floor_count = int(service_floor_positions[nearest_id].count)
 	for entry in generic_interior_positions:
 		var distance: float = player.global_position.distance_to(entry.world)
 		if distance < nearest_distance:
 			nearest_distance = distance
+			nearest_id = ""
 			destination = entry.interior
+			floor_count = int(entry.get("floors", 1))
 	if nearest_distance > 18.0:
 		return
 	previous_position = player.global_position
+	current_interior_base = destination
+	current_building_id = nearest_id
+	current_floor = 0
+	current_floor_count = maxi(1, floor_count)
 	player.global_position = destination + Vector3(0, 1.2, 2.8)
 	player.velocity = Vector3.ZERO
 	inside_building = true
+	if floor_status_label:
+		floor_status_label.text = "طبقه ۱ از %d" % current_floor_count
+	var services := get_parent().get_node_or_null("LifeCityServices") if get_parent() else null
+	if services:
+		match nearest_id:
+			"military":
+				services.call("_open_military_command", "")
+			"central_bank", "city_bank":
+				services.call("_open_main_menu", "bank")
+			"city_hall":
+				services.call("_open_main_menu", "city_hall")
+			"intelligence":
+				services.call("_open_main_menu", "intelligence")
+			"dealership":
+				services.call("_open_main_menu", "public_garage")
+			"real_estate":
+				services.call("_open_main_menu", "public")
+			"palace", "government":
+				services.call("_open_main_menu", "public")
 
 func _exit_building() -> void:
 	if player == null or not inside_building:
@@ -581,3 +681,8 @@ func _exit_building() -> void:
 	player.global_position = previous_position if previous_position != Vector3.ZERO else Vector3(0, 1.2, 12)
 	player.velocity = Vector3.ZERO
 	inside_building = false
+	current_building_id = ""
+	current_floor = 0
+	current_floor_count = 1
+	if floor_status_label:
+		floor_status_label.text = ""
