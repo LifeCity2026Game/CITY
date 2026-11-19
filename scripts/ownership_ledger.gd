@@ -148,16 +148,27 @@ func _commit_purchase(peer_id: int, item_id: String) -> void:
 
 func request_player_transfer(document_id: String, target_peer_id: int) -> void:
 	if _is_authority():
-		_commit_player_transfer(_local_peer_id(), document_id, target_peer_id)
+		_create_ownership_offer(_local_peer_id(), document_id, target_peer_id)
 	else:
 		rpc_id(1, "rpc_request_player_transfer", document_id, target_peer_id)
 
 @rpc("any_peer", "call_remote", "reliable")
 func rpc_request_player_transfer(document_id: String, target_peer_id: int) -> void:
 	if multiplayer.is_server():
-		_commit_player_transfer(multiplayer.get_remote_sender_id(), document_id, target_peer_id)
+		_create_ownership_offer(multiplayer.get_remote_sender_id(), document_id, target_peer_id)
 
-func _commit_player_transfer(from_peer: int, document_id: String, target_peer: int) -> void:
+func request_accept_ownership_transfer(offer_id: String) -> void:
+	if _is_authority():
+		_accept_ownership_offer(_local_peer_id(), offer_id)
+	else:
+		rpc_id(1, "rpc_request_accept_ownership_transfer", offer_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_accept_ownership_transfer(offer_id: String) -> void:
+	if multiplayer.is_server():
+		_accept_ownership_offer(multiplayer.get_remote_sender_id(), offer_id)
+
+func _create_ownership_offer(from_peer: int, document_id: String, target_peer: int) -> void:
 	if not documents.has(document_id):
 		_send_notice(from_peer, "سند مالکیت پیدا نشد.")
 		return
@@ -167,12 +178,37 @@ func _commit_player_transfer(from_peer: int, document_id: String, target_peer: i
 	if target_peer <= 0 or target_peer == from_peer:
 		_send_notice(from_peer, "شناسه بازیکن مقصد معتبر نیست.")
 		return
-	if multiplayer.has_multiplayer_peer() and target_peer != 1 and not multiplayer.get_peers().has(target_peer):
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer and target_peer != 1 and not multiplayer.get_peers().has(target_peer):
 		_send_notice(from_peer, "بازیکن مقصد آنلاین نیست.")
 		return
-	_transfer_document(document_id, from_peer, target_peer, "player_trade", "بازیکن %d" % target_peer)
-	_send_notice(from_peer, "مالکیت با موفقیت به بازیکن %d منتقل شد." % target_peer)
-	_send_notice(target_peer, "یک دارایی با سند %s به تو منتقل شد." % document_id)
+	var offer_id := "LC-TRF-%06d" % next_document_number
+	next_document_number += 1
+	ownership_transfer_offers[offer_id] = {"offer_id": offer_id, "document_id": document_id, "from_peer": from_peer, "to_peer": target_peer, "status": "pending", "created_unix": int(Time.get_unix_time_from_system())}
+	_save_ledger()
+	_send_notice(from_peer, "درخواست انتقال %s برای بازیکن %d فرستاده شد؛ انتقال پس از تأیید او انجام می‌شود. کد: %s" % [document_id, target_peer, offer_id])
+	_send_notice(target_peer, "پیشنهاد دریافت سند %s از بازیکن %d رسید. برای قبول، کد %s را وارد کن." % [document_id, from_peer, offer_id])
+
+func _accept_ownership_offer(actor_peer: int, offer_id: String) -> void:
+	if not ownership_transfer_offers.has(offer_id):
+		_send_notice(actor_peer, "درخواست انتقال پیدا نشد.")
+		return
+	var offer: Dictionary = ownership_transfer_offers[offer_id]
+	if int(offer.get("to_peer", -1)) != actor_peer or str(offer.get("status", "")) != "pending":
+		_send_notice(actor_peer, "این پیشنهاد برای تو نیست یا قبلاً تعیین تکلیف شده است.")
+		return
+	var document_id := str(offer.get("document_id", ""))
+	var from_peer := int(offer.get("from_peer", -1))
+	if not documents.has(document_id) or int(documents[document_id].get("owner_peer_id", -999)) != from_peer:
+		offer["status"] = "invalid"
+		ownership_transfer_offers[offer_id] = offer
+		_save_ledger()
+		_send_notice(actor_peer, "مالکیت سند تغییر کرده و این پیشنهاد دیگر معتبر نیست.")
+		return
+	offer["status"] = "accepted"
+	ownership_transfer_offers[offer_id] = offer
+	_transfer_document(document_id, from_peer, actor_peer, "player_trade", "بازیکن %d" % actor_peer)
+	_send_notice(from_peer, "انتقال سند %s با تأیید مقصد نهایی شد." % document_id)
+	_send_notice(actor_peer, "سند %s به مالکیت تو درآمد و در پنل دارایی‌ها ثبت شد." % document_id)
 
 func request_npc_purchase(item_id: String, npc_id: String = "NPC-001") -> void:
 	if _is_authority():
@@ -245,6 +281,7 @@ func _commit_npc_sale(peer_id: int, document_id: String, npc_id: String) -> void
 
 func _transfer_document(document_id: String, from_peer: int, to_peer: int, event_name: String, new_owner_name: String = "") -> void:
 	var doc: Dictionary = documents[document_id].duplicate(true)
+	doc["previous_owner_peer_id"] = from_peer
 	doc["owner_peer_id"] = to_peer
 	if not new_owner_name.is_empty():
 		doc["owner_name"] = new_owner_name
@@ -403,6 +440,10 @@ var game_clock_seconds: float = 0.0
 var role_permissions: Dictionary = {}
 var shared_account_access: Dictionary = {}
 var cheque_spending_ban: Dictionary = {}
+var ownership_transfer_offers: Dictionary = {}
+var marriage_proposals: Dictionary = {}
+var marriage_records: Dictionary = {}
+var next_social_number: int = 1
 
 func _process(delta: float) -> void:
 	if not _is_authority():
@@ -621,7 +662,7 @@ func _set_account_share(owner_peer: int, account_number: String, target_peer_id:
 	if int(account.get("owner_peer_id", -1)) != owner_peer or str(account.get("owner_type", "")) != "player":
 		_send_notice(owner_peer, "فقط صاحب حساب می‌تواند دسترسی خرید بدهد.")
 		return
-	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and target_peer_id != 1 and not multiplayer.get_peers().has(target_peer_id):
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer and target_peer_id != 1 and not multiplayer.get_peers().has(target_peer_id):
 		_send_notice(owner_peer, "بازیکن مقصد آنلاین نیست.")
 		return
 	var access: Dictionary = shared_account_access.get(account_number, {})
@@ -1148,13 +1189,115 @@ func get_central_bank_snapshot(actor_peer: int) -> Dictionary:
 	return snapshot
 
 
+func request_marriage_proposal(target_peer: int) -> void:
+	if _is_authority():
+		_create_marriage_proposal(_local_peer_id(), target_peer)
+	else:
+		rpc_id(1, "rpc_request_marriage_proposal", target_peer)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_marriage_proposal(target_peer: int) -> void:
+	if multiplayer.is_server():
+		_create_marriage_proposal(multiplayer.get_remote_sender_id(), target_peer)
+
+func _create_marriage_proposal(from_peer: int, target_peer: int) -> void:
+	if from_peer <= 0 or target_peer <= 0 or from_peer == target_peer:
+		_send_notice(from_peer, "شناسه بازیکن مقصد معتبر نیست.")
+		return
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer and target_peer != 1 and not multiplayer.get_peers().has(target_peer):
+		_send_notice(from_peer, "برای عقد، بازیکن مقصد باید آنلاین باشد.")
+		return
+	for marriage in marriage_records.values():
+		if str(marriage.get("status", "")) == "married" and (int(marriage.get("partner_a", -1)) == from_peer or int(marriage.get("partner_b", -1)) == from_peer or int(marriage.get("partner_a", -1)) == target_peer or int(marriage.get("partner_b", -1)) == target_peer):
+			_send_notice(from_peer, "یکی از دو بازیکن در حال حاضر متأهل است.")
+			return
+	var proposal_id := "LC-MRG-%06d" % next_social_number
+	next_social_number += 1
+	marriage_proposals[proposal_id] = {"proposal_id": proposal_id, "from_peer": from_peer, "to_peer": target_peer, "status": "pending", "created_unix": int(Time.get_unix_time_from_system())}
+	_save_ledger()
+	_send_notice(from_peer, "درخواست عقد برای بازیکن %d ارسال شد؛ کد درخواست: %s" % [target_peer, proposal_id])
+	_send_notice(target_peer, "درخواست ازدواج از بازیکن %d دریافت شد. برای قبول، کد %s را وارد کن." % [from_peer, proposal_id])
+
+func request_accept_marriage(proposal_id: String) -> void:
+	if _is_authority():
+		_accept_marriage(_local_peer_id(), proposal_id)
+	else:
+		rpc_id(1, "rpc_request_accept_marriage", proposal_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_accept_marriage(proposal_id: String) -> void:
+	if multiplayer.is_server():
+		_accept_marriage(multiplayer.get_remote_sender_id(), proposal_id)
+
+func _accept_marriage(actor_peer: int, proposal_id: String) -> void:
+	if not marriage_proposals.has(proposal_id):
+		_send_notice(actor_peer, "درخواست عقد پیدا نشد.")
+		return
+	var proposal: Dictionary = marriage_proposals[proposal_id]
+	var partner_a := int(proposal.get("from_peer", -1))
+	if int(proposal.get("to_peer", -1)) != actor_peer or str(proposal.get("status", "")) != "pending":
+		_send_notice(actor_peer, "این درخواست برای تو نیست یا قبلاً پاسخ داده شده است.")
+		return
+	for marriage in marriage_records.values():
+		if str(marriage.get("status", "")) == "married" and [int(marriage.get("partner_a", -1)), int(marriage.get("partner_b", -1))].has(actor_peer):
+			_send_notice(actor_peer, "تو در حال حاضر متأهل هستی.")
+			return
+	var marriage_id := "LC-NKAH-%06d" % next_social_number
+	next_social_number += 1
+	marriage_records[marriage_id] = {"marriage_id": marriage_id, "partner_a": partner_a, "partner_b": actor_peer, "status": "married", "ceremony": "محضر LIFE CITY", "married_unix": int(Time.get_unix_time_from_system())}
+	proposal["status"] = "accepted"
+	marriage_proposals[proposal_id] = proposal
+	_save_ledger()
+	_send_notice(partner_a, "عقد شما در محضر LIFE CITY ثبت شد. شماره ثبت: %s" % marriage_id)
+	_send_notice(actor_peer, "عقد شما در محضر LIFE CITY ثبت شد. شماره ثبت: %s" % marriage_id)
+
+func request_post_bail(record_id: String) -> void:
+	if _is_authority():
+		_post_bail(_local_peer_id(), record_id)
+	else:
+		rpc_id(1, "rpc_request_post_bail", record_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_post_bail(record_id: String) -> void:
+	if multiplayer.is_server():
+		_post_bail(multiplayer.get_remote_sender_id(), record_id)
+
+func _post_bail(actor_peer: int, record_id: String) -> void:
+	if not prison_records.has(record_id):
+		_send_notice(actor_peer, "پرونده زندان پیدا نشد.")
+		return
+	var record: Dictionary = prison_records[record_id]
+	if str(record.get("status", "")) != "زندانی":
+		_send_notice(actor_peer, "این پرونده فعال نیست.")
+		return
+	var bail_amount := int(record.get("bail_amount", 2500))
+	if bail_amount <= 0 or get_balance(actor_peer) < bail_amount:
+		_send_notice(actor_peer, "موجودی کافی برای ضمانت (%d سکه) نداری." % bail_amount)
+		return
+	balances[actor_peer] = get_balance(actor_peer) - bail_amount
+	central_bank_treasury += bail_amount
+	record["status"] = "آزادشده"
+	record["released_by"] = actor_peer
+	record["release_reason"] = "آزادی با سند ضمانت"
+	record["bail_paid"] = bail_amount
+	record["released_game_time"] = game_clock_seconds
+	prison_records[record_id] = record
+	var tx_id := "BAIL-%06d" % next_document_number
+	next_document_number += 1
+	cash_transactions[tx_id] = {"transaction_id": tx_id, "type": "prison_bail", "record_id": record_id, "prisoner_peer": int(record.get("peer_id", -1)), "guarantor_peer": actor_peer, "amount": bail_amount, "status": "completed", "time": int(Time.get_unix_time_from_system())}
+	_save_ledger()
+	_send_balance(actor_peer)
+	_send_notice(actor_peer, "سند ضمانت ثبت شد؛ %d سکه پرداخت کردی." % bail_amount)
+	_send_notice(int(record.get("peer_id", -1)), "دوستت/بازیکن %d برای آزادی تو سند ضمانت گذاشت و آزاد شدی." % actor_peer)
+	_notify_prison_state(int(record.get("peer_id", -1)), record_id, false)
+
 func _save_ledger() -> void:
 	if not _is_authority():
 		return
 	var saved_balances: Dictionary = {}
 	for peer_key in balances.keys():
 		saved_balances[str(peer_key)] = balances[peer_key]
-	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions, "bank_accounts": bank_accounts, "citizen_registry": citizen_registry, "citizen_accounts": citizen_accounts, "cheque_book": cheque_book, "prison_records": prison_records, "central_bank_treasury": central_bank_treasury, "next_account_number": next_account_number, "next_citizen_number": next_citizen_number, "game_clock_seconds": game_clock_seconds, "role_permissions": role_permissions, "cheque_spending_ban": cheque_spending_ban, "shared_account_access": shared_account_access}
+	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions, "bank_accounts": bank_accounts, "citizen_registry": citizen_registry, "citizen_accounts": citizen_accounts, "cheque_book": cheque_book, "prison_records": prison_records, "central_bank_treasury": central_bank_treasury, "next_account_number": next_account_number, "next_citizen_number": next_citizen_number, "game_clock_seconds": game_clock_seconds, "role_permissions": role_permissions, "cheque_spending_ban": cheque_spending_ban, "shared_account_access": shared_account_access, "ownership_transfer_offers": ownership_transfer_offers, "marriage_proposals": marriage_proposals, "marriage_records": marriage_records, "next_social_number": next_social_number}
 	var file := FileAccess.open("user://ownership_ledger.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(payload))
@@ -1186,3 +1329,7 @@ func _load_ledger() -> void:
 		role_permissions = parsed.get("role_permissions", {})
 		cheque_spending_ban = parsed.get("cheque_spending_ban", {})
 		shared_account_access = parsed.get("shared_account_access", {})
+		ownership_transfer_offers = parsed.get("ownership_transfer_offers", {})
+		marriage_proposals = parsed.get("marriage_proposals", {})
+		marriage_records = parsed.get("marriage_records", {})
+		next_social_number = int(parsed.get("next_social_number", next_social_number))
