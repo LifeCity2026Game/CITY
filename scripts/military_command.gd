@@ -46,24 +46,103 @@ func _process(delta: float) -> void:
 	for unit in units:
 		if not is_instance_valid(unit):
 			continue
+		_update_unit_ai(unit, delta)
 		var destination: Vector3 = unit.get_meta("destination", unit.position)
 		var speed := float(unit.get_meta("speed", 4.0))
 		if unit.position.distance_to(destination) > 0.6:
 			unit.position = unit.position.move_toward(destination, speed * delta)
-			unit.look_at(Vector3(destination.x, unit.position.y, destination.z), Vector3.UP)
-		else:
-			if bool(unit.get_meta("patrol", false)):
-				var phase := float(unit.get_meta("phase", 0.0)) + delta
-				unit.set_meta("phase", phase)
-				var center: Vector3 = unit.get_meta("center", unit.position)
-				var radius := float(unit.get_meta("radius", 12.0))
-				var next_pos := center + Vector3(cos(phase * 0.25) * radius, 0.0, sin(phase * 0.25) * radius)
-				unit.set_meta("destination", next_pos)
+			var look_target := Vector3(destination.x, unit.position.y, destination.z)
+			if unit.position.distance_to(look_target) > 0.1:
+				unit.look_at(look_target, Vector3.UP)
+		elif bool(unit.get_meta("patrol", false)) and bool(unit.get_meta("ai_enabled", false)):
+			_choose_ai_patrol_destination(unit)
 	if missile_active:
 		_update_missile(delta)
 	for fx in explosion_nodes:
 		if is_instance_valid(fx):
 			fx.scale *= 1.0 + delta * 0.75
+
+func _update_unit_ai(unit: Node3D, delta: float) -> void:
+	if not bool(unit.get_meta("ai_enabled", false)):
+		return
+	var department := str(unit.get_meta("department", "نیروی زمینی"))
+	var timer := float(unit.get_meta("ai_decision_timer", 0.0)) + delta
+	unit.set_meta("ai_decision_timer", timer)
+	# Branch-specific movement constraints keep units inside believable game-world domains.
+	match department:
+		"نیروی هوایی":
+			var altitude := 15.0 + sin(mission_clock * 0.7 + float(unit.get_instance_id() % 17)) * 2.0
+			if bool(unit.get_meta("patrol", false)):
+				unit.position.y = lerpf(unit.position.y, altitude, minf(delta * 0.8, 1.0))
+			var target: Vector3 = unit.get_meta("destination", unit.position)
+			target.y = maxf(target.y, 12.0)
+			unit.set_meta("destination", target)
+		"نیروی دریایی":
+			unit.position.y = 0.2
+			var sea_target: Vector3 = unit.get_meta("destination", unit.position)
+			sea_target.x = clampf(sea_target.x, -108.0, 108.0)
+			sea_target.z = clampf(sea_target.z, 72.0, 120.0)
+			unit.set_meta("destination", sea_target)
+		"گارد ساحلی":
+			unit.position.y = 0.35
+			var coast_target: Vector3 = unit.get_meta("destination", unit.position)
+			coast_target.x = clampf(coast_target.x, -108.0, 108.0)
+			coast_target.z = clampf(coast_target.z, 82.0, 116.0)
+			unit.set_meta("destination", coast_target)
+		"تفنگداران دریایی":
+			var amphibious_target: Vector3 = unit.get_meta("destination", unit.position)
+			if unit.position.z > 88.0:
+				unit.set_meta("movement_phase", "sea_approach")
+				amphibious_target.z = clampf(amphibious_target.z, 72.0, 94.0)
+			else:
+				unit.set_meta("movement_phase", "shore_advance")
+				amphibious_target.y = 0.6
+			unit.set_meta("destination", amphibious_target)
+		"نیروی فضایی":
+			unit.rotate_y(delta * 0.22)
+			unit.position.y = 45.0 + sin(mission_clock * 0.18) * 2.0
+		"گارد ملی":
+			unit.position.y = 0.6
+			if timer >= 8.0 and bool(unit.get_meta("patrol", false)):
+				unit.set_meta("ai_decision_timer", 0.0)
+				unit.set_meta("ai_state", "urban_security_scan")
+		_:
+			unit.position.y = 0.6
+			if timer >= 10.0 and bool(unit.get_meta("patrol", false)):
+				unit.set_meta("ai_decision_timer", 0.0)
+				unit.set_meta("ai_state", "road_patrol")
+
+func _choose_ai_patrol_destination(unit: Node3D) -> void:
+	var department := str(unit.get_meta("department", "نیروی زمینی"))
+	var center: Vector3 = unit.get_meta("center", unit.position)
+	var phase := float(unit.get_meta("phase", 0.0)) + 0.9
+	unit.set_meta("phase", phase)
+	var radius := float(unit.get_meta("radius", 12.0))
+	var next_pos := center
+	match department:
+		"نیروی هوایی":
+			next_pos = center + Vector3(cos(phase * 0.25) * radius * 1.5, 0.0, sin(phase * 0.25) * radius)
+			next_pos.y = maxf(center.y, 15.0)
+			unit.set_meta("ai_state", "air_patrol_orbit")
+		"نیروی دریایی":
+			next_pos = center + Vector3(cos(phase * 0.2) * radius * 1.7, 0.0, sin(phase * 0.12) * 3.0)
+			next_pos.z = clampf(next_pos.z, 72.0, 120.0)
+			unit.set_meta("ai_state", "sea_lane_patrol")
+		"گارد ساحلی":
+			next_pos = center + Vector3(cos(phase * 0.3) * radius, 0.0, sin(phase * 0.2) * radius * 0.45)
+			next_pos.z = clampf(next_pos.z, 82.0, 116.0)
+			unit.set_meta("ai_state", "coastal_patrol")
+		"تفنگداران دریایی":
+			next_pos = center + Vector3(cos(phase * 0.2) * radius, 0.0, sin(phase * 0.2) * radius)
+			unit.set_meta("ai_state", "amphibious_patrol")
+		"گارد ملی":
+			next_pos = center + Vector3(round(cos(phase * 0.2) * radius / 6.0) * 6.0, 0.0, round(sin(phase * 0.2) * radius / 6.0) * 6.0)
+			unit.set_meta("ai_state", "urban_security_patrol")
+		_:
+			next_pos = center + Vector3(round(cos(phase * 0.2) * radius / 6.0) * 6.0, 0.0, round(sin(phase * 0.2) * radius / 6.0) * 6.0)
+			unit.set_meta("ai_state", "ground_road_patrol")
+	unit.set_meta("destination", next_pos)
+
 
 func _can_command() -> bool:
 	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
@@ -243,6 +322,9 @@ func _spawn_unit(label: String, at: Vector3, paint: Color, speed: float, patrol:
 	root.set_meta("center", at)
 	root.set_meta("radius", radius)
 	root.set_meta("phase", 0.0)
+	root.set_meta("ai_enabled", true)
+	root.set_meta("ai_state", "idle")
+	root.set_meta("ai_decision_timer", 0.0)
 	add_child(root)
 	_box(root, "Chassis", Vector3(0,0.55,0), Vector3(2.1,0.75,3.3), paint)
 	_box(root, "Cabin", Vector3(0,1.15,-0.25), Vector3(1.65,0.65,1.45), paint.lightened(0.15))
@@ -269,6 +351,9 @@ func _spawn_aircraft(label: String, at: Vector3, paint: Color, patrol: bool) -> 
 	craft.set_meta("speed", 7.0)
 	craft.set_meta("radius", 20.0)
 	craft.set_meta("destination", at + Vector3(18,0,0))
+	craft.set_meta("ai_enabled", true)
+	craft.set_meta("ai_state", "air_patrol")
+	craft.set_meta("ai_decision_timer", 0.0)
 	add_child(craft)
 	_box(craft, "Fuselage", Vector3(0,0,0), Vector3(0.8,0.65,3.5), paint)
 	_box(craft, "Wings", Vector3(0,0,0), Vector3(6.0,0.16,1.1), paint.darkened(0.1))
@@ -288,6 +373,9 @@ func _spawn_ship(at: Vector3, label: String) -> void:
 	ship.set_meta("center", at)
 	ship.set_meta("radius", 12.0)
 	ship.set_meta("phase", 0.0)
+	ship.set_meta("ai_enabled", true)
+	ship.set_meta("ai_state", "sea_patrol")
+	ship.set_meta("ai_decision_timer", 0.0)
 	add_child(ship)
 	_box(ship, "Hull", Vector3(0,0.5,0), Vector3(3.4,0.8,8.0), Color(0.18,0.25,0.31))
 	_box(ship, "Bridge", Vector3(0,1.4,-1), Vector3(2.0,1.2,2.0), Color(0.68,0.7,0.72))
@@ -298,6 +386,11 @@ func _spawn_satellite() -> void:
 	var satellite := Node3D.new()
 	satellite.name = "CommunicationsSatellite"
 	satellite.position = Vector3(0,45,0)
+	satellite.set_meta("department", "نیروی فضایی")
+	satellite.set_meta("ai_enabled", true)
+	satellite.set_meta("ai_state", "orbital_stationkeeping")
+	satellite.set_meta("ai_decision_timer", 0.0)
+	units.append(satellite)
 	add_child(satellite)
 	_box(satellite, "SatelliteBody", Vector3.ZERO, Vector3(1.8,0.7,1.0), Color(0.72,0.72,0.78))
 	_box(satellite, "SolarLeft", Vector3(-2.5,0,0), Vector3(3.2,0.08,1.2), Color(0.12,0.22,0.48))
