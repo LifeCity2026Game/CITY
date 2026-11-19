@@ -8,6 +8,7 @@ var rain: GPUParticles3D
 var traffic_cars: Array[Node3D] = []
 var traffic_origins: Array[Vector3] = []
 var interior_positions: Dictionary = {}
+var generic_interior_positions: Array[Dictionary] = []
 var inside_building := false
 var previous_position := Vector3.ZERO
 var pedestrians: Array[Node3D] = []
@@ -40,6 +41,7 @@ func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_nod
 	_build_traffic()
 	_build_pedestrians()
 	_build_interiors()
+	_build_generic_interiors()
 	_build_weather()
 	_build_controls()
 
@@ -358,6 +360,95 @@ func _build_interiors() -> void:
 		door_marker.position = Vector3(0, 1.3, 5.35)
 		room.add_child(door_marker)
 
+
+func _build_generic_interiors() -> void:
+	# Every procedural city block gets a matching enterable interior.
+	var index := 0
+	for gx in range(-4, 5):
+		for gz in range(-4, 5):
+			if abs(gx) < 2 and abs(gz) < 2:
+				continue
+			var world_pos := Vector3(float(gx) * 24.0, 0.0, float(gz) * 24.0)
+			var room_pos := Vector3(700.0 + float(index) * 18.0, 0.0, 320.0)
+			var category := _generic_building_category(gx, gz)
+			var room := Node3D.new()
+			room.name = "GenericInterior_%02d_%02d_%s" % [gx, gz, category]
+			room.position = room_pos
+			add_child(room)
+			_box(room, "Floor", Vector3(0, -0.12, 0), Vector3(10, 0.24, 9), Color(0.48, 0.45, 0.39))
+			_add_floor_collision(room, Vector3(0, -0.12, 0), Vector3(10, 0.24, 9))
+			_add_floor_collision(room, Vector3(0, 1.8, -4.5), Vector3(10, 3.6, 0.2))
+			_add_floor_collision(room, Vector3(-5, 1.8, 0), Vector3(0.2, 3.6, 9))
+			_add_floor_collision(room, Vector3(5, 1.8, 0), Vector3(0.2, 3.6, 9))
+			_box(room, "BackWall", Vector3(0, 1.8, -4.5), Vector3(10, 3.6, 0.2), Color(0.70, 0.68, 0.62))
+			_box(room, "LeftWall", Vector3(-5, 1.8, 0), Vector3(0.2, 3.6, 9), Color(0.64, 0.64, 0.60))
+			_box(room, "RightWall", Vector3(5, 1.8, 0), Vector3(0.2, 3.6, 9), Color(0.64, 0.64, 0.60))
+			_box(room, "Ceiling", Vector3(0, 3.7, 0), Vector3(10, 0.2, 9), Color(0.82, 0.81, 0.76))
+			_populate_generic_room(room, category, index)
+			var sign := Label3D.new()
+			sign.text = _generic_category_label(category)
+			sign.font_size = 24
+			sign.position = Vector3(0, 2.7, -4.28)
+			room.add_child(sign)
+			generic_interior_positions.append({"world": world_pos, "interior": room_pos, "category": category})
+			index += 1
+
+func _generic_building_category(gx: int, gz: int) -> String:
+	var types := ["residential", "retail", "office", "cafe", "clinic", "residential", "market", "apartment"]
+	return types[abs(gx * 7 + gz * 11) % types.size()]
+
+func _generic_category_label(category: String) -> String:
+	match category:
+		"residential": return "خانه مسکونی"
+		"retail": return "فروشگاه"
+		"office": return "دفتر اداری"
+		"cafe": return "کافه و رستوران"
+		"clinic": return "درمانگاه"
+		"market": return "سوپرمارکت"
+		"apartment": return "آپارتمان"
+	return "ساختمان شهری"
+
+func _populate_generic_room(room: Node3D, category: String, index: int) -> void:
+	match category:
+		"residential", "apartment":
+			_box(room, "Sofa", Vector3(-2.8, 0.48, 1.6), Vector3(2.8, 0.9, 1.0), Color(0.34, 0.20, 0.14))
+			_box(room, "CoffeeTable", Vector3(-2.6, 0.42, 0.0), Vector3(1.5, 0.18, 0.8), Color(0.28, 0.18, 0.11))
+			_box(room, "KitchenCounter", Vector3(2.8, 0.55, -2.8), Vector3(3.0, 1.1, 0.8), Color(0.58, 0.58, 0.54))
+			_box(room, "Bed", Vector3(2.7, 0.35, 1.8), Vector3(2.2, 0.5, 2.5), Color(0.68, 0.68, 0.72))
+			_add_interior_person(room, "ساکن خانه", Vector3(0.0, 0.0, 2.8), Color(0.28, 0.34, 0.48))
+		"retail", "market":
+			for shelf_index in range(3):
+				_box(room, "ProductShelf_%d" % shelf_index, Vector3(-3.4 + float(shelf_index) * 3.2, 1.0, -1.2), Vector3(1.0, 2.0, 3.2), Color(0.42, 0.30, 0.18))
+				for level in range(3):
+					_box(room, "Product_%d_%d" % [shelf_index, level], Vector3(-3.4 + float(shelf_index) * 3.2, 0.55 + float(level) * 0.55, 0.55), Vector3(0.65, 0.32, 0.45), [Color(0.75,0.22,0.14),Color(0.18,0.48,0.25),Color(0.85,0.66,0.18)][(shelf_index+level)%3])
+			_box(room, "CheckoutCounter", Vector3(0, 0.6, 2.8), Vector3(2.8, 1.2, 0.8), Color(0.25, 0.20, 0.16))
+			_add_interior_person(room, "فروشنده", Vector3(0, 0.0, 1.8), Color(0.18, 0.32, 0.48))
+			_add_interior_person(room, "مشتری", Vector3(3.6, 0.0, 2.2), Color(0.42, 0.25, 0.18))
+		"office":
+			for desk_index in range(3):
+				var dx := -3.0 + float(desk_index) * 3.0
+				_box(room, "OfficeDesk_%d" % desk_index, Vector3(dx, 0.62, -0.8), Vector3(2.1, 1.2, 1.0), Color(0.34, 0.23, 0.15))
+				_box(room, "OfficeMonitor_%d" % desk_index, Vector3(dx, 1.35, -1.0), Vector3(0.9, 0.6, 0.12), Color(0.08, 0.14, 0.18))
+			_add_interior_person(room, "کارمند اداری", Vector3(-2.8, 0.0, 1.2), Color(0.20, 0.30, 0.48))
+		"cafe":
+			for table_index in range(3):
+				var tx := -3.0 + float(table_index) * 3.0
+				_add_cafe_table(room, Vector3(tx, 0.0, 0.8 if table_index % 2 == 0 else -1.8))
+			_box(room, "CafeCounter", Vector3(0, 0.65, -3.1), Vector3(3.5, 1.3, 0.8), Color(0.30, 0.18, 0.12))
+			_add_interior_person(room, "باریستا", Vector3(0, 0.0, -2.2), Color(0.24, 0.22, 0.18))
+			_add_interior_person(room, "مشتری کافه", Vector3(3.3, 0.0, 1.4), Color(0.38, 0.24, 0.18))
+		"clinic":
+			_box(room, "Reception", Vector3(0, 0.62, -2.8), Vector3(3.5, 1.2, 0.8), Color(0.78, 0.80, 0.82))
+			_box(room, "ExaminationBed", Vector3(2.5, 0.45, 1.2), Vector3(2.2, 0.7, 1.0), Color(0.82, 0.84, 0.86))
+			_box(room, "MedicalCabinet", Vector3(-3.8, 1.0, -1.8), Vector3(1.0, 2.0, 0.8), Color(0.88, 0.89, 0.86))
+			_add_interior_person(room, "پزشک", Vector3(2.5, 0.0, -0.8), Color(0.82, 0.84, 0.86))
+			_add_interior_person(room, "پذیرش درمانگاه", Vector3(-1.0, 0.0, -3.7), Color(0.18, 0.42, 0.40))
+
+func _add_cafe_table(parent: Node3D, at: Vector3) -> void:
+	_box(parent, "CafeTableTop", at + Vector3(0, 0.72, 0), Vector3(1.25, 0.12, 1.0), Color(0.30, 0.18, 0.11))
+	for side in [-1.0, 1.0]:
+		_box(parent, "CafeChair", at + Vector3(side * 0.9, 0.42, 0), Vector3(0.55, 0.84, 0.55), Color(0.22, 0.25, 0.29))
+
 func _build_weather() -> void:
 	rain = GPUParticles3D.new()
 	rain.name = "RainParticles"
@@ -459,6 +550,7 @@ func _enter_nearest_building() -> void:
 		return
 	var nearest_id := ""
 	var nearest_distance := 999999.0
+	var destination := Vector3.ZERO
 	var positions := [
 		Vector3(-29, 4, 28), Vector3(29, 4, 28), Vector3(0, 4, 50),
 		Vector3(0, 4, -50), Vector3(-55, 4, -55), Vector3(55, 4, -55), Vector3(55, 4, 55),
@@ -470,10 +562,16 @@ func _enter_nearest_building() -> void:
 		if distance < nearest_distance:
 			nearest_distance = distance
 			nearest_id = str(SERVICE_BUILDINGS[i].id)
-	if nearest_distance > 24.0:
+			destination = interior_positions[nearest_id]
+	for entry in generic_interior_positions:
+		var distance: float = player.global_position.distance_to(entry.world)
+		if distance < nearest_distance:
+			nearest_distance = distance
+			destination = entry.interior
+	if nearest_distance > 18.0:
 		return
 	previous_position = player.global_position
-	player.global_position = interior_positions[nearest_id] + Vector3(0, 1.2, 2.8)
+	player.global_position = destination + Vector3(0, 1.2, 2.8)
 	player.velocity = Vector3.ZERO
 	inside_building = true
 
