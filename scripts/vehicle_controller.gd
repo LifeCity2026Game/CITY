@@ -622,7 +622,8 @@ func repair_vehicle() -> void:
 	max_forward_speed = base_max_forward_speed
 	var body := get_node_or_null("BodyShell") as MeshInstance3D
 	if body and body.material_override is StandardMaterial3D:
-		(body.material_override as StandardMaterial3D).albedo_color = vehicle_paint_color
+		var paint_material := body.material_override as StandardMaterial3D
+		paint_material.albedo_color = vehicle_paint_color
 	if damage_label:
 		damage_label.text = "سلامت خودرو: ۱۰۰٪"
 	if speed_label:
