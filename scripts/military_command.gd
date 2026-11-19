@@ -250,6 +250,12 @@ func _add_button(parent: VBoxContainer, caption: String, action: String, arg: St
 func _toggle_panel() -> void:
 	panel.visible = not panel.visible
 
+func open_panel() -> void:
+	if is_instance_valid(panel):
+		panel.visible = true
+		if is_instance_valid(status_label):
+			status_label.text = "ستاد کل آماده است | شاخه فعال: " + selected_department
+
 func _target_position() -> Vector3:
 	var choices := [Vector3(-29,0,28), Vector3(55,0,-55), Vector3(55,0,55), Vector3(-55,0,-55), Vector3(0,0,-50), Vector3(72,0,24)]
 	var x_text := target_x_input.text.strip_edges() if is_instance_valid(target_x_input) else ""
