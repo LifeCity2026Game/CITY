@@ -200,6 +200,7 @@ func _add_control_button(parent: HBoxContainer, caption: String, axis: String) -
 	var button := Button.new()
 	button.text = caption
 	button.custom_minimum_size = Vector2(66, 66)
+	_style_mobile_button(button)
 	button.add_theme_font_size_override("font_size", 25)
 	parent.add_child(button)
 	button.button_down.connect(func(): player.set_mobile_axis(axis, true))
@@ -217,7 +218,7 @@ func _build_graphics_settings() -> void:
 	graphics_layer.name = "GraphicsSettings"
 	graphics_layer.set_script(GRAPHICS_SCRIPT)
 	add_child(graphics_layer)
-	graphics_layer.configure(world_environment, sun)
+	graphics_layer.configure(world_environment, sun, player)
 
 func _build_stage_two() -> void:
 	ownership_ledger = Node.new()
@@ -244,3 +245,24 @@ func _build_vehicle() -> void:
 	vehicle_controller.position = Vector3(4.0, 0.2, 7.0)
 	add_child(vehicle_controller)
 	vehicle_controller.configure(player)
+
+func _style_mobile_button(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color("2878d5")
+	normal.corner_radius_top_left = 22
+	normal.corner_radius_top_right = 22
+	normal.corner_radius_bottom_left = 22
+	normal.corner_radius_bottom_right = 22
+	normal.border_width_left = 2
+	normal.border_width_top = 2
+	normal.border_width_right = 2
+	normal.border_width_bottom = 2
+	normal.border_color = Color("9bc8f5")
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("3689e8")
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color("1e5eaa")
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_color_override("font_color", Color.WHITE)
