@@ -87,6 +87,22 @@ func _run_vehicle_checks() -> void:
 		_fail("Player could not enter the vehicle")
 		return
 
+	car._toggle_doors()
+	if absf(car.left_door.rotation.y) < 0.1 or absf(car.right_door.rotation.y) < 0.1:
+		_fail("Vehicle doors did not open")
+		return
+	car._toggle_doors()
+	car._toggle_lights()
+	if not car.headlamps[0].visible or not car.headlamps[1].visible:
+		_fail("Headlights did not turn on")
+		return
+	car._toggle_lights()
+	car._set_control("right", true)
+	await physics_frame
+	if absf(car.front_wheels[0].rotation.y) < 0.01 or absf(car.steering_wheel.rotation.z) < 0.01:
+		_fail("Steering input did not move front wheels and steering wheel")
+		return
+	car._set_control("right", false)
 	car._toggle_hood()
 	if not car.hood_open:
 		_fail("Hood did not open")
@@ -111,6 +127,17 @@ func _run_vehicle_checks() -> void:
 	if player.body_temperature >= player_temperature_before:
 		_fail("Vehicle climate did not affect player body temperature")
 		return
+	var cool_temperature: float = car.cabin_temperature
+	car._cycle_climate()
+	if car.climate_mode != "heat":
+		_fail("Climate system did not switch to heating")
+		return
+	for heat_frame in range(90):
+		await physics_frame
+	if car.cabin_temperature <= cool_temperature or player.body_temperature <= cool_temperature:
+		_fail("Heater did not warm the cabin and player")
+		return
+	car._cycle_climate()
 	car._cycle_indicators()
 	if car.indicators != 1:
 		_fail("Left indicator did not activate")
