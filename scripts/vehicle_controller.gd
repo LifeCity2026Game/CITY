@@ -342,6 +342,11 @@ func _cycle_indicators() -> void:
 		var suffix := "خاموش" if indicators == 0 else ("چپ" if indicators == 1 else "راست")
 		speed_label.text = "راهنما: " + suffix
 
+func apply_impact(impact_speed: float) -> void:
+	current_speed = move_toward(current_speed, 0.0, impact_speed * 1.8)
+	if speed_label:
+		speed_label.text = "تصادف! سرعت کاهش یافت"
+
 func _physics_process(delta: float) -> void:
 	if not occupied:
 		return
@@ -381,7 +386,16 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= gravity * delta
 	else:
 		velocity.y = 0.0
+	var speed_before_collision := absf(current_speed)
 	move_and_slide()
+	if get_slide_collision_count() > 0:
+		var impact := get_slide_collision(0)
+		if speed_before_collision > 3.0:
+			current_speed = move_toward(current_speed, 0.0, maxf(brake_strength, speed_before_collision * 2.0) * delta * 3.0)
+			if impact.get_collider() is CharacterBody3D:
+				var other := impact.get_collider() as CharacterBody3D
+				if other.has_method("apply_impact"):
+					other.apply_impact(speed_before_collision)
 	for wheel in wheel_nodes:
 		wheel.rotate_x(current_speed * delta / 0.39)
 	if steering_wheel:
