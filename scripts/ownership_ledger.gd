@@ -568,6 +568,10 @@ func _account_transfer(actor_peer: int, source_account: String, pin: String, tar
 		"time": int(Time.get_unix_time_from_system()), "status": "completed"
 	}
 	_save_ledger()
+	_send_own_accounts(actor_peer)
+	var destination_owner := int(destination.get("owner_peer_id", -999))
+	if destination_owner > 0 and destination_owner != actor_peer:
+		_send_own_accounts(destination_owner)
 	_send_notice(actor_peer, "انتقال بانکی انجام شد؛ کد پیگیری %s" % tx_id)
 	citizen_record_changed.emit(str(source.citizen_id))
 	citizen_record_changed.emit(str(destination.citizen_id))
@@ -604,6 +608,7 @@ func _account_purchase(peer_id: int, account_number: String, pin: String, item_i
 	doc["tax_paid"] = tax
 	documents[doc.document_id] = doc
 	_save_ledger()
+	_send_own_accounts(peer_id)
 	_send_receipt(peer_id, doc)
 	_send_notice(peer_id, "خرید نقدی ثبت شد؛ مالیات %d سکه به خزانه رفت." % tax)
 	citizen_record_changed.emit(str(account.citizen_id))
@@ -758,6 +763,7 @@ func _settle_due_cheques() -> void:
 			if cheque_owner > 0 and not synced_cheque_owners.has(cheque_owner):
 				synced_cheque_owners[cheque_owner] = true
 				_send_own_cheques(cheque_owner)
+				_send_own_accounts(cheque_owner)
 		for citizen_id in citizen_registry.keys():
 			citizen_record_changed.emit(str(citizen_id))
 
@@ -810,6 +816,9 @@ func central_bank_withdraw(actor_peer: int, target_account: String, amount: int,
 		"time": int(Time.get_unix_time_from_system())
 	}
 	_save_ledger()
+	var recipient_peer := int(bank_accounts[target_account].get("owner_peer_id", -999))
+	if recipient_peer > 0:
+		_send_own_accounts(recipient_peer)
 	return true
 
 func release_prisoner(actor_peer: int, record_id: String, reason: String) -> bool:
