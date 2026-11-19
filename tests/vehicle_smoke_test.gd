@@ -128,7 +128,7 @@ func _run_vehicle_checks() -> void:
 	if car.vehicle_health >= 100.0:
 		_fail("Collision did not reduce vehicle condition")
 		return
-	car.global_position = Vector3(-55.0, 0.2, 55.0)
+	car.global_position = Vector3(-55.0, 0.2, 64.0)
 	car.repair_vehicle()
 	if car.vehicle_health != 100.0:
 		_fail("Vehicle repair did not restore full condition")
