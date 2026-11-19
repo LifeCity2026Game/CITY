@@ -27,7 +27,10 @@ const SERVICE_BUILDINGS := [
 	{"name": "تعمیرگاه خودرو", "id": "repair_garage", "color": Color(0.34, 0.38, 0.42)},
 	{"name": "دفتر املاک", "id": "real_estate", "color": Color(0.52, 0.42, 0.28)},
 	{"name": "مرکز مخابرات", "id": "telecom", "color": Color(0.20, 0.46, 0.62)},
-	{"name": "زندان مرکزی", "id": "prison", "color": Color(0.34, 0.30, 0.29)}
+	{"name": "زندان مرکزی", "id": "prison", "color": Color(0.34, 0.30, 0.29)},
+	{"name": "شهرداری", "id": "city_hall", "color": Color(0.48, 0.56, 0.43)},
+	{"name": "محضر ازدواج", "id": "marriage_office", "color": Color(0.72, 0.62, 0.42)},
+	{"name": "تالار عروسی", "id": "wedding_hall", "color": Color(0.72, 0.36, 0.48)}
 ]
 
 func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_node: DirectionalLight3D) -> void:
@@ -41,7 +44,7 @@ func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_nod
 	_build_controls()
 
 func _process(delta: float) -> void:
-	day_clock = fposmod(day_clock + delta / 360.0, 1.0)
+	day_clock = fposmod(day_clock + delta / 1440.0, 1.0)
 	_update_day_night()
 	for i in range(pedestrians.size()):
 		var walker := pedestrians[i]
@@ -216,6 +219,33 @@ func _build_interiors() -> void:
 			_box(room, "PresidentialCouncilTable", Vector3(0, 0.55, 1.2), Vector3(5.2, 0.18, 2.0), Color(0.30, 0.19, 0.10))
 		elif str(entry.id) == "military":
 			_box(room, "MilitaryCommandMap", Vector3(0, 1.8, -4.7), Vector3(4.8, 2.5, 0.12), Color(0.12, 0.30, 0.22))
+		elif str(entry.id) == "city_hall":
+			_box(room, "CityHallCouncilDesk", Vector3(0, 0.65, -2.6), Vector3(5.0, 1.3, 1.1), Color(0.36, 0.30, 0.20))
+			for chair_index in range(6):
+				_box(room, "CityHallVisitorChair_%d" % chair_index, Vector3(-4.5 + float(chair_index % 3) * 4.5, 0.55, 1.5 + float(chair_index / 3) * 1.5), Vector3(0.8, 1.1, 0.8), Color(0.22, 0.25, 0.30))
+		elif str(entry.id) == "marriage_office":
+			_box(room, "MarriageDesk", Vector3(0, 0.72, -2.6), Vector3(4.8, 1.4, 1.0), Color(0.48, 0.31, 0.16))
+			_box(room, "MarriageRegistryBook", Vector3(0, 1.48, -2.6), Vector3(1.1, 0.12, 0.8), Color(0.18, 0.32, 0.20))
+			for side in [-1.0, 1.0]:
+				_box(room, "MarriageWitnessChair", Vector3(side * 3.4, 0.55, -1.0), Vector3(0.9, 1.1, 0.9), Color(0.42, 0.28, 0.18))
+			_box(room, "MarriageWallEmblem", Vector3(0, 2.8, -5.25), Vector3(1.5, 1.1, 0.12), Color(0.78, 0.65, 0.30))
+		elif str(entry.id) == "wedding_hall":
+			_box(room, "WeddingStage", Vector3(0, 0.35, -3.5), Vector3(6.0, 0.7, 2.2), Color(0.78, 0.69, 0.60))
+			_box(room, "WeddingArchTop", Vector3(0, 2.6, -4.2), Vector3(5.0, 0.3, 0.35), Color(0.84, 0.70, 0.42))
+			for side in [-1.0, 1.0]:
+				_box(room, "WeddingArchPillar", Vector3(side * 2.35, 1.5, -4.2), Vector3(0.28, 2.7, 0.3), Color(0.88, 0.82, 0.72))
+			for row in range(3):
+				for side in [-1.0, 1.0]:
+					_box(room, "WeddingGuestChair", Vector3(side * 4.2, 0.55, 1.0 + float(row) * 1.6), Vector3(0.9, 1.1, 0.9), Color(0.72, 0.55, 0.54))
+			for flower_index in range(8):
+				var flower := MeshInstance3D.new()
+				var flower_mesh := SphereMesh.new()
+				flower_mesh.radius = 0.22
+				flower_mesh.height = 0.3
+				flower.mesh = flower_mesh
+				flower.material_override = _mat(Color(0.90, 0.70, 0.75))
+				flower.position = Vector3(-3.5 + float(flower_index) * 1.0, 1.8, -4.0)
+				room.add_child(flower)
 		var door_marker := MeshInstance3D.new()
 		var door_mesh := BoxMesh.new()
 		door_mesh.size = Vector3(2.0, 2.8, 0.18)
@@ -328,7 +358,8 @@ func _enter_nearest_building() -> void:
 	var positions := [
 		Vector3(-29, 4, 28), Vector3(29, 4, 28), Vector3(0, 4, 50),
 		Vector3(0, 4, -50), Vector3(-55, 4, -55), Vector3(55, 4, -55), Vector3(55, 4, 55),
-		Vector3(-55, 4, 55), Vector3(-29, 4, -28), Vector3(29, 4, -28)
+		Vector3(-55, 4, 55), Vector3(-29, 4, -28), Vector3(29, 4, -28),
+		Vector3(0, 4, 82), Vector3(55, 4, 92), Vector3(-55, 4, 92), Vector3(0, 4, -92)
 	]
 	for i in range(positions.size()):
 		var distance := player.global_position.distance_to(positions[i])

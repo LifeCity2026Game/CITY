@@ -1138,7 +1138,7 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 	var total_purchases := 0
 	var total_tax_paid := 0
 	for doc in documents.values():
-		if int(doc.get("purchased_by_peer_id", doc.get("owner_peer_id", -999))) == owner_peer:
+		if int(doc.get("owner_peer_id", -999)) == owner_peer and str(doc.get("status", "valid")) == "valid":
 			assets.append(doc.duplicate(true))
 			total_purchases += int(doc.get("purchase_price", 0))
 			total_tax_paid += int(doc.get("tax_paid", 0))

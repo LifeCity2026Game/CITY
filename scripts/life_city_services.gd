@@ -37,7 +37,7 @@ var previous_player_position := Vector3.ZERO
 var inside_owned_home := false
 var selected_role: String = "وزیر"
 
-const GAME_DAY_LENGTH := 360.0
+const GAME_DAY_LENGTH := 1440.0
 const ONLINE_PRODUCTS := {
 	"گوشی هوشمند": 4500, "گوشی پرچمدار": 9000,
 	"کامپیوتر گیمینگ": 18000, "مانیتور گیمینگ": 4200,
@@ -450,8 +450,17 @@ func _render_page() -> void:
 			for home in HOME_CATALOG:
 				_add_button(layout, "خرید نقدی %s | %d سکه" % [home, HOME_CATALOG[home]], "cash_item_purchase", home)
 				_add_button(layout, "خرید چکی %s | %d سکه" % [home, HOME_CATALOG[home]], "cheque_purchase", home)
-			for home in owned_homes:
-				layout.add_child(_label("ملک تحت مالکیت: " + home))
+			if ledger:
+				var owner_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				var home_documents := 0
+				for document in ledger.get_documents_for(owner_id):
+					if HOME_CATALOG.has(str(document.get("item_id", ""))):
+						home_documents += 1
+						layout.add_child(_label("ملک %d | %s | %s | سند %s" % [home_documents, str(document.get("item_id", "")), str(document.get("address", "نشانی ثبت‌شده")), str(document.get("document_id", ""))]))
+				layout.add_child(_label("تعداد کل املاک تحت مالکیت: %d | محدودیت تعداد خرید وجود ندارد." % home_documents))
+			else:
+				for home in owned_homes:
+					layout.add_child(_label("ملک تحت مالکیت: " + home))
 			_add_button(layout, "ورود به خانه و چیدمان وسایل", "enter_home")
 			_add_button(layout, "خروج از خانه", "exit_home")
 		"garage":
@@ -469,8 +478,19 @@ func _render_page() -> void:
 					var item_name := str(document.get("item_id", ""))
 					if CAR_PRICES.has(item_name) and not garage_cars.has(item_name):
 						garage_cars.append(item_name)
-			for car in garage_cars:
-				_add_button(layout, "اسپاون " + car, "spawn_car", car)
+			var vehicle_documents := 0
+			if ledger:
+				var owner_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				for document in ledger.get_documents_for(owner_id):
+					var item_name := str(document.get("item_id", ""))
+					if CAR_PRICES.has(item_name):
+						vehicle_documents += 1
+						layout.add_child(_label("خودرو %d | %s | پلاک %s | سند %s" % [vehicle_documents, item_name, str(document.get("plate", "ثبت‌نشده")), str(document.get("document_id", ""))]))
+						_add_button(layout, "اسپاون " + item_name, "spawn_car", item_name)
+			layout.add_child(_label("تعداد خودروهای ثبت‌شده: %d | محدودیت تعداد خرید وجود ندارد." % vehicle_documents))
+			if vehicle_documents == 0:
+				for car in garage_cars:
+					_add_button(layout, "اسپاون " + car, "spawn_car", car)
 		"creator":
 			if not _is_creator():
 				notice_changed.emit("پنل سازنده فقط برای سازنده بازی است.")
@@ -559,7 +579,7 @@ func _render_page() -> void:
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_intelligence"):
 				notice_changed.emit("دسترسی وزارت اطلاعات برای این مقام فعال نشده است.")
 				return
-			notice_changed.emit("وزارت اطلاعات | اطلاعات شهروندان و مقام‌ها")
+			notice_changed.emit("وزارت اطلاعات | اطلاعات شهروندان، تمام اسناد مالکیت فعال، پلاک خودروها و نشانی املاک")
 			if _is_creator():
 				var role_picker := OptionButton.new()
 				for role_name in ROLES:

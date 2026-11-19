@@ -180,6 +180,10 @@ func _build_world() -> void:
 	_add_service("TELECOM CENTER", Vector3(29, 4, -28), Color(0.20, 0.46, 0.62))
 	_add_service("CENTRAL PRISON", Vector3(0, 4, 82), Color(0.34, 0.30, 0.29))
 	_add_service("CITY HALL", Vector3(55, 4, 92), Color(0.48, 0.56, 0.43))
+	_add_service("MARRIAGE REGISTRY", Vector3(-55, 4, 92), Color(0.72, 0.62, 0.42))
+	_add_service("WEDDING HALL", Vector3(0, 4, -92), Color(0.72, 0.36, 0.48))
+	_decorate_ceremony_building("MARRIAGE REGISTRY", Vector3(-55, 4, 92), Color(0.82, 0.72, 0.48), false)
+	_decorate_ceremony_building("WEDDING HALL", Vector3(0, 4, -92), Color(0.88, 0.73, 0.76), true)
 	_build_city_details()
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
@@ -221,6 +225,39 @@ func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	label.font_size = 32
 	label.modulate = Color.WHITE
 	building.add_child(label)
+
+func _decorate_ceremony_building(building_name: String, pos: Vector3, accent: Color, is_wedding_hall: bool) -> void:
+	var decoration := Node3D.new()
+	decoration.name = building_name.replace(" ", "_") + "_Architecture"
+	decoration.position = pos
+	add_child(decoration)
+	for side in [-1.0, 1.0]:
+		_add_box(decoration, "GrandEntrancePillar", Vector3(side * 5.8, 0.0, 7.0), Vector3(0.65, 7.2, 0.75), accent)
+		_add_box(decoration, "PillarCapital", Vector3(side * 5.8, 3.7, 7.0), Vector3(1.05, 0.35, 1.05), accent.lightened(0.12))
+		_add_box(decoration, "EntranceStep", Vector3(side * 2.0, -3.45, 7.6), Vector3(4.0, 0.25, 1.0), Color(0.62, 0.58, 0.52), false)
+	_add_box(decoration, "CeremonySignPanel", Vector3(0, 3.1, 6.95), Vector3(5.2, 1.0, 0.25), accent.darkened(0.18), false)
+	var sign := Label3D.new()
+	sign.text = "تالار عروسی" if is_wedding_hall else "محضر ازدواج"
+	sign.position = Vector3(0, 3.15, 7.12)
+	sign.font_size = 34
+	sign.modulate = Color.WHITE
+	decoration.add_child(sign)
+	if is_wedding_hall:
+		var dome := MeshInstance3D.new()
+		var dome_mesh := SphereMesh.new()
+		dome_mesh.radius = 3.0
+		dome_mesh.height = 2.2
+		dome.mesh = dome_mesh
+		dome.material_override = _material(accent)
+		dome.position = Vector3(0, 4.4, -1.5)
+		decoration.add_child(dome)
+		for side in [-1.0, 1.0]:
+			_add_box(decoration, "WeddingFlowerBed", Vector3(side * 9.5, -3.5, 5.0), Vector3(2.2, 0.7, 4.0), Color(0.22, 0.38, 0.24), false)
+			_add_cylinder(decoration, "WeddingFlowerTop", Vector3(side * 9.5, -2.85, 5.0), 0.85, 0.45, accent)
+	else:
+		_add_box(decoration, "RegistryPediment", Vector3(0, 4.45, 6.8), Vector3(12.0, 0.5, 1.1), accent.darkened(0.12), false)
+		for side in [-1.0, 1.0]:
+			_add_cylinder(decoration, "RegistryDecorativeColumn", Vector3(side * 3.8, 0.0, 7.0), 0.34, 7.2, accent)
 
 func _build_player() -> void:
 	player = CharacterBody3D.new()
