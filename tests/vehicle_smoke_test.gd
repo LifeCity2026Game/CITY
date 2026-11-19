@@ -24,6 +24,10 @@ func _run_vehicle_checks() -> void:
 	if car.driver != player:
 		_fail("Vehicle driver was not configured with the player")
 		return
+	var city := game.get_node_or_null("CityFeatures")
+	if city == null or not city.interior_positions.has("repair_garage"):
+		_fail("Vehicle repair garage or its enterable interior is missing")
+		return
 	var collision_nodes := car.find_children("*", "CollisionShape3D", true, false)
 	if collision_nodes.is_empty():
 		_fail("Vehicle collision is missing")
@@ -124,6 +128,7 @@ func _run_vehicle_checks() -> void:
 	if car.vehicle_health >= 100.0:
 		_fail("Collision did not reduce vehicle condition")
 		return
+	car.global_position = Vector3(-55.0, 0.2, 55.0)
 	car.repair_vehicle()
 	if car.vehicle_health != 100.0:
 		_fail("Vehicle repair did not restore full condition")
