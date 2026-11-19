@@ -102,6 +102,14 @@ func _run_vehicle_checks() -> void:
 	if not car.left_indicator_lamps[0].visible and not car.left_indicator_lamps[1].visible:
 		_fail("Left indicator lamps did not illuminate")
 		return
+	car.apply_impact(10.0)
+	if car.vehicle_health >= 100.0:
+		_fail("Collision did not reduce vehicle condition")
+		return
+	car.repair_vehicle()
+	if car.vehicle_health != 100.0:
+		_fail("Vehicle repair did not restore full condition")
+		return
 	car._toggle_transmission()
 	if car.transmission_mode != "manual":
 		_fail("Manual transmission mode did not activate")
