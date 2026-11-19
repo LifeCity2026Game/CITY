@@ -37,7 +37,7 @@ func _run() -> void:
 		var card_index := int(seeded_card.get("account_index", 0))
 		if card_index >= 2 and card_index <= 6:
 			npc_card_indexes[card_index] = true
-			assert(int(seeded_card.get("balance", -1)) == 0, "NPC accounts 2-6 must start empty")
+			assert(int(seeded_card.get("balance", -1)) == 10000, "NPC accounts 2-6 must start with 10,000")
 	assert(npc_card_indexes.size() == 5, "NPC cards 2-6 were not seeded")
 
 	print("FINANCE_CHECKPOINT_CHEQUE")
@@ -73,13 +73,14 @@ func _run() -> void:
 	assert(ledger.central_bank_treasury == 450, "10 percent tax was not booked")
 	assert(ledger.central_bank_withdraw(1, primary_number, 50, "برداشت به کارت اصلی"), "Central Bank could not credit creator primary card")
 	assert(ledger.central_bank_withdraw(1, account_number, 100, "آزمون برداشت به کارت دوم"), "Central Bank withdrawal to creator secondary card failed")
-	ledger.balances[2] = 0
+	ledger.balances.erase(2)
 	ledger._open_bank_account(2, "2222", 0)
 	var player_two_accounts: Array[Dictionary] = ledger.get_accounts_for_peer(2)
 	assert(not player_two_accounts.is_empty(), "online player's bank card was not created")
 	var player_two_card := str(player_two_accounts[0].get("number", ""))
+	assert(int(ledger.bank_accounts[player_two_card].balance) == 10000, "new online player must start with 10,000")
 	assert(ledger.central_bank_withdraw(1, player_two_card, 75, "برداشت به کارت بازیکن آنلاین"), "Central Bank could not credit another player's card")
-	assert(int(ledger.bank_accounts[player_two_card].balance) == 75, "other player's card did not receive Central Bank funds")
+	assert(int(ledger.bank_accounts[player_two_card].balance) == 10075, "other player's card did not receive Central Bank funds")
 	assert(ledger.central_bank_treasury == 225, "Central Bank treasury withdrawal amount is incorrect")
 
 	var profile: Dictionary = ledger.get_citizen_full_record(str(account.citizen_id))
