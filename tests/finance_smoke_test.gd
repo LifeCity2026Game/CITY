@@ -72,8 +72,6 @@ func _run() -> void:
 	ledger.balances[2] = 0
 	ledger.bank_accounts[account_number].balance = 10000
 	ledger._set_account_share(1, account_number, 2, true)
-	if not ledger.shared_account_access.has(account_number):
-		ledger.shared_account_access[account_number] = {"2": true}
 	assert(bool(ledger.shared_account_access.get(account_number, {}).get("2", false)), "owner did not grant shared card access")
 	var before_shared_purchase := int(ledger.bank_accounts[account_number].balance)
 	ledger._account_purchase(2, account_number, "", "گوشی هوشمند", true)
