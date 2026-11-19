@@ -48,8 +48,8 @@ func _run_vehicle_checks() -> void:
 		_fail("Character joystick did not release movement")
 		return
 	var services := game.get_node_or_null("LifeCityServices")
-	if services == null or services.sim_cards.size() != 2:
-		_fail("Mobile services or two-SIM configuration is missing")
+	if services == null or services.sim_cards.size() != 1:
+		_fail("Mobile services or initial SIM configuration is missing")
 		return
 	if services.ONLINE_PRODUCTS.size() < 10 or services.HOME_CATALOG.size() < 4 or services.CAR_PRICES.size() != 9:
 		_fail("Online shop, physical property store or vehicle catalog is incomplete")
@@ -61,6 +61,13 @@ func _run_vehicle_checks() -> void:
 	if game.ownership_ledger.get_balance(2) != 0:
 		_fail("New online citizen must start with zero balance")
 		return
+	services._buy_sim()
+	if services.sim_cards.size() != 2:
+		_fail("Citizen could not purchase a second SIM")
+		return
+	services.active_page = "phone"
+	services._render_page()
+	services.pin_input.text = "1234"
 	services._create_account(0)
 	services._create_account(0)
 	services._create_account(0)
