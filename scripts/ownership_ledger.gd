@@ -757,6 +757,26 @@ func release_prisoner(actor_peer: int, record_id: String, reason: String) -> boo
 signal central_bank_snapshot_received(data: Dictionary)
 signal citizen_record_received(data: Dictionary)
 
+
+signal own_accounts_received(accounts: Array)
+
+func request_own_bank_accounts() -> void:
+	var peer_id := _local_peer_id()
+	if _is_authority():
+		own_accounts_received.emit(get_accounts_for_peer(peer_id))
+	else:
+		rpc_id(1, "rpc_request_own_bank_accounts")
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_own_bank_accounts() -> void:
+	if multiplayer.is_server():
+		var sender := multiplayer.get_remote_sender_id()
+		rpc_id(sender, "rpc_receive_own_bank_accounts", get_accounts_for_peer(sender))
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_own_bank_accounts(accounts: Array) -> void:
+	own_accounts_received.emit(accounts)
+
 func get_accounts_for_peer(peer_id: int) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var citizen_id := _citizen_id_for_peer(peer_id) if _is_authority() else ""
