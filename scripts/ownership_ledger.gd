@@ -55,6 +55,7 @@ func _new_document(item_id: String, owner_peer: int, price: int, event_name: Str
 		"document_id": "LC-DOC-%06d" % next_document_number,
 		"item_id": item_id,
 		"owner_peer_id": owner_peer,
+		"purchased_by_peer_id": owner_peer,
 		"owner_name": "بازیکن %d" % owner_peer,
 		"purchase_price": price,
 		"created_unix": now,
@@ -694,6 +695,10 @@ func _settle_due_cheques() -> void:
 				if documents.has(doc_id):
 					documents[doc_id]["status"] = "repossessed"
 					documents[doc_id]["repossessed"] = true
+					documents[doc_id]["previous_owner_peer_id"] = int(cheque.issuer_peer_id)
+					documents[doc_id]["owner_peer_id"] = -3
+					documents[doc_id]["owner_name"] = "اموال توقیف‌شده"
+					documents[doc_id]["history"].append({"event": "repossession", "from": int(cheque.issuer_peer_id), "to": -3, "time": int(Time.get_unix_time_from_system())})
 				var record_id := "JAIL-%06d" % next_document_number
 				next_document_number += 1
 				prison_records[record_id] = {
@@ -934,7 +939,11 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 	for record in prison_records.values():
 		if str(record.get("citizen_id", "")) == citizen_id:
 			citizen_prison.append(record.duplicate(true))
-	var assets := get_documents_for(int(citizen.get("owner_peer_id", -999)))
+	var assets: Array[Dictionary] = []
+	var owner_peer := int(citizen.get("owner_peer_id", -999))
+	for doc in documents.values():
+		if int(doc.get("purchased_by_peer_id", doc.get("owner_peer_id", -999))) == owner_peer:
+			assets.append(doc.duplicate(true))
 	return {
 		"citizen": citizen.duplicate(true), "accounts": accounts,
 		"cheques": citizen_cheques, "prison_records": citizen_prison,
