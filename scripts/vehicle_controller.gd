@@ -566,6 +566,8 @@ func _toggle_vehicle() -> void:
 			driver.set_body_temperature(22.0)
 		throttle = 0.0
 		steering = 0.0
+		brake_pressed = false
+		handbrake = false
 		gear = "P"
 		_update_gear_label()
 
