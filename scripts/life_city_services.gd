@@ -427,7 +427,7 @@ func _action(action: String, arg: String = "") -> void:
 		if _is_creator() or _has_role(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "شهردار"):
 			notice_changed.emit("گزارش شهرداری ثبت شد؛ خدمات شهری برای بررسی در دفتر مأموریت‌ها قرار گرفت.")
 	elif action == "city_maintenance":
-		if _is_creator() or str(roles.get(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "")) == "شهردار":
+		if _is_creator() or _has_role(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "شهردار"):
 			notice_changed.emit("دستور تعمیر و پاکسازی شهری ثبت شد.")
 	_refresh()
 	_save_services()
