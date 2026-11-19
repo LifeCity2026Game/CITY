@@ -197,7 +197,7 @@ func _build_ui() -> void:
 	details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(details_label)
 	for entry in [
-		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"], ["دسترسی کارت بانکی بین بازیکنان", "shared_card"],
+		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"], ["دسترسی کارت بانکی بین بازیکنان", "shared_card"], ["محضر، ضمانت زندان و انتقال سند", "social"],
 		["فروشگاه آنلاین", "online_shop"], ["املاک حضوری", "property"],
 		["نمایشگاه خودرو و پارکینگ", "garage"], ["شهرداری", "city_hall"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["بانک مرکزی (مقام مجاز)", "central_bank"], ["زندان (مقام مجاز)", "prison"], ["پنل سازنده", "creator"]
 	]:
@@ -266,6 +266,16 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "shared_card_purchase":
 		if ledger and account_input:
 			ledger.request_shared_account_purchase(account_input.text.strip_edges(), arg)
+	elif action == "marriage_propose":
+		if ledger and target_input: ledger.request_marriage_proposal(int(target_input.text))
+	elif action == "marriage_accept":
+		if ledger and reason_input: ledger.request_accept_marriage(reason_input.text.strip_edges())
+	elif action == "post_bail":
+		if ledger and target_input: ledger.request_post_bail(target_input.text.strip_edges())
+	elif action == "ownership_offer":
+		if ledger and account_input and target_input: ledger.request_player_transfer(account_input.text.strip_edges(), int(target_input.text))
+	elif action == "ownership_accept":
+		if ledger and reason_input: ledger.request_accept_ownership_transfer(reason_input.text.strip_edges())
 	elif action == "issue_cheque":
 		_issue_cheque()
 	elif action == "enter_home":
@@ -353,6 +363,32 @@ func _render_page() -> void:
 			_add_button(layout, "انتقال وجه", "account_transfer")
 			_add_button(layout, "مدیریت چک‌ها", "page", "cheques")
 			_add_button(layout, "نمایش تراکنش‌ها", "page", "transactions")
+		"social":
+			notice_changed.emit("خدمات اجتماعی آنلاین | عقد با رضایت دو طرف، ضمانت زندانی و انتقال قطعی سند با تأیید گیرنده.")
+			layout.add_child(_label("محضر ازدواج: ابتدا شناسه بازیکن آنلاین را وارد کن و درخواست عقد بفرست؛ طرف مقابل باید کد درخواست را تأیید کند."))
+			target_input = _add_input("شناسه بازیکن آنلاین برای درخواست ازدواج")
+			_add_button(layout, "ارسال درخواست عقد", "marriage_propose")
+			reason_input = _add_input("کد درخواست ازدواج برای قبول")
+			_add_button(layout, "قبول عقد و ثبت در محضر", "marriage_accept")
+			layout.add_child(_label("ضمانت زندان: کد پرونده زندانی را وارد کن؛ هزینه ضمانت از موجودی سکه‌ای تو پرداخت می‌شود."))
+			target_input = _add_input("کد پرونده زندان (JAIL-...)")
+			_add_button(layout, "پرداخت ضمانت و آزادی زندانی", "post_bail")
+			layout.add_child(_label("انتقال سند: مالک سند، شماره سند و شناسه گیرنده را وارد می‌کند. گیرنده باید کد پیشنهاد را تأیید کند؛ بعد از تأیید، دارایی از پنل مالک قبلی حذف و به پنل گیرنده اضافه می‌شود."))
+			account_input = _add_input("شماره سند مالکیت (LC-DOC-...)")
+			target_input = _add_input("شناسه بازیکن گیرنده")
+			_add_button(layout, "ارسال پیشنهاد انتقال سند", "ownership_offer")
+			reason_input = _add_input("کد پیشنهاد انتقال برای قبول")
+			_add_button(layout, "قبول انتقال و ثبت مالکیت", "ownership_accept")
+			if ledger:
+				var local_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				for marriage_id in ledger.marriage_records:
+					var marriage: Dictionary = ledger.marriage_records[marriage_id]
+					if int(marriage.get("partner_a", -1)) == local_peer or int(marriage.get("partner_b", -1)) == local_peer:
+						layout.add_child(_label("وضعیت ازدواج: متأهل | شماره ثبت: " + str(marriage_id)))
+				for offer_id in ledger.ownership_transfer_offers:
+					var offer: Dictionary = ledger.ownership_transfer_offers[offer_id]
+					if int(offer.get("to_peer", -1)) == local_peer and str(offer.get("status", "")) == "pending":
+						layout.add_child(_label("پیشنهاد دریافتی: %s | از بازیکن %d" % [str(offer_id), int(offer.get("from_peer", -1))]))
 		"shared_card":
 			notice_changed.emit("کارت مشترک بازی | صاحب حساب می‌تواند به بازیکن دیگر اجازه خرید بدهد؛ رمز حساب هرگز به او نمایش داده نمی‌شود.")
 			account_input = _add_input("شماره حساب خودت یا حسابی که صاحبش اجازه داده")
