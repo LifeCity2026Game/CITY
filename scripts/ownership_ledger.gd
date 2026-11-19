@@ -998,6 +998,46 @@ func release_prisoner(actor_peer: int, record_id: String, reason: String) -> boo
 	_notify_prison_state(released_peer, record_id, false)
 	return true
 
+func request_extend_prison_sentence(record_id: String, extra_days: int, reason: String) -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		if extend_prison_sentence(actor, record_id, extra_days, reason):
+			_send_notice(actor, "مدت حبس در پرونده ثبت و تمدید شد.")
+		else:
+			_send_notice(actor, "تمدید حبس انجام نشد؛ پرونده، دسترسی یا تعداد روزها معتبر نیست.")
+	else:
+		rpc_id(1, "rpc_request_extend_prison_sentence", record_id, extra_days, reason)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_extend_prison_sentence(record_id: String, extra_days: int, reason: String) -> void:
+	if multiplayer.is_server():
+		var actor := multiplayer.get_remote_sender_id()
+		if extend_prison_sentence(actor, record_id, extra_days, reason):
+			_send_notice(actor, "مدت حبس در پرونده ثبت و تمدید شد.")
+		else:
+			_send_notice(actor, "تمدید حبس انجام نشد؛ پرونده، دسترسی یا تعداد روزها معتبر نیست.")
+
+func extend_prison_sentence(actor_peer: int, record_id: String, extra_days: int, reason: String) -> bool:
+	if not _is_authority() or not _actor_has_permission(actor_peer, "release_prisoner"):
+		return false
+	if not prison_records.has(record_id) or extra_days < 1 or extra_days > 3650:
+		return false
+	var record: Dictionary = prison_records[record_id]
+	if str(record.get("status", "")) != "زندانی":
+		return false
+	record["sentence_extension_days"] = int(record.get("sentence_extension_days", 0)) + extra_days
+	record["sentence_extension_reason"] = reason
+	record["sentence_extended_by"] = actor_peer
+	record["sentence_extended_unix"] = int(Time.get_unix_time_from_system())
+	prison_records[record_id] = record
+	var audit_id := "JAIL-EXT-%06d" % next_document_number
+	next_document_number += 1
+	cash_transactions[audit_id] = {"transaction_id": audit_id, "type": "prison_sentence_extension", "record_id": record_id, "citizen_id": str(record.get("citizen_id", "")), "extra_days": extra_days, "reason": reason, "actor_peer": actor_peer, "time": int(Time.get_unix_time_from_system())}
+	_save_ledger()
+	citizen_record_changed.emit(str(record.get("citizen_id", "")))
+	return true
+
+
 
 signal central_bank_snapshot_received(data: Dictionary)
 signal citizen_record_received(data: Dictionary)
@@ -1215,8 +1255,25 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 			elif str(spend.get("status", "")) == "برگشت‌خورده":
 				dishonoured_count += 1
 	return {
-		"citizen": citizen.duplicate(true), "accounts": accounts,
-		"cheques": citizen_cheques, "honoured_cheque_spends": honoured_count,
+	var marital_status := "مجرد"
+	for marriage in marriage_records.values():
+		if str(marriage.get("status", "")) == "married" and [int(marriage.get("partner_a", -1)), int(marriage.get("partner_b", -1))].has(owner_peer):
+			marital_status = "متأهل"
+			break
+	var cheque_history: Array = []
+	for cheque in citizen_cheques:
+		for spend in cheque.get("spends", []):
+			cheque_history.append({
+				"cheque_id": str(cheque.get("cheque_id", cheque.get("id", ""))),
+				"item": str(spend.get("item_id", "")),
+				"amount": int(spend.get("amount", 0)),
+				"status": str(spend.get("status", "")),
+				"spend_id": str(spend.get("spend_id", ""))
+			})
+	return {
+		"citizen": citizen.duplicate(true), "marital_status": marital_status,
+		"accounts": accounts, "cheques": citizen_cheques, "cheque_history": cheque_history,
+		"honoured_cheque_spends": honoured_count,
 		"dishonoured_cheque_spends": dishonoured_count,
 		"prison_records": citizen_prison, "assets": assets,
 		"transactions": citizen_transactions,
