@@ -26,7 +26,8 @@ const SERVICE_BUILDINGS := [
 	{"name": "ستاد کل نیروهای مسلح", "id": "military", "color": Color(0.30, 0.39, 0.34)},
 	{"name": "تعمیرگاه خودرو", "id": "repair_garage", "color": Color(0.34, 0.38, 0.42)},
 	{"name": "دفتر املاک", "id": "real_estate", "color": Color(0.52, 0.42, 0.28)},
-	{"name": "مرکز مخابرات", "id": "telecom", "color": Color(0.20, 0.46, 0.62)}
+	{"name": "مرکز مخابرات", "id": "telecom", "color": Color(0.20, 0.46, 0.62)},
+	{"name": "زندان مرکزی", "id": "prison", "color": Color(0.34, 0.30, 0.29)}
 ]
 
 func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_node: DirectionalLight3D) -> void:
@@ -77,7 +78,7 @@ func _build_facades() -> void:
 	var positions := [
 		Vector3(-29, 4, 28), Vector3(29, 4, 28), Vector3(0, 4, 50),
 		Vector3(0, 4, -50), Vector3(-55, 4, -55), Vector3(55, 4, -55), Vector3(55, 4, 55),
-		Vector3(-55, 4, 55), Vector3(-29, 4, -28), Vector3(29, 4, -28)
+		Vector3(-55, 4, 55), Vector3(-29, 4, -28), Vector3(29, 4, -28), Vector3(0, 4, 82)
 	]
 	for i in range(positions.size()):
 		var p: Vector3 = positions[i]
