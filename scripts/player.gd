@@ -157,7 +157,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera_pitch = clampf(camera_pitch - event.relative.y * 0.004 * camera_sensitivity, -0.85, 0.55)
 		camera_pivot.rotation = Vector3(camera_pitch, camera_yaw, 0.0)
 
+func set_mobile_direction(value: Vector2) -> void:
+	mobile_direction = value.limit_length(1.0)
+
 func set_mobile_axis(axis: String, pressed: bool) -> void:
+	# Backward-compatible helper for legacy callers.
 	match axis:
 		"left": mobile_direction.x = -1.0 if pressed else 0.0
 		"right": mobile_direction.x = 1.0 if pressed else 0.0
