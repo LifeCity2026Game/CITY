@@ -55,14 +55,21 @@ func _run_vehicle_checks() -> void:
 	if car.climate_label == null or car.transmission_label == null:
 		_fail("Climate or transmission status display is missing")
 		return
-	car._cycle_vehicle_model()
-	if car.vehicle_name != "پژو ۲۰۷":
-		_fail("Vehicle model selector did not switch to Peugeot 207")
-		return
+	var selected_names: Array[String] = [str(car.vehicle_name)]
 	for model_step in range(8):
 		car._cycle_vehicle_model()
-	if car.vehicle_name != "دنا" or car.style_root == null:
-		_fail("Vehicle model selector did not cycle back to Dena with a style profile")
+		selected_names.append(str(car.vehicle_name))
+	if selected_names.size() != 9 or selected_names.has("City Sedan"):
+		_fail("Vehicle selector did not expose all nine named cars")
+		return
+	var unique_names := selected_names.duplicate()
+	unique_names.sort()
+	for name_index in range(unique_names.size() - 1):
+		if unique_names[name_index] == unique_names[name_index + 1]:
+			_fail("Vehicle catalog contains duplicate names")
+			return
+	if car.vehicle_name != "پراید" or car.style_root == null:
+		_fail("Vehicle selector did not finish on the ninth model with a style profile")
 		return
 
 	if car.global_position.distance_to(player.global_position) > 7.0:
