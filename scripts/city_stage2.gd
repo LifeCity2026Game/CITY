@@ -129,8 +129,11 @@ func _clear_actions() -> void:
 		child.queue_free()
 
 func _refresh() -> void:
-	status_label.text = notice
-	details_label.text = "برای مشاهده موجودی، اینترنت‌بانک موبایل را باز کن."
+	# The retired legacy overlay has no labels; its data systems remain available.
+	if is_instance_valid(status_label):
+		status_label.text = notice
+	if is_instance_valid(details_label):
+		details_label.text = "برای مشاهده موجودی، اینترنت‌بانک موبایل را باز کن."
 
 func _on_action(action: String, arg: String = "") -> void:
 	var private_areas := {
