@@ -112,11 +112,14 @@ func _on_prison_state_changed(peer_id: int, _record_id: String, imprisoned: bool
 		if not is_imprisoned:
 			previous_prison_position = player.global_position
 		is_imprisoned = true
+		player.mobile_direction = Vector2.ZERO
+		player.set_physics_process(false)
 		player.global_position = Vector3(540, 1.2, 2.8)
 		player.velocity = Vector3.ZERO
 		notice_changed.emit("به دلیل چک برگشتی به زندان منتقل شدی.")
 	else:
 		is_imprisoned = false
+		player.set_physics_process(true)
 		if previous_prison_position != Vector3.ZERO:
 			player.global_position = previous_prison_position
 			player.velocity = Vector3.ZERO
