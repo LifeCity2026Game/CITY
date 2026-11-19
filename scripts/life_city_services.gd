@@ -751,8 +751,8 @@ func _render_page() -> void:
 				var kind := "بازیکن" if str(citizen.get("owner_type", "")) == "player" else "NPC"
 				var summary := "%s | %s | وضعیت تأهل: %s\nحساب‌ها: %s\nدارایی‌ها: %s\nچک پاس‌شده: %d | برگشتی: %d | تراکنش: %d | پرونده زندان: %d" % [
 					name, kind, str(record.get("marital_status", "نامشخص")),
-					"؛ ".join(account_lines) if not account_lines.is_empty() else "بدون حساب بانکی",
-					"؛ ".join(asset_lines) if not asset_lines.is_empty() else "بدون دارایی ثبت‌شده",
+					str(account_lines) if not account_lines.is_empty() else "بدون حساب بانکی",
+					str(asset_lines) if not asset_lines.is_empty() else "بدون دارایی ثبت‌شده",
 					int(record.get("honoured_cheque_spends", 0)), int(record.get("dishonoured_cheque_spends", 0)),
 					record.get("transactions", []).size(), record.get("prison_records", []).size()
 				]
