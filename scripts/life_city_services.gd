@@ -47,7 +47,7 @@ const ONLINE_PRODUCTS := {
 }
 const HOME_CATALOG := {"خانه اقتصادی": 18000, "آپارتمان اقتصادی": 22000, "خانه جنوب شهر": 30000, "آپارتمان شهری": 48000, "خانه شمال شهر": 65000, "خانه ساحلی": 80000, "ویلای ساحلی": 95000, "پنت‌هاوس": 140000}
 const CAR_PRICES := {"دنا": 14000, "پژو ۲۰۷": 16000, "لندکروزر": 95000, "لکسوس RX": 78000, "فراری": 240000, "لامبورگینی": 320000, "تیبا": 8000, "تیبا ۲": 9000, "پراید": 6000}
-const ROLES := ["وزیر", "وزیر اطلاعات", "رئیس بانک مرکزی", "رئیس‌جمهور", "فرمانده کل ارتش", "فرمانده نیروی زمینی", "فرمانده نیروی هوایی", "فرمانده نیروی دریایی", "فرمانده نیروی فضایی", "فرمانده گارد ساحلی", "فرمانده تفنگداران دریایی", "فرمانده گارد ملی"]
+const ROLES := ["وزیر", "وزیر اطلاعات", "رئیس بانک مرکزی", "رئیس‌جمهور", "فرمانده کل ارتش", "فرمانده نیروی زمینی", "فرمانده نیروی هوایی", "فرمانده نیروی دریایی", "فرمانده نیروی فضایی", "فرمانده گارد ساحلی", "فرمانده تفنگداران دریایی", "فرمانده گارد ملی", "شهردار"]
 
 func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: CharacterBody3D, network_node: Node) -> void:
 	ledger = ledger_node
@@ -199,7 +199,7 @@ func _build_ui() -> void:
 	for entry in [
 		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"],
 		["فروشگاه آنلاین", "online_shop"], ["املاک حضوری", "property"],
-		["نمایشگاه خودرو و پارکینگ", "garage"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["بانک مرکزی (مقام مجاز)", "central_bank"], ["زندان (مقام مجاز)", "prison"], ["پنل سازنده", "creator"]
+		["نمایشگاه خودرو و پارکینگ", "garage"], ["شهرداری", "city_hall"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["بانک مرکزی (مقام مجاز)", "central_bank"], ["زندان (مقام مجاز)", "prison"], ["پنل سازنده", "creator"]
 	]:
 		_add_button(layout, entry[0], "page", entry[1])
 	phone_panel.visible = false
@@ -289,6 +289,12 @@ func _action(action: String, arg: String = "") -> void:
 		if ledger and target_input: ledger.request_role_permissions(int(target_input.text), permissions_draft)
 	elif action == "teleport":
 		_teleport_to(arg)
+	elif action == "city_report":
+		if _is_creator() or str(roles.get(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "")) == "شهردار":
+			notice_changed.emit("گزارش شهرداری ثبت شد؛ خدمات شهری برای بررسی در دفتر مأموریت‌ها قرار گرفت.")
+	elif action == "city_maintenance":
+		if _is_creator() or str(roles.get(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "")) == "شهردار":
+			notice_changed.emit("دستور تعمیر و پاکسازی شهری ثبت شد.")
 	_refresh()
 	_save_services()
 
@@ -298,6 +304,17 @@ func _render_page() -> void:
 	match active_page:
 		"home":
 			notice_changed.emit("خدمات بازی از این پنل جداگانه باز می‌شوند.")
+		"city_hall":
+			var local_peer_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+			var local_role: String = str(roles.get(local_peer_id, "شهروند"))
+			if not _is_creator() and local_role != "شهردار":
+				notice_changed.emit("ورود به پنل مدیریت شهرداری فقط برای شهردار منصوب‌شده و سازنده مجاز است.")
+				return
+			notice_changed.emit("شهرداری شهر | مدیر مسئول: %s" % local_role)
+			layout.add_child(_label("وظایف شهردار: خدمات شهری، نگهداری ساختمان‌های عمومی، نظم و رویدادهای شهری."))
+			_add_button(layout, "نمایش موقعیت ساختمان شهرداری", "teleport", "شهرداری")
+			_add_button(layout, "ثبت گزارش خدمات شهری", "city_report")
+			_add_button(layout, "ثبت دستور پاکسازی و تعمیرات شهری", "city_maintenance")
 		"phone":
 			notice_changed.emit("حداکثر دو سیم‌کارت؛ هر سیم‌کارت حداکثر سه حساب بانکی.")
 			pin_input = _add_input("رمز چهار تا هشت رقمی حساب")
@@ -548,7 +565,7 @@ func _teleport_to(place: String) -> void:
 	if not _is_creator() or player == null:
 		return
 	var locations := {
-		"بانک مرکزی": Vector3(-29, 4, 28), "بانک شهری": Vector3(29, 4, 28),
+		"بانک مرکزی": Vector3(-29, 4, 28), "بانک شهری": Vector3(29, 4, 28), "شهرداری": Vector3(55, 4, 92),
 		"کاخ ریاست جمهوری": Vector3(55, 4, -55), "وزارت اطلاعات": Vector3(-55, 4, -55),
 		"ستاد کل ارتش": Vector3(55, 4, 55), "زندان مرکزی": Vector3(0, 4, 82),
 		"مرکز مخابرات": Vector3(29, 4, -28)
