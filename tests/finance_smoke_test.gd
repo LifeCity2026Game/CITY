@@ -101,7 +101,7 @@ func _run() -> void:
 	assert(int(marriage.partner_a) == 1 and int(marriage.partner_b) == 2, "marriage partners incorrect")
 
 	print("SOCIAL_CHECK_OWNERSHIP_TRANSFER")
-	var vehicle_doc := ledger._new_document("دنا", 1, 14000, "purchase", "TEST")
+	var vehicle_doc: Dictionary = ledger._new_document("دنا", 1, 14000, "purchase", "TEST")
 	ledger.documents[vehicle_doc.document_id] = vehicle_doc
 	ledger._create_ownership_offer(1, vehicle_doc.document_id, 2)
 	var offer_id := str(ledger.ownership_transfer_offers.keys().back())
