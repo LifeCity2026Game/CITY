@@ -495,13 +495,18 @@ func _apply_interior_profile(paint: Color, profile_index: int) -> void:
 	var cabin := get_node_or_null("CabinInterior")
 	if cabin == null:
 		return
-	var seat_color := Color(0.12, 0.13, 0.15)
-	if profile_index in [2, 3]:
-		seat_color = Color(0.20, 0.13, 0.09)
-	elif profile_index in [4, 5]:
-		seat_color = Color(0.055, 0.055, 0.06)
-	elif profile_index in [6, 7, 8]:
-		seat_color = Color(0.17, 0.16, 0.14)
+	var seat_colors: Array[Color] = [
+		Color(0.10, 0.11, 0.13), Color(0.34, 0.08, 0.07), Color(0.19, 0.12, 0.08),
+		Color(0.42, 0.32, 0.20), Color(0.055, 0.055, 0.06), Color(0.075, 0.07, 0.055),
+		Color(0.34, 0.35, 0.36), Color(0.08, 0.18, 0.13), Color(0.36, 0.34, 0.29)
+	]
+	var accent_colors: Array[Color] = [
+		Color(0.16, 0.35, 0.62), Color(0.76, 0.12, 0.08), Color(0.58, 0.62, 0.56),
+		Color(0.68, 0.58, 0.36), Color(0.80, 0.035, 0.025), Color(0.88, 0.68, 0.04),
+		Color(0.55, 0.57, 0.60), Color(0.12, 0.40, 0.27), Color(0.78, 0.78, 0.72)
+	]
+	var seat_color: Color = seat_colors[clampi(profile_index, 0, seat_colors.size() - 1)]
+	var accent: Color = accent_colors[clampi(profile_index, 0, accent_colors.size() - 1)]
 	for seat_name in ["SeatBase", "SeatBack", "HeadRest"]:
 		for seat in cabin.find_children(seat_name, "MeshInstance3D", true, false):
 			seat.material_override = _mat(seat_color, 0.0, 0.62)
@@ -510,11 +515,18 @@ func _apply_interior_profile(paint: Color, profile_index: int) -> void:
 		dashboard.material_override = _mat(paint.darkened(0.72), 0.15, 0.48)
 	var display := cabin.get_node_or_null("CenterDisplay") as MeshInstance3D
 	if display:
-		var display_material := _mat(Color(0.015, 0.12, 0.17))
+		display.scale = Vector3(0.85 + float(profile_index % 3) * 0.15, 0.85 + float(profile_index % 2) * 0.15, 1.0)
+		var display_material := _mat(accent.darkened(0.72))
 		display_material.emission_enabled = true
-		display_material.emission = Color(0.02, 0.28, 0.42)
+		display_material.emission = accent
 		display_material.emission_energy_multiplier = 0.45
 		display.material_override = display_material
+	var selector := cabin.get_node_or_null("GearSelector") as MeshInstance3D
+	if selector:
+		selector.material_override = _mat(accent, 0.55, 0.3)
+	var steering_rim := cabin.get_node_or_null("SteeringWheel/SteeringRim") as MeshInstance3D
+	if steering_rim:
+		steering_rim.material_override = _mat(seat_color.darkened(0.18), 0.1, 0.35)
 
 func _toggle_vehicle() -> void:
 	if driver == null:
