@@ -84,7 +84,7 @@ func _run_vehicle_checks() -> void:
 	if car.climate_mode != "cool":
 		_fail("Climate system did not switch to cooling")
 		return
-	var temperature_before := car.cabin_temperature
+	var temperature_before: float = float(car.cabin_temperature)
 	var player_temperature_before: float = player.body_temperature
 	for climate_frame in range(90):
 		await physics_frame
