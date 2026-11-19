@@ -458,7 +458,10 @@ func _on_citizen_record_received(data: Dictionary) -> void:
 	layout.add_child(_label("حساب‌ها: " + str(data.get("accounts", []))))
 	layout.add_child(_label("چک‌ها: " + str(data.get("cheques", []))))
 	layout.add_child(_label("سوابق زندان: " + str(data.get("prison_records", []))))
-	layout.add_child(_label("دارایی‌ها: " + str(data.get("assets", []))))
+	layout.add_child(_label("دارایی‌ها و آدرس املاک/پلاک خودرو: " + str(data.get("assets", []))))
+	layout.add_child(_label("تعداد چک‌های پاس‌شده: %d | برگشتی: %d" % [int(data.get("honoured_cheque_spends", 0)), int(data.get("dishonoured_cheque_spends", 0))]))
+	layout.add_child(_label("کل خریدها: %d | مالیات پرداخت‌شده: %d" % [int(data.get("total_purchases", 0)), int(data.get("total_tax_paid", 0))]))
+	layout.add_child(_label("تراکنش‌های بانکی: " + str(data.get("transactions", []))))
 	layout.add_child(_label("محرومیت چک: " + str(data.get("cheque_banned", false))))
 
 func _teleport_to(place: String) -> void:
