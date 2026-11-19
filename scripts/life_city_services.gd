@@ -357,7 +357,8 @@ func _render_page() -> void:
 					ledger.request_own_bank_accounts()
 					account_request_in_progress = false
 				for account in own_accounts_cache:
-					layout.add_child(_label("حساب: %s | موجودی: %d | رمز: محرمانه" % [str(account.get("number", "")), int(account.get("balance", 0))]))
+					var shown_balance := str(account.get("balance_display", str(account.get("balance", 0))))
+					layout.add_child(_label("حساب: %s | موجودی: %s | رمز: محرمانه" % [str(account.get("number", "")), shown_balance]))
 		"bank":
 			notice_changed.emit("اینترنت‌بانک: انتقال با شماره حساب ۸ رقمی و رمز حساب.")
 			account_input = _add_input("شماره حساب مبدأ ۸ رقمی")
@@ -621,7 +622,8 @@ func _on_central_bank_snapshot_received(data: Dictionary) -> void:
 		layout.add_child(_label("موجودی خزانه: %d سکه" % int(data.treasury)))
 	for number in data.get("accounts", {}).keys():
 		var account: Dictionary = data.accounts[number]
-		layout.add_child(_label("حساب %s | شهروند %s | موجودی %d | رمز محرمانه" % [number, str(account.get("citizen_id", "")), int(account.get("balance", 0))]))
+		var shown_balance := str(account.get("balance_display", str(account.get("balance", 0))))
+		layout.add_child(_label("حساب %s | شهروند %s | موجودی %s | رمز محرمانه" % [number, str(account.get("citizen_id", "")), shown_balance]))
 	for cheque_id in data.get("cheques", {}).keys():
 		var cheque: Dictionary = data.cheques[cheque_id]
 		layout.add_child(_label("%s | وضعیت %s | اعتبار باقی‌مانده %d | سوابق %d" % [cheque_id, str(cheque.get("status", "")), int(cheque.get("remaining_value", 0)), cheque.get("spends", []).size()]))
