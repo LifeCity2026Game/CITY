@@ -75,7 +75,7 @@ func _on_peer_connected(peer_id: int) -> void:
 	var services := get_parent().get_node_or_null("LifeCityServices")
 	if services:
 		for role_peer_id in services.roles.keys():
-			services.rpc_id(peer_id, "sync_role", int(role_peer_id), str(services.roles[role_peer_id]))
+			services.rpc_id(peer_id, "sync_role", int(role_peer_id), services._roles_for_peer(int(role_peer_id)))
 	_spawn_remote(peer_id)
 	rpc("spawn_remote", peer_id)
 	rpc_id(peer_id, "spawn_remote", 1)
