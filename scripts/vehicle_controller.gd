@@ -74,6 +74,12 @@ func _ready() -> void:
 	_build_vehicle()
 	_build_cameras()
 	_build_controls()
+	vehicle_name = "دنا"
+	_apply_vehicle_style("sedan", Color(0.12, 0.30, 0.66))
+	_apply_interior_profile(Color(0.12, 0.30, 0.66), 0)
+	var selector := controls_layer.get_node_or_null("ModelSelector") as Button
+	if selector:
+		selector.text = "انتخاب خودرو: " + vehicle_name
 
 func configure(player_node: CharacterBody3D) -> void:
 	driver = player_node
@@ -444,7 +450,7 @@ func _cycle_vehicle_model() -> void:
 
 func _apply_vehicle_style(style: String, paint: Color) -> void:
 	if style_root:
-		style_root.queue_free()
+		style_root.free()
 	style_root = Node3D.new()
 	style_root.name = "VehicleStyleParts"
 	add_child(style_root)
