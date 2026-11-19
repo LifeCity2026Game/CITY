@@ -20,6 +20,9 @@ var owned_homes: Array[String] = []
 var owned_vehicles: Array[String] = []
 var game_day_seconds := 0.0
 var active_page := "home"
+var home_interior: Node3D
+var previous_player_position := Vector3.ZERO
+var inside_owned_home := false
 
 const GAME_DAY_LENGTH := 360.0
 const ONLINE_PRODUCTS := {
@@ -41,6 +44,7 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 
 func _ready() -> void:
 	_seed_phone()
+	_build_home_interior()
 	_build_ui()
 	_refresh()
 	if ledger and ledger.has_signal("balance_changed"):
@@ -156,6 +160,10 @@ func _action(action: String, arg: String = "") -> void:
 		_transfer()
 	elif action == "issue_cheque":
 		_issue_cheque()
+	elif action == "enter_home":
+		_enter_home()
+	elif action == "exit_home":
+		_exit_home()
 	elif action == "owner_withdraw":
 		_owner_withdraw()
 	elif action == "assign_role":
@@ -212,6 +220,8 @@ func _render_page() -> void:
 				_add_button(layout, "خرید %s | %d سکه" % [home, HOME_CATALOG[home]], "buy_home", home)
 			for home in owned_homes:
 				layout.add_child(_label("ملک تحت مالکیت: " + home))
+			_add_button(layout, "ورود به خانه و چیدمان وسایل", "enter_home")
+			_add_button(layout, "خروج از خانه", "exit_home")
 		"garage":
 			notice_changed.emit("پارکینگ خودروهای خریداری‌شده؛ انتخاب خودرو و اسپاون در شهر.")
 			for car in CAR_PRICES:
@@ -309,7 +319,18 @@ func _place_item(item: String) -> void:
 		return
 	if not placed_furniture.has(item):
 		placed_furniture.append(item)
-	notice_changed.emit("وسیله در فهرست چیدمان خانه ثبت شد: " + item)
+	var furniture_positions := {
+		"مبل": Vector3(-2.8, 0.55, -2.0), "تخت خواب": Vector3(2.7, 0.35, -2.2),
+		"یخچال": Vector3(-5.2, 1.0, -5.2), "تلویزیون": Vector3(0, 1.1, -6.2),
+		"میز ناهارخوری": Vector3(3.8, 0.55, 2.4), "کمد": Vector3(5.3, 1.1, -1.8)
+	}
+	var dimensions := {
+		"مبل": Vector3(2.8, 1.1, 1.0), "تخت خواب": Vector3(2.4, 0.7, 2.0),
+		"یخچال": Vector3(1.0, 2.0, 1.0), "تلویزیون": Vector3(1.8, 1.1, 0.15),
+		"میز ناهارخوری": Vector3(2.0, 1.1, 1.3), "کمد": Vector3(1.2, 2.2, 0.7)
+	}
+	_home_box("Furniture_" + item, furniture_positions.get(item, Vector3.ZERO), dimensions.get(item, Vector3.ONE), Color(0.28, 0.34, 0.42))
+	notice_changed.emit("وسیله داخل خانه چیده شد: " + item)
 
 func _create_account(sim_index: int) -> void:
 	if sim_index < 0 or sim_index >= sim_cards.size():
@@ -387,3 +408,70 @@ func _refresh() -> void:
 	_refresh_status()
 	if is_instance_valid(notice_label) and notice_label.text.is_empty():
 		notice_label.text = "آماده"
+
+func _build_home_interior() -> void:
+	home_interior = Node3D.new()
+	home_interior.name = "OwnedHomeInterior"
+	home_interior.position = Vector3(360, 0, 0)
+	add_child(home_interior)
+	var floor_body := StaticBody3D.new()
+	floor_body.name = "HomeFloorCollision"
+	var floor_shape := CollisionShape3D.new()
+	var floor_box := BoxShape3D.new()
+	floor_box.size = Vector3(14, 0.3, 14)
+	floor_shape.shape = floor_box
+	floor_body.add_child(floor_shape)
+	floor_body.position.y = -0.15
+	home_interior.add_child(floor_body)
+	_home_box("Floor", Vector3(0, -0.16, 0), Vector3(14, 0.25, 14), Color(0.48, 0.39, 0.29))
+	_home_box("BackWall", Vector3(0, 2.0, -7), Vector3(14, 4, 0.25), Color(0.78, 0.76, 0.70))
+	_home_box("LeftWall", Vector3(-7, 2.0, 0), Vector3(0.25, 4, 14), Color(0.72, 0.74, 0.72))
+	_home_box("RightWall", Vector3(7, 2.0, 0), Vector3(0.25, 4, 14), Color(0.72, 0.74, 0.72))
+	_home_box("FrontLeftWall", Vector3(-5.0, 2.0, 7), Vector3(4, 4, 0.25), Color(0.72, 0.74, 0.72))
+	_home_box("FrontRightWall", Vector3(5.0, 2.0, 7), Vector3(4, 4, 0.25), Color(0.72, 0.74, 0.72))
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.25, 0.65, 0.82, 0.28)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var window := MeshInstance3D.new()
+	var window_mesh := BoxMesh.new()
+	window_mesh.size = Vector3(5.5, 2.2, 0.08)
+	window.mesh = window_mesh
+	window.material_override = glass
+	window.position = Vector3(0, 2.4, 6.85)
+	home_interior.add_child(window)
+	var sign := Label3D.new()
+	sign.text = "خانه من | فضای داخلی قابل چیدمان"
+	sign.position = Vector3(0, 3.4, -6.7)
+	home_interior.add_child(sign)
+
+func _home_box(label: String, pos: Vector3, dimensions: Vector3, color: Color) -> void:
+	var item := MeshInstance3D.new()
+	item.name = label
+	var mesh := BoxMesh.new()
+	mesh.size = dimensions
+	item.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	item.material_override = material
+	item.position = pos
+	home_interior.add_child(item)
+
+func _enter_home() -> void:
+	if owned_homes.is_empty():
+		notice_changed.emit("ابتدا باید از فروشگاه حضوری یک خانه بخری.")
+		return
+	if inside_owned_home:
+		return
+	previous_player_position = player.global_position
+	player.global_position = home_interior.global_position + Vector3(0, 1.2, 4)
+	player.velocity = Vector3.ZERO
+	inside_owned_home = true
+	notice_changed.emit("وارد خانه شدی؛ وسایل خریداری‌شده را از سفارش‌های تحویل‌شده بچین.")
+
+func _exit_home() -> void:
+	if not inside_owned_home:
+		return
+	player.global_position = previous_player_position
+	player.velocity = Vector3.ZERO
+	inside_owned_home = false
+	notice_changed.emit("از خانه خارج شدی.")
