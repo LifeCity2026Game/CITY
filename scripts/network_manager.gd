@@ -165,10 +165,11 @@ func _build_network_panel() -> void:
 	var panel := PanelContainer.new()
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
-	panel.offset_left = -300
+	panel.offset_left = -340
 	panel.offset_right = -12
-	panel.offset_top = 12
-	panel.offset_bottom = 190
+	# Keep the lobby below the top-right graphics button so the two controls never overlap.
+	panel.offset_top = 78
+	panel.offset_bottom = 300
 	layer.add_child(panel)
 	var layout := VBoxContainer.new()
 	panel.add_child(layout)
