@@ -197,7 +197,7 @@ func _build_ui() -> void:
 	details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(details_label)
 	for entry in [
-		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"],
+		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"], ["دسترسی کارت بانکی بین بازیکنان", "shared_card"],
 		["فروشگاه آنلاین", "online_shop"], ["املاک حضوری", "property"],
 		["نمایشگاه خودرو و پارکینگ", "garage"], ["شهرداری", "city_hall"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["بانک مرکزی (مقام مجاز)", "central_bank"], ["زندان (مقام مجاز)", "prison"], ["پنل سازنده", "creator"]
 	]:
@@ -257,6 +257,15 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "account_transfer":
 		if ledger and account_input and pin_input and target_input and amount_input:
 			ledger.request_account_transfer(account_input.text.strip_edges(), pin_input.text, target_input.text.strip_edges(), int(amount_input.text))
+	elif action == "share_card":
+		if ledger and account_input and target_input:
+			ledger.request_share_account_with_peer(account_input.text.strip_edges(), int(target_input.text), true)
+	elif action == "revoke_card":
+		if ledger and account_input and target_input:
+			ledger.request_share_account_with_peer(account_input.text.strip_edges(), int(target_input.text), false)
+	elif action == "shared_card_purchase":
+		if ledger and account_input:
+			ledger.request_shared_account_purchase(account_input.text.strip_edges(), arg)
 	elif action == "issue_cheque":
 		_issue_cheque()
 	elif action == "enter_home":
@@ -344,6 +353,19 @@ func _render_page() -> void:
 			_add_button(layout, "انتقال وجه", "account_transfer")
 			_add_button(layout, "مدیریت چک‌ها", "page", "cheques")
 			_add_button(layout, "نمایش تراکنش‌ها", "page", "transactions")
+		"shared_card":
+			notice_changed.emit("کارت مشترک بازی | صاحب حساب می‌تواند به بازیکن دیگر اجازه خرید بدهد؛ رمز حساب هرگز به او نمایش داده نمی‌شود.")
+			account_input = _add_input("شماره حساب خودت یا حسابی که صاحبش اجازه داده")
+			target_input = _add_input("شناسه بازیکن دوستت")
+			_add_button(layout, "اجازه خرید به این بازیکن", "share_card")
+			_add_button(layout, "لغو اجازه خرید", "revoke_card")
+			layout.add_child(_label("خرید با کارت بازیکن دیگر فقط پس از اجازه صاحب حساب انجام می‌شود. خرید به نام خریدار ثبت می‌شود و موجودی از حساب صاحب کارت کم می‌شود."))
+			for item in ONLINE_PRODUCTS:
+				_add_button(layout, "خرید با کارت مجاز: %s | %d سکه" % [item, ONLINE_PRODUCTS[item]], "shared_card_purchase", item)
+			for item in HOME_CATALOG:
+				_add_button(layout, "خرید ملک با کارت مجاز: %s | %d سکه" % [item, HOME_CATALOG[item]], "shared_card_purchase", item)
+			for item in CAR_PRICES:
+				_add_button(layout, "خرید خودرو با کارت مجاز: %s | %d سکه" % [item, CAR_PRICES[item]], "shared_card_purchase", item)
 		"cheques":
 			notice_changed.emit("صدور چک با شماره حساب هشت‌رقمی؛ اعتبار باقی‌مانده برای خریدهای بعدی می‌ماند.")
 			account_input = _add_input("شماره حساب ۸ رقمی")
