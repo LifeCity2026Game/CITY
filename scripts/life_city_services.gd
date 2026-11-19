@@ -205,6 +205,8 @@ func _action(action: String, arg: String = "") -> void:
 		_owner_withdraw()
 	elif action == "assign_role":
 		_assign_role(int(arg))
+	elif action == "assign_role_target":
+		if target_input: _assign_role(int(target_input.text))
 	elif action == "open_account":
 		if ledger and pin_input: ledger.request_open_bank_account(pin_input.text)
 	elif action == "issue_real_cheque":
@@ -382,8 +384,14 @@ func _render_page() -> void:
 			if not _is_creator():
 				notice_changed.emit("مدیریت مقام‌ها فقط برای سازنده است.")
 				return
-			notice_changed.emit("کد پلیر آنلاین را وارد و اختیارات هر حوزه را جداگانه تعیین کن.")
+			notice_changed.emit("مقام و اختیارات هر حوزه را برای پلیر انتخاب کن.")
 			target_input = _add_input("شناسه پلیر آنلاین (مثلاً ۲)")
+			var palace_role_picker := OptionButton.new()
+			for role_name in ROLES:
+				palace_role_picker.add_item(role_name)
+			palace_role_picker.item_selected.connect(func(index: int): selected_role = ROLES[index])
+			layout.add_child(palace_role_picker)
+			_add_button(layout, "اعطای مقام انتخاب‌شده", "assign_role_target")
 			permissions_draft = {"view_central_bank":false, "central_bank_withdraw":false, "view_citizen_records":false, "view_prison_records":false, "release_prisoner":false, "pardon_cheque_ban":false, "view_intelligence":false, "command_military":false}
 			var permission_labels := {"view_central_bank":"مشاهده بانک مرکزی", "central_bank_withdraw":"برداشت از خزانه", "view_citizen_records":"مشاهده پرونده شهروندان", "view_prison_records":"مشاهده پرونده زندانیان", "release_prisoner":"آزادی زندانی", "pardon_cheque_ban":"بخشودگی محرومیت چک", "view_intelligence":"مشاهده اطلاعات وزارت اطلاعات", "command_military":"فرماندهی یگان نظامی"}
 			for permission in permissions_draft.keys():
