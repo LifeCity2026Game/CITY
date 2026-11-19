@@ -453,6 +453,14 @@ func _seed_citizens() -> void:
 			citizen_registry[citizen_id]["npc_id"] = npc_id
 	_save_ledger()
 
+func register_online_player(peer_id: int) -> String:
+	if not _is_authority() or peer_id <= 0:
+		return ""
+	var citizen_id := _citizen_id_for_peer(peer_id)
+	citizen_registry[citizen_id]["last_seen_unix"] = int(Time.get_unix_time_from_system())
+	_save_ledger()
+	return citizen_id
+
 func _citizen_id_for_peer(peer_id: int) -> String:
 	for citizen_id in citizen_registry:
 		if str(citizen_registry[citizen_id].get("owner_type", "")) == "player" and int(citizen_registry[citizen_id].get("owner_peer_id", -999)) == peer_id:
