@@ -205,6 +205,8 @@ func _action(action: String, arg: String = "") -> void:
 		if ledger and account_input and pin_input and amount_input: ledger.request_issue_cheque(account_input.text.strip_edges(), pin_input.text, int(amount_input.text))
 	elif action == "cheque_purchase":
 		if ledger and target_input: ledger.request_cheque_purchase(target_input.text.strip_edges(), arg)
+	elif action == "cash_item_purchase":
+		if ledger and account_input and pin_input: ledger.request_account_purchase(account_input.text.strip_edges(), pin_input.text, arg)
 	elif action == "search_citizen":
 		if ledger and target_input: ledger.request_citizen_record(target_input.text.strip_edges())
 	elif action == "pardon_ban":
@@ -269,9 +271,13 @@ func _render_page() -> void:
 				for transaction in ledger.cash_transactions.values():
 					layout.add_child(_label(str(transaction)))
 		"online_shop":
-			notice_changed.emit("فروشگاه آنلاین | تحویل سفارش یک روز کامل درون‌بازی بعد از خرید.")
+			notice_changed.emit("فروشگاه آنلاین | پرداخت نقدی از حساب یا پرداخت با چک.")
+			account_input = _add_input("شماره حساب ۸ رقمی برای پرداخت نقدی")
+			pin_input = _add_input("رمز حساب")
+			target_input = _add_input("کد چک برای پرداخت با چک")
 			for item in ONLINE_PRODUCTS:
-				_add_button(layout, "%s | %d سکه" % [item, ONLINE_PRODUCTS[item]], "buy_online", item)
+				_add_button(layout, "خرید نقدی %s | %d سکه" % [item, ONLINE_PRODUCTS[item]], "cash_item_purchase", item)
+				_add_button(layout, "خرید چکی %s | %d سکه" % [item, ONLINE_PRODUCTS[item]], "cheque_purchase", item)
 			_add_button(layout, "سفارش‌های من", "page", "orders")
 		"orders":
 			for order in order_list:
@@ -280,17 +286,25 @@ func _render_page() -> void:
 				if bool(order.delivered) and str(order.item) in ["مبل","تخت خواب","یخچال","تلویزیون","میز ناهارخوری","کمد"]:
 					_add_button(layout, "قرار دادن %s در خانه" % order.item, "place_item", str(order.item))
 		"property":
-			notice_changed.emit("فروشگاه حضوری املاک | خرید ملک از دفتر داخل شهر.")
+			notice_changed.emit("دفتر املاک | پرداخت نقدی یا چکی برای خرید ملک.")
+			account_input = _add_input("شماره حساب ۸ رقمی")
+			pin_input = _add_input("رمز حساب")
+			target_input = _add_input("کد چک")
 			for home in HOME_CATALOG:
-				_add_button(layout, "خرید %s | %d سکه" % [home, HOME_CATALOG[home]], "buy_home", home)
+				_add_button(layout, "خرید نقدی %s | %d سکه" % [home, HOME_CATALOG[home]], "cash_item_purchase", home)
+				_add_button(layout, "خرید چکی %s | %d سکه" % [home, HOME_CATALOG[home]], "cheque_purchase", home)
 			for home in owned_homes:
 				layout.add_child(_label("ملک تحت مالکیت: " + home))
 			_add_button(layout, "ورود به خانه و چیدمان وسایل", "enter_home")
 			_add_button(layout, "خروج از خانه", "exit_home")
 		"garage":
-			notice_changed.emit("پارکینگ خودروهای خریداری‌شده؛ انتخاب خودرو و اسپاون در شهر.")
+			notice_changed.emit("نمایشگاه و پارکینگ | خرید خودرو نقدی یا چکی.")
+			account_input = _add_input("شماره حساب ۸ رقمی")
+			pin_input = _add_input("رمز حساب")
+			target_input = _add_input("کد چک")
 			for car in CAR_PRICES:
-				_add_button(layout, "خرید %s | %d سکه" % [car, CAR_PRICES[car]], "buy_car", car)
+				_add_button(layout, "خرید نقدی %s | %d سکه" % [car, CAR_PRICES[car]], "cash_item_purchase", car)
+				_add_button(layout, "خرید چکی %s | %d سکه" % [car, CAR_PRICES[car]], "cheque_purchase", car)
 			var garage_cars: Array[String] = owned_vehicles.duplicate()
 			if ledger:
 				var owner_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
@@ -405,8 +419,6 @@ func _render_page() -> void:
 
 func _on_own_accounts_received(accounts: Array) -> void:
 	own_accounts_cache = accounts.duplicate(true)
-	if active_page == "phone":
-		_render_page()
 
 func _on_central_bank_snapshot_received(data: Dictionary) -> void:
 	if data.is_empty():
