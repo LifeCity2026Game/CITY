@@ -13,6 +13,9 @@ var details_label: Label
 var target_input: LineEdit
 var amount_input: LineEdit
 var pin_input: LineEdit
+var account_input: LineEdit
+var reason_input: LineEdit
+var permissions_draft: Dictionary = {}
 var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
 var roles: Dictionary = {1: "سازنده"}
@@ -46,6 +49,10 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 	network = network_node
 	if ledger and ledger.has_signal("balance_changed") and not ledger.balance_changed.is_connected(_on_balance_changed):
 		ledger.balance_changed.connect(_on_balance_changed)
+	if ledger and ledger.has_signal("central_bank_snapshot_received") and not ledger.central_bank_snapshot_received.is_connected(_on_central_bank_snapshot_received):
+		ledger.central_bank_snapshot_received.connect(_on_central_bank_snapshot_received)
+	if ledger and ledger.has_signal("citizen_record_received") and not ledger.citizen_record_received.is_connected(_on_citizen_record_received):
+		ledger.citizen_record_received.connect(_on_citizen_record_received)
 	if not multiplayer.peer_connected.is_connected(_on_peer_list_changed):
 		multiplayer.peer_connected.connect(_on_peer_list_changed)
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_list_changed):
@@ -121,7 +128,7 @@ func _build_ui() -> void:
 	for entry in [
 		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"],
 		["فروشگاه آنلاین", "online_shop"], ["املاک حضوری", "property"],
-		["نمایشگاه خودرو و پارکینگ", "garage"], ["وزارت اطلاعات و مقام‌ها", "intel"]
+		["نمایشگاه خودرو و پارکینگ", "garage"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["پنل سازنده", "creator"]
 	]:
 		_add_button(layout, entry[0], "page", entry[1])
 	phone_panel.visible = false
@@ -186,6 +193,24 @@ func _action(action: String, arg: String = "") -> void:
 		_owner_withdraw()
 	elif action == "assign_role":
 		_assign_role(int(arg))
+	elif action == "open_account":
+		if ledger and pin_input: ledger.request_open_bank_account(pin_input.text)
+	elif action == "issue_real_cheque":
+		if ledger and account_input and pin_input and amount_input: ledger.request_issue_cheque(account_input.text.strip_edges(), pin_input.text, int(amount_input.text))
+	elif action == "cheque_purchase":
+		if ledger and target_input: ledger.request_cheque_purchase(target_input.text.strip_edges(), arg)
+	elif action == "search_citizen":
+		if ledger and target_input: ledger.request_citizen_record(target_input.text.strip_edges())
+	elif action == "pardon_ban":
+		if ledger and target_input and reason_input: ledger.request_pardon_cheque_ban(int(target_input.text), reason_input.text)
+	elif action == "release_prisoner":
+		if ledger and target_input and reason_input: ledger.request_release_prisoner(target_input.text.strip_edges(), reason_input.text)
+	elif action == "withdraw_treasury":
+		if ledger and account_input and amount_input and reason_input: ledger.request_central_bank_withdraw(account_input.text.strip_edges(), int(amount_input.text), reason_input.text)
+	elif action == "save_permissions":
+		if ledger and target_input: ledger.request_role_permissions(int(target_input.text), permissions_draft)
+	elif action == "teleport":
+		_teleport_to(arg)
 	_refresh()
 	_save_services()
 
@@ -204,9 +229,12 @@ func _render_page() -> void:
 				var sim: Dictionary = sim_cards[i]
 				layout.add_child(_label("%s | %s | اینترنت: %d MB" % [sim.number, sim.carrier, int(sim.data_mb)]))
 				_add_button(layout, "خرید بسته اینترنت برای سیم‌کارت %d" % (i + 1), "buy_data", str(i))
-				_add_button(layout, "افتتاح حساب روی سیم‌کارت %d" % (i + 1), "create_account", str(i))
-				for account in sim.accounts:
-					layout.add_child(_label("حساب: %s | موجودی: %d" % [account.number, int(account.balance)]))
+			pin_input = _add_input("رمز ۴ تا ۸ رقمی برای افتتاح حساب")
+			_add_button(layout, "افتتاح حساب بانکی", "open_account")
+			if ledger:
+				var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				for account in ledger.get_accounts_for_peer(local_id):
+					layout.add_child(_label("حساب: %s | موجودی: %d | رمز: محرمانه" % [account.number, int(account.balance)]))
 		"bank":
 			notice_changed.emit("اینترنت‌بانک: انتقال بین شهروندان و حساب‌های NPC.")
 			target_input = _add_input("شماره حساب مقصد")
@@ -216,10 +244,17 @@ func _render_page() -> void:
 			_add_button(layout, "صدور چک آزمایشی", "page", "cheques")
 			_add_button(layout, "نمایش تراکنش‌ها", "page", "transactions")
 		"cheques":
-			notice_changed.emit("چک‌ها و شناسه پیگیری آن‌ها.")
-			_add_button(layout, "صدور چک ۱۰۰۰ سکه‌ای", "issue_cheque")
-			for cheque in cheques:
-				layout.add_child(_label("%s | %s | %d" % [cheque.id, cheque.status, int(cheque.amount)]))
+			notice_changed.emit("صدور چک با شماره حساب هشت‌رقمی؛ اعتبار باقی‌مانده برای خریدهای بعدی می‌ماند.")
+			account_input = _add_input("شماره حساب ۸ رقمی")
+			pin_input = _add_input("رمز حساب")
+			amount_input = _add_input("مبلغ چک")
+			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+			_add_button(layout, "صدور چک", "issue_real_cheque")
+			target_input = _add_input("کد چک برای خرید")
+			for item in ONLINE_PRODUCTS:
+				_add_button(layout, "خرید %s با چک" % item, "cheque_purchase", item)
+			for cheque in (ledger.cheque_book.values() if ledger else []):
+				layout.add_child(_label("%s | %s | اعتبار باقی‌مانده: %d" % [cheque.id, cheque.status, int(cheque.remaining_value)]))
 		"transactions":
 			notice_changed.emit("سوابق تراکنش در دفترکل بانکی ثبت می‌شوند.")
 			if ledger:
@@ -257,6 +292,79 @@ func _render_page() -> void:
 						garage_cars.append(item_name)
 			for car in garage_cars:
 				_add_button(layout, "اسپاون " + car, "spawn_car", car)
+		"creator":
+			if not _is_creator():
+				notice_changed.emit("پنل سازنده فقط برای سازنده بازی است.")
+				return
+			notice_changed.emit("پنل سازنده | مدیریت کل شهر")
+			_add_button(layout, "فرماندهی ارتش", "page", "military")
+			_add_button(layout, "وزارت اطلاعات", "page", "intel")
+			_add_button(layout, "تلپورت", "page", "teleport_page")
+			_add_button(layout, "بانک مرکزی", "page", "central_bank")
+			_add_button(layout, "مدیریت زندان", "page", "prison")
+			_add_button(layout, "کاخ ریاست جمهوری و اختیارات", "page", "palace")
+			_add_button(layout, "سامانه جامع شهروندان", "page", "citizen_search")
+		"central_bank":
+			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_central_bank"):
+				notice_changed.emit("دسترسی بانک مرکزی برای این مقام فعال نشده است.")
+				return
+			notice_changed.emit("بانک مرکزی | خزانه، حساب‌ها، چک‌ها و سوابق مالی")
+			account_input = _add_input("شماره حساب مقصد ۸ رقمی")
+			amount_input = _add_input("مبلغ برداشت از خزانه")
+			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+			reason_input = _add_input("علت برداشت")
+			_add_button(layout, "برداشت از خزانه به حساب", "withdraw_treasury")
+			_add_button(layout, "مدیریت زندان", "page", "prison")
+			_add_button(layout, "جست‌وجوی شهروند", "page", "citizen_search")
+			if ledger and ledger._is_authority():
+				_on_central_bank_snapshot_received(ledger.get_central_bank_snapshot(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1))
+			else:
+				ledger.request_central_bank_snapshot()
+		"prison":
+			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "release_prisoner"):
+				notice_changed.emit("دسترسی مدیریت زندان برای این مقام فعال نشده است.")
+				return
+			notice_changed.emit("زندان مرکزی | پرونده زندانیان و آزادی با دستور مقام مجاز")
+			target_input = _add_input("شناسه پرونده زندان")
+			reason_input = _add_input("دلیل آزادی")
+			_add_button(layout, "آزادی زندانی", "release_prisoner")
+			if ledger and ledger._is_authority():
+				_on_central_bank_snapshot_received(ledger.get_central_bank_snapshot(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1))
+			else:
+				ledger.request_central_bank_snapshot()
+		"citizen_search":
+			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_citizen_records"):
+				notice_changed.emit("دسترسی مشاهده پرونده شهروندان فعال نیست.")
+				return
+			notice_changed.emit("کد شهروندی را وارد کن؛ پرونده NPC و پلیر آنلاین جست‌وجو می‌شود.")
+			target_input = _add_input("کد شهروندی یا شناسه پلیر")
+			_add_button(layout, "جست‌وجوی پرونده کامل", "search_citizen")
+		"palace":
+			if not _is_creator():
+				notice_changed.emit("مدیریت مقام‌ها فقط برای سازنده است.")
+				return
+			notice_changed.emit("کد پلیر آنلاین را وارد و اختیارات هر حوزه را جداگانه تعیین کن.")
+			target_input = _add_input("شناسه پلیر آنلاین (مثلاً ۲)")
+			permissions_draft = {"view_central_bank":false, "central_bank_withdraw":false, "view_citizen_records":false, "pardon_cheque_ban":false, "release_prisoner":false}
+			for permission in permissions_draft.keys():
+				var permission_check := CheckBox.new()
+				permission_check.text = permission
+				permission_check.toggled.connect(func(enabled: bool): permissions_draft[permission] = enabled)
+				layout.add_child(permission_check)
+			_add_button(layout, "ذخیره اختیارات مقام", "save_permissions")
+		"teleport_page":
+			if not _is_creator():
+				notice_changed.emit("تلپورت فقط برای سازنده است.")
+				return
+			for place in ["بانک مرکزی", "بانک شهری", "کاخ ریاست جمهوری", "وزارت اطلاعات", "ستاد کل ارتش", "زندان مرکزی", "مرکز مخابرات"]:
+				_add_button(layout, "تلپورت به " + place, "teleport", place)
+		"military":
+			if not _is_creator():
+				notice_changed.emit("فرماندهی کل ارتش فقط برای سازنده است.")
+				return
+			notice_changed.emit("فرماندهی کل ارتش | هفت نیروی نظامی در ساختار فرماندهی")
+			for role_name in ROLES:
+				layout.add_child(_label(role_name))
 		"intel":
 			if not _is_creator():
 				notice_changed.emit("این بخش فقط در اختیار سازنده/میزبان است.")
@@ -279,6 +387,54 @@ func _render_page() -> void:
 			amount_input = _add_input("مبلغ برداشت")
 			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 			_add_button(layout, "برداشت سازنده از حساب شهروند", "owner_withdraw")
+
+
+func _on_central_bank_snapshot_received(data: Dictionary) -> void:
+	if data.is_empty():
+		return
+	var layout := _content()
+	if not is_instance_valid(layout):
+		return
+	for key in ["accounts", "cheques", "prison_records"]:
+		if data.has(key):
+			layout.add_child(_label("— " + key + " —"))
+	if data.has("treasury"):
+		layout.add_child(_label("موجودی خزانه: %d سکه" % int(data.treasury)))
+	for number in data.get("accounts", {}).keys():
+		var account: Dictionary = data.accounts[number]
+		layout.add_child(_label("حساب %s | شهروند %s | موجودی %d | رمز محرمانه" % [number, str(account.get("citizen_id", "")), int(account.get("balance", 0))]))
+	for cheque_id in data.get("cheques", {}).keys():
+		var cheque: Dictionary = data.cheques[cheque_id]
+		layout.add_child(_label("%s | وضعیت %s | اعتبار باقی‌مانده %d | سوابق %d" % [cheque_id, str(cheque.get("status", "")), int(cheque.get("remaining_value", 0)), cheque.get("spends", []).size()]))
+	for record_id in data.get("prison_records", {}).keys():
+		var record: Dictionary = data.prison_records[record_id]
+		layout.add_child(_label("پرونده %s | شهروند %s | علت %s | وضعیت %s" % [record_id, str(record.get("citizen_id", "")), str(record.get("reason", "")), str(record.get("status", ""))]))
+
+func _on_citizen_record_received(data: Dictionary) -> void:
+	if data.is_empty():
+		notice_changed.emit("پرونده پیدا نشد یا دسترسی کافی نیست.")
+		return
+	var layout := _content()
+	layout.add_child(_label("مشخصات شهروند: " + str(data.get("citizen", {}))))
+	layout.add_child(_label("حساب‌ها: " + str(data.get("accounts", []))))
+	layout.add_child(_label("چک‌ها: " + str(data.get("cheques", []))))
+	layout.add_child(_label("سوابق زندان: " + str(data.get("prison_records", []))))
+	layout.add_child(_label("دارایی‌ها: " + str(data.get("assets", []))))
+	layout.add_child(_label("محرومیت چک: " + str(data.get("cheque_banned", false))))
+
+func _teleport_to(place: String) -> void:
+	if not _is_creator() or player == null:
+		return
+	var locations := {
+		"بانک مرکزی": Vector3(-29, 4, 28), "بانک شهری": Vector3(29, 4, 28),
+		"کاخ ریاست جمهوری": Vector3(55, 4, -55), "وزارت اطلاعات": Vector3(-55, 4, -55),
+		"ستاد کل ارتش": Vector3(55, 4, 55), "زندان مرکزی": Vector3(0, 4, 82),
+		"مرکز مخابرات": Vector3(29, 4, -28)
+	}
+	if locations.has(place):
+		player.global_position = locations[place] + Vector3(0, 1.2, 10)
+		player.velocity = Vector3.ZERO
+		notice_changed.emit("به %s منتقل شدی." % place)
 
 func _label(value: String) -> Label:
 	var label := Label.new()
@@ -360,20 +516,10 @@ func _place_item(item: String) -> void:
 	notice_changed.emit("وسیله داخل خانه چیده شد: " + item)
 
 func _create_account(sim_index: int) -> void:
-	if sim_index < 0 or sim_index >= sim_cards.size():
-		return
-	var accounts: Array = sim_cards[sim_index].accounts
-	if accounts.size() >= 3:
-		notice_changed.emit("برای این سیم‌کارت سه حساب ساخته شده است.")
-		return
-	if pin_input == null or pin_input.text.length() < 4 or pin_input.text.length() > 8 or not pin_input.text.is_valid_int():
-		notice_changed.emit("رمز حساب باید بین ۴ تا ۸ رقم باشد.")
-		return
-	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-	var account_number := "LC-%04d-%d-%03d" % [peer_id, sim_index + 1, accounts.size() + 1]
-	accounts.append({"number":account_number, "balance":_get_balance(), "pin":pin_input.text})
-	sim_cards[sim_index].accounts = accounts
-	notice_changed.emit("حساب جدید ساخته شد: " + account_number)
+	if ledger and pin_input:
+		ledger.request_open_bank_account(pin_input.text)
+	else:
+		notice_changed.emit("سامانه بانک در دسترس نیست.")
 
 
 func _buy_sim() -> void:
