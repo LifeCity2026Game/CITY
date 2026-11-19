@@ -367,7 +367,7 @@ func rpc_receive_balance(current_balance: int) -> void:
 
 func _send_receipt(peer_id: int, doc: Dictionary) -> void:
 	_send_balance(peer_id)
-	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "rpc_receive_receipt", doc)
 	else:
 		receipt_issued.emit(doc)
@@ -378,7 +378,7 @@ func rpc_receive_receipt(doc: Dictionary) -> void:
 	receipt_issued.emit(doc)
 
 func _send_notice(peer_id: int, message: String) -> void:
-	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "rpc_receive_notice", message)
 	else:
 		ledger_notice.emit(message)
