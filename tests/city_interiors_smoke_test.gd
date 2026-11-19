@@ -21,8 +21,8 @@ func _run_city_checks() -> void:
 	if city == null or player == null:
 		_fail("City feature system or player is missing")
 		return
-	if city.generic_interior_positions.size() != 64:
-		_fail("Expected 64 generated city interiors, found %d" % city.generic_interior_positions.size())
+	if city.generic_interior_positions.size() != 72:
+		_fail("Expected 72 generated city interiors, found %d" % city.generic_interior_positions.size())
 		return
 	if city.interior_positions.size() != 14:
 		_fail("Expected 14 service-building interiors, found %d" % city.interior_positions.size())
