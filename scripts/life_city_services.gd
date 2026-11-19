@@ -15,6 +15,7 @@ var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
 var roles: Dictionary = {1: "سازنده"}
 var placed_furniture: Array[String] = []
+var cheques: Array[Dictionary] = []
 var owned_homes: Array[String] = []
 var owned_vehicles: Array[String] = []
 var game_day_seconds := 0.0
@@ -153,6 +154,8 @@ func _action(action: String, arg: String = "") -> void:
 		_buy_data(int(arg))
 	elif action == "transfer":
 		_transfer()
+	elif action == "issue_cheque":
+		_issue_cheque()
 	elif action == "owner_withdraw":
 		_owner_withdraw()
 	elif action == "assign_role":
@@ -183,8 +186,10 @@ func _render_page() -> void:
 			_add_button(layout, "صدور چک آزمایشی", "page", "cheques")
 			_add_button(layout, "نمایش تراکنش‌ها", "page", "transactions")
 		"cheques":
-			notice_changed.emit("چک‌ها در این نسخه به‌صورت سند قابل پیگیری و ثبت‌شده نمایش داده می‌شوند.")
+			notice_changed.emit("چک‌ها و شناسه پیگیری آن‌ها.")
 			_add_button(layout, "صدور چک ۱۰۰۰ سکه‌ای", "issue_cheque")
+			for cheque in cheques:
+				layout.add_child(_label("%s | %s | %d" % [cheque.id, cheque.status, int(cheque.amount)]))
 		"transactions":
 			notice_changed.emit("سوابق تراکنش در دفترکل بانکی ثبت می‌شوند.")
 			if ledger:
@@ -246,7 +251,7 @@ func _buy_online(item: String) -> void:
 		notice_changed.emit("موجودی کافی نیست یا کالا معتبر نیست.")
 		return
 	if ledger:
-		ledger.adjust_balance(1, -price, "online_order:" + item)
+		ledger.request_purchase(item)
 	order_list.append({"item":item, "remaining":GAME_DAY_LENGTH, "delivered":false})
 	notice_changed.emit("سفارش ثبت شد؛ تحویل پس از یک روز کامل درون‌بازی.")
 
@@ -256,8 +261,7 @@ func _buy_home(home: String) -> void:
 		notice_changed.emit("موجودی کافی نیست.")
 		return
 	if ledger:
-		ledger.adjust_balance(1, -price, "property_purchase:" + home)
-		ledger.issue_custom_document(home, 1, price)
+		ledger.request_purchase(home)
 	owned_homes.append(home)
 	notice_changed.emit("ملک خریداری شد؛ خانه در ابتدا خالی است و باید وسایل بخری.")
 
@@ -267,8 +271,7 @@ func _buy_car(car: String) -> void:
 		notice_changed.emit("موجودی کافی نیست.")
 		return
 	if ledger:
-		ledger.adjust_balance(1, -price, "vehicle_purchase:" + car)
-		ledger.issue_custom_document(car, 1, price)
+		ledger.request_purchase(car)
 	owned_vehicles.append(car)
 	notice_changed.emit("خودرو خریداری شد و به پنل پارکینگ اضافه شد.")
 
@@ -311,9 +314,14 @@ func _buy_data(sim_index: int) -> void:
 		notice_changed.emit("خرید بسته اینترنت ناموفق بود.")
 		return
 	if ledger:
-		ledger.adjust_balance(1, -250, "mobile_data_bundle")
+		ledger.request_adjust_balance(-250, "mobile_data_bundle")
 	sim_cards[sim_index].data_mb = int(sim_cards[sim_index].data_mb) + 5000
 	notice_changed.emit("بسته ۵ گیگابایتی فعال شد.")
+
+func _issue_cheque() -> void:
+	var cheque_id := "LC-CHQ-%04d" % (cheques.size() + 1)
+	cheques.append({"id": cheque_id, "issuer": 1, "amount": 1000, "status": "صادر شده"})
+	notice_changed.emit("چک آزمایشی ثبت شد: " + cheque_id)
 
 func _transfer() -> void:
 	if target_input == null or amount_input == null:
