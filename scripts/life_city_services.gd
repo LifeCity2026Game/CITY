@@ -30,7 +30,7 @@ var is_imprisoned := false
 var previous_prison_position := Vector3.ZERO
 var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
-var roles: Dictionary = {1: "سازنده"}
+var roles: Dictionary = {1: ["سازنده"]}
 var placed_furniture: Array[String] = []
 var cheques: Array[Dictionary] = []
 var owned_homes: Array[String] = []
@@ -389,8 +389,12 @@ func _action(action: String, arg: String = "") -> void:
 		_owner_withdraw()
 	elif action == "assign_role":
 		_assign_role(int(arg))
+	elif action == "remove_role":
+		_remove_role(int(arg))
 	elif action == "assign_role_target":
 		if target_input: _assign_role(int(target_input.text))
+	elif action == "remove_role_target":
+		if target_input: _remove_role(int(target_input.text))
 	elif action == "open_account":
 		if ledger and pin_input: ledger.request_open_bank_account(pin_input.text)
 	elif action == "issue_real_cheque":
@@ -420,7 +424,7 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "teleport":
 		_teleport_to(arg)
 	elif action == "city_report":
-		if _is_creator() or str(roles.get(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "")) == "شهردار":
+		if _is_creator() or _has_role(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "شهردار"):
 			notice_changed.emit("گزارش شهرداری ثبت شد؛ خدمات شهری برای بررسی در دفتر مأموریت‌ها قرار گرفت.")
 	elif action == "city_maintenance":
 		if _is_creator() or str(roles.get(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "")) == "شهردار":
@@ -460,8 +464,9 @@ func _render_page() -> void:
 				layout.add_child(_label("هنوز خودروی خریداری‌شده و دارای سند نداری."))
 		"city_hall":
 			var local_peer_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-			var local_role: String = str(roles.get(local_peer_id, "شهروند"))
-			if not _is_creator() and local_role != "شهردار":
+			var local_roles := _roles_for_peer(local_peer_id)
+			var local_role: String = "، ".join(local_roles) if not local_roles.is_empty() else "شهروند"
+			if not _is_creator() and not _has_role(local_peer_id, "شهردار"):
 				notice_changed.emit("ورود به پنل مدیریت شهرداری فقط برای شهردار منصوب‌شده و سازنده مجاز است.")
 				return
 			notice_changed.emit("شهرداری شهر | مدیر مسئول: %s" % local_role)
@@ -702,7 +707,9 @@ func _render_page() -> void:
 				palace_role_picker.add_item(role_name)
 			palace_role_picker.item_selected.connect(func(index: int): selected_role = ROLES[index])
 			layout.add_child(palace_role_picker)
-			_add_button(layout, "اعطای مقام انتخاب‌شده", "assign_role_target")
+			_add_button(layout, "افزودن مقام انتخاب‌شده (بدون حذف مقام‌های قبلی)", "assign_role_target")
+			_add_button(layout, "حذف فقط مقام انتخاب‌شده", "remove_role_target")
+			layout.add_child(_label("هر فرد می‌تواند هم‌زمان چند مقام داشته باشد؛ اختیارات هر حوزه جداگانه کنترل می‌شود."))
 			permissions_draft = {"view_central_bank":false, "central_bank_withdraw":false, "view_citizen_records":false, "view_prison_records":false, "release_prisoner":false, "pardon_cheque_ban":false, "view_intelligence":false, "command_military":false}
 			var permission_labels := {"view_central_bank":"مشاهده بانک مرکزی", "central_bank_withdraw":"برداشت از خزانه", "view_citizen_records":"مشاهده پرونده شهروندان", "view_prison_records":"مشاهده پرونده زندانیان", "release_prisoner":"آزادی زندانی", "pardon_cheque_ban":"بخشودگی محرومیت چک", "view_intelligence":"مشاهده اطلاعات وزارت اطلاعات", "command_military":"فرماندهی یگان نظامی"}
 			for permission in permissions_draft.keys():
@@ -787,7 +794,9 @@ func _render_page() -> void:
 				]
 				layout.add_child(_label(summary))
 				if _is_creator() and peer_id > 0 and owner_type == "player":
-					_add_button(layout, "انتصاب مقام برای " + name + " (" + kind + ")", "assign_role", str(peer_id))
+					layout.add_child(_label("مقام‌های فعلی: " + "، ".join(_roles_for_peer(peer_id))))
+					_add_button(layout, "افزودن مقام «" + selected_role + "» برای " + name, "assign_role", str(peer_id))
+					_add_button(layout, "حذف مقام «" + selected_role + "» از " + name, "remove_role", str(peer_id))
 			if _is_creator():
 				target_input = _add_input("شناسه بازیکن برای برداشت سازنده")
 				amount_input = _add_input("مبلغ برداشت")
@@ -1028,19 +1037,59 @@ func _owner_withdraw() -> void:
 	else:
 		notice_changed.emit("برداشت ناموفق: شناسه یا موجودی نامعتبر است.")
 
-func _assign_role(peer_id: int) -> void:
-	if not _is_creator():
-		return
-	var role: String = selected_role
-	roles[peer_id] = role
-	_save_services()
+func _roles_for_peer(peer_id: int) -> Array[String]:
+	var result: Array[String] = []
+	var stored = roles.get(peer_id, [])
+	if stored is Array:
+		for item in stored:
+			var role_name := str(item)
+			if not role_name.is_empty() and not result.has(role_name):
+				result.append(role_name)
+	elif stored is String and not str(stored).is_empty():
+		result.append(str(stored))
+	return result
+
+func _has_role(peer_id: int, role_name: String) -> bool:
+	return _roles_for_peer(peer_id).has(role_name)
+
+func _sync_roles(peer_id: int) -> void:
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and not multiplayer.get_peers().is_empty():
-		rpc("sync_role", peer_id, role)
-	notice_changed.emit("مقام شهروند %d تغییر کرد: %s" % [peer_id, role])
+		rpc("sync_role", peer_id, _roles_for_peer(peer_id))
+
+func _assign_role(peer_id: int) -> void:
+	if not _is_creator() or peer_id <= 0 or not ROLES.has(selected_role):
+		return
+	var assigned := _roles_for_peer(peer_id)
+	if assigned.has(selected_role):
+		notice_changed.emit("این شهروند از قبل مقام «%s» را دارد." % selected_role)
+		return
+	assigned.append(selected_role)
+	roles[peer_id] = assigned
+	_save_services()
+	_sync_roles(peer_id)
+	notice_changed.emit("مقام «%s» به فهرست مقام‌های شهروند %d اضافه شد؛ مقام‌های قبلی حفظ شدند." % [selected_role, peer_id])
+
+func _remove_role(peer_id: int) -> void:
+	if not _is_creator() or peer_id <= 0 or peer_id == 1 and _has_role(peer_id, "سازنده"):
+		return
+	var assigned := _roles_for_peer(peer_id)
+	if not assigned.has(selected_role):
+		notice_changed.emit("این شهروند مقام انتخاب‌شده را ندارد.")
+		return
+	assigned.erase(selected_role)
+	roles[peer_id] = assigned
+	_save_services()
+	_sync_roles(peer_id)
+	notice_changed.emit("مقام «%s» از شهروند %d حذف شد؛ سایر مقام‌ها حفظ شدند." % [selected_role, peer_id])
 
 @rpc("authority", "call_remote", "reliable")
-func sync_role(peer_id: int, role: String) -> void:
-	roles[peer_id] = role
+func sync_role(peer_id: int, assigned_roles: Array) -> void:
+	var normalized: Array[String] = []
+	for item in assigned_roles:
+		if not normalized.has(str(item)):
+			normalized.append(str(item))
+	roles[peer_id] = normalized
+	_refresh_status()
 
 func _on_balance_changed(_peer_id: int, _balance: int) -> void:
 	if active_page == "intel":
@@ -1053,7 +1102,8 @@ func _on_peer_list_changed(_peer_id: int) -> void:
 func _refresh_status() -> void:
 	if is_instance_valid(details_label):
 		var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-		details_label.text = "نقش: %s | روز بازی: %d" % [str(roles.get(peer_id, "شهروند")), int(game_day_seconds / GAME_DAY_LENGTH) + 1]
+		var current_roles := _roles_for_peer(peer_id)
+		details_label.text = "مقام‌ها: %s | روز بازی: %d" % ["، ".join(current_roles) if not current_roles.is_empty() else "شهروند", int(game_day_seconds / GAME_DAY_LENGTH) + 1]
 
 func _refresh() -> void:
 	_refresh_status()
@@ -1157,7 +1207,15 @@ func _load_services() -> void:
 		if order is Dictionary:
 			order_list.append(order)
 	for key in parsed.get("roles", {}).keys():
-		roles[int(key)] = str(parsed.roles[key])
+		var saved_roles = parsed.roles[key]
+		if saved_roles is Array:
+			var normalized: Array[String] = []
+			for saved_role in saved_roles:
+				if not normalized.has(str(saved_role)):
+					normalized.append(str(saved_role))
+			roles[int(key)] = normalized
+		else:
+			roles[int(key)] = [str(saved_roles)]
 	for item in parsed.get("placed_furniture", []):
 		placed_furniture.append(str(item))
 	for cheque in parsed.get("cheques", []):
