@@ -179,10 +179,11 @@ func _build_ui() -> void:
 	phone_panel.name = "ServicesPanel"
 	phone_panel.anchor_left = 0.0
 	phone_panel.anchor_right = 0.0
+	phone_panel.anchor_bottom = 1.0
 	phone_panel.offset_left = 12
 	phone_panel.offset_right = 360
 	phone_panel.offset_top = 190
-	phone_panel.offset_bottom = 680
+	phone_panel.offset_bottom = -12
 	layer.add_child(phone_panel)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -223,7 +224,8 @@ func _clear_dynamic() -> void:
 func _add_button(parent: Node, caption: String, action: String, arg: String = "") -> Button:
 	var button := Button.new()
 	button.text = caption
-	button.custom_minimum_size = Vector2(300, 42)
+	button.custom_minimum_size = Vector2(0, 46)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(button)
 	button.pressed.connect(_action.bind(action, arg))
 	return button
@@ -236,6 +238,10 @@ func _add_input(placeholder: String) -> LineEdit:
 
 func _toggle_panel() -> void:
 	phone_panel.visible = not phone_panel.visible
+	# Avoid touch targets being stacked underneath the open services panel.
+	var joystick := get_parent().get_node_or_null("CharacterControls/CharacterJoystick")
+	if joystick:
+		joystick.visible = not phone_panel.visible
 
 func _action(action: String, arg: String = "") -> void:
 	if action == "page":
