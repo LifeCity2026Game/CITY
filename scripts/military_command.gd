@@ -176,12 +176,7 @@ func _build_interface() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "MilitaryCommandUI"
 	add_child(layer)
-	var toggle := Button.new()
-	toggle.text = "فرماندهی ارتش"
-	toggle.position = Vector2(12, 610)
-	toggle.custom_minimum_size = Vector2(190, 48)
-	toggle.pressed.connect(_toggle_panel)
-	layer.add_child(toggle)
+	# The command panel is opened from the accessible HQ interior, not a duplicate floating button.
 	panel = PanelContainer.new()
 	panel.position = Vector2(12, 70)
 	panel.size = Vector2(350, 520)
