@@ -17,17 +17,23 @@ func _run() -> void:
 
 	print("FINANCE_CHECKPOINT_ACCOUNT")
 	var accounts: Array[Dictionary] = ledger.get_accounts_for_peer(1)
-	assert(accounts.size() == 1, "creator primary account was not seeded")
+	assert(accounts.is_empty(), "creator must not receive an automatic bank account")
+	ledger.request_open_bank_account("9876")
+	accounts = ledger.get_accounts_for_peer(1)
+	assert(accounts.size() == 1, "creator's first manually opened account was not created")
 	var primary_account: Dictionary = accounts[0]
 	var primary_number := str(primary_account.get("number", ""))
-	assert(int(primary_account.get("account_index", 0)) == 1, "creator account must be account 1")
-	assert(bool(primary_account.get("unlimited_balance", false)), "creator account 1 must have unlimited balance")
+	assert(int(primary_account.get("account_index", 0)) == 1, "creator first account must be account 1")
+	assert(bool(primary_account.get("unlimited_balance", false)), "creator first manually opened account must have unlimited balance")
 	assert(str(primary_account.get("balance_display", "")) == "نامحدود", "creator account must display unlimited balance")
+	assert(str(ledger.bank_accounts[primary_number].pin_hash) != "9876", "creator PIN must not be stored in plaintext")
 	ledger.balances[1] = 20000
 	ledger.request_open_bank_account("1234")
 	accounts = ledger.get_accounts_for_peer(1)
 	assert(accounts.size() == 2, "secondary finite account creation failed")
 	var account: Dictionary = accounts[1]
+	assert(int(account.get("account_index", 0)) == 2, "second creator account must be finite account 2")
+	assert(not bool(account.get("unlimited_balance", false)), "only creator account 1 may be unlimited")
 	var account_number := str(account.get("number", ""))
 	assert(account_number.length() == 8 and account_number.is_valid_int(), "account number must be 8 numeric digits")
 	assert(str(ledger.bank_accounts[account_number].pin_hash) != "1234", "PIN must not be stored in plaintext")
