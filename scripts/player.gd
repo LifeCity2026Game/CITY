@@ -4,6 +4,9 @@ extends CharacterBody3D
 @export var gravity: float = 18.0
 var mobile_direction := Vector2.ZERO
 var camera_pivot: Node3D
+var camera_yaw: float = 0.0
+var camera_pitch: float = -0.12
+var camera_sensitivity: float = 0.8
 var is_remote := false
 var target_position := Vector3.ZERO
 var target_yaw := 0.0
@@ -116,13 +119,14 @@ func _make_leg(pos: Vector3, pants_mat: Material, shoe_mat: Material) -> Node3D:
 
 func _build_camera() -> void:
 	camera_pivot = Node3D.new()
-	camera_pivot.position = Vector3(0, 3.0, 6.2)
+	camera_pivot.position = global_position + Vector3(0, 1.55, 0)
 	add_child(camera_pivot)
 	var camera := Camera3D.new()
-	camera.position = Vector3.ZERO
+	camera.position = Vector3(0, 1.05, 6.2)
 	camera.current = true
 	camera_pivot.add_child(camera)
-	camera_pivot.look_at(global_position + Vector3(0, 1.1, 0), Vector3.UP)
+	camera.look_at(Vector3(0, 0, 0), Vector3.UP)
+	camera_pivot.rotation = Vector3(camera_pitch, camera_yaw, 0.0)
 
 func configure_remote() -> void:
 	is_remote = true
@@ -131,6 +135,22 @@ func configure_remote() -> void:
 func set_remote_state(pos: Vector3, yaw: float) -> void:
 	target_position = pos
 	target_yaw = yaw
+
+func set_camera_sensitivity(value: float) -> void:
+	camera_sensitivity = clampf(value, 0.1, 3.0)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if camera_pivot == null:
+		return
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	if event is InputEventScreenDrag and event.position.x > viewport_width * 0.32:
+		camera_yaw -= event.relative.x * 0.004 * camera_sensitivity
+		camera_pitch = clampf(camera_pitch - event.relative.y * 0.004 * camera_sensitivity, -0.85, 0.55)
+		camera_pivot.rotation = Vector3(camera_pitch, camera_yaw, 0.0)
+	elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		camera_yaw -= event.relative.x * 0.004 * camera_sensitivity
+		camera_pitch = clampf(camera_pitch - event.relative.y * 0.004 * camera_sensitivity, -0.85, 0.55)
+		camera_pivot.rotation = Vector3(camera_pitch, camera_yaw, 0.0)
 
 func set_mobile_axis(axis: String, pressed: bool) -> void:
 	match axis:
@@ -172,5 +192,4 @@ func _physics_process(delta: float) -> void:
 	left_leg.rotation.x = swing
 	right_leg.rotation.x = -swing
 	if camera_pivot:
-		camera_pivot.global_position = global_position + Vector3(0, 3.0, 6.2)
-		camera_pivot.look_at(global_position + Vector3(0, 1.05, 0), Vector3.UP)
+		camera_pivot.global_position = global_position + Vector3(0, 1.55, 0)
