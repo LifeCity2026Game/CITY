@@ -441,7 +441,7 @@ func _assign_role(peer_id: int) -> void:
 	var role: String = selected_role
 	roles[peer_id] = role
 	_save_services()
-	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and not multiplayer.get_peers().is_empty():
 		rpc("sync_role", peer_id, role)
 	notice_changed.emit("مقام شهروند %d تغییر کرد: %s" % [peer_id, role])
 
