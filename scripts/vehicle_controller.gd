@@ -65,6 +65,9 @@ var climate_label: Label
 var transmission_label: Label
 var damage_label: Label
 var vehicle_health := 100.0
+var base_acceleration := 11.0
+var base_max_forward_speed := 34.0
+var vehicle_paint_color := Color(0.12, 0.30, 0.66)
 var style_root: Node3D
 
 func _ready() -> void:
@@ -260,9 +263,13 @@ func _build_controls() -> void:
 	panel.offset_top = 125
 	panel.offset_bottom = 560
 	controls_layer.add_child(panel)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(scroll)
 	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 5)
-	panel.add_child(col)
+	scroll.add_child(col)
 	enter_button = _button(col, "سوار خودرو", _toggle_vehicle)
 	var row := HBoxContainer.new()
 	col.add_child(row)
@@ -400,6 +407,9 @@ func _cycle_vehicle_model() -> void:
 	vehicle_name = str(spec.name)
 	max_forward_speed = float(spec.speed)
 	acceleration = float(spec.accel)
+	base_max_forward_speed = max_forward_speed
+	base_acceleration = acceleration
+	vehicle_paint_color = spec.color
 	var body := get_node_or_null("BodyShell") as MeshInstance3D
 	if body:
 		var material := body.material_override as StandardMaterial3D
@@ -590,6 +600,9 @@ func _process(_delta: float) -> void:
 func apply_impact(impact_speed: float) -> void:
 	current_speed = move_toward(current_speed, 0.0, impact_speed * 1.8)
 	vehicle_health = maxf(0.0, vehicle_health - impact_speed * 2.2)
+	var performance_factor := maxf(0.35, vehicle_health / 100.0)
+	acceleration = base_acceleration * performance_factor
+	max_forward_speed = base_max_forward_speed * performance_factor
 	if damage_label:
 		damage_label.text = "سلامت خودرو: %d%%" % int(vehicle_health)
 	if speed_label:
@@ -605,6 +618,8 @@ func repair_vehicle() -> void:
 			speed_label.text = "برای تعمیر خودرو توقف کن"
 		return
 	vehicle_health = 100.0
+	acceleration = base_acceleration
+	max_forward_speed = base_max_forward_speed
 	if damage_label:
 		damage_label.text = "سلامت خودرو: ۱۰۰٪"
 	if speed_label:
