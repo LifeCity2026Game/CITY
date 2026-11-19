@@ -1254,7 +1254,6 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 				honoured_count += 1
 			elif str(spend.get("status", "")) == "برگشت‌خورده":
 				dishonoured_count += 1
-	return {
 	var marital_status := "مجرد"
 	for marriage in marriage_records.values():
 		if str(marriage.get("status", "")) == "married" and [int(marriage.get("partner_a", -1)), int(marriage.get("partner_b", -1))].has(owner_peer):
