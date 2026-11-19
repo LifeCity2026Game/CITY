@@ -7,6 +7,9 @@ var ledger: Node
 var panel: PanelContainer
 var status_label: Label
 var target_picker: OptionButton
+var target_x_input: LineEdit
+var target_z_input: LineEdit
+var active_projectile_nuclear := false
 var units: Array[Node3D] = []
 var active_missions: Array[Dictionary] = []
 var targets: Array[Node3D] = []
@@ -31,6 +34,12 @@ func configure(player_node: CharacterBody3D, ledger_node: Node) -> void:
 func _ready() -> void:
 	_build_targets()
 	_build_interface()
+
+func _build_targets() -> void:
+	targets.clear()
+	for node in get_tree().get_nodes_in_group("city_buildings"):
+		if node is Node3D:
+			targets.append(node)
 
 func _process(delta: float) -> void:
 	mission_clock += delta
@@ -99,6 +108,16 @@ func _build_interface() -> void:
 	target_picker.add_item("ساختمان دولت")
 	target_picker.add_item("ساختمان تجاری شمال")
 	layout.add_child(target_picker)
+	target_x_input = LineEdit.new()
+	target_x_input.placeholder_text = "مختصات X مقصد (مثلاً ۳۰)"
+	target_x_input.text = "0"
+	target_x_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	layout.add_child(target_x_input)
+	target_z_input = LineEdit.new()
+	target_z_input.placeholder_text = "مختصات Z مقصد (مثلاً -۴۰)"
+	target_z_input.text = "0"
+	target_z_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+	layout.add_child(target_z_input)
 	for i in range(DEPARTMENTS.size()):
 		_add_button(layout, DEPARTMENTS[i], "department", DEPARTMENTS[i])
 	_add_button(layout, "گشت شهری نیروی زمینی", "ground_patrol")
@@ -111,6 +130,11 @@ func _build_interface() -> void:
 	_add_button(layout, "عملیات آبی‌ـ‌خاکی تفنگداران", "marines")
 	_add_button(layout, "ماهواره، اینترنت و هشدار فضایی", "space")
 	_add_button(layout, "گشت و امنیت شهری گارد ملی", "national_guard")
+	_add_button(layout, "دستور حرکت یگان شاخه انتخابی به مختصات", "move_to_target")
+	_add_button(layout, "دستور حمله بازی‌محور به مختصات", "attack_target")
+	_add_button(layout, "رژه یگان در نقطه انتخابی", "parade_target")
+	_add_button(layout, "حمله جنگنده با بمب معمولی", "fighter_attack")
+	_add_button(layout, "حمله جنگنده با بمب هسته‌ای خیالی", "nuclear_attack")
 	_add_button(layout, "نمایش یگان‌ها و مأموریت‌ها", "status")
 	_add_button(layout, "بستن", "close")
 
@@ -126,6 +150,10 @@ func _toggle_panel() -> void:
 
 func _target_position() -> Vector3:
 	var choices := [Vector3(-29,0,28), Vector3(55,0,-55), Vector3(55,0,55), Vector3(-55,0,-55), Vector3(0,0,-50), Vector3(72,0,24)]
+	var x_text := target_x_input.text.strip_edges() if is_instance_valid(target_x_input) else ""
+	var z_text := target_z_input.text.strip_edges() if is_instance_valid(target_z_input) else ""
+	if not x_text.is_empty() and not z_text.is_empty() and x_text.is_valid_float() and z_text.is_valid_float():
+		return Vector3(clampf(float(x_text), -105.0, 105.0), 0.0, clampf(float(z_text), -105.0, 105.0))
 	return choices[clampi(target_picker.selected, 0, choices.size()-1)]
 
 func _on_action(action: String, arg: String = "") -> void:
@@ -176,6 +204,16 @@ func _on_action(action: String, arg: String = "") -> void:
 			_spawn_unit("خودروی گارد ملی", Vector3(0,0.6,16), COLORS[6], 4.5, true, 12.0)
 			_create_perimeter(_target_position())
 			_log("گارد ملی برای امنیت شهری و مدیریت رویدادهای بازی اعزام شد.")
+		"move_to_target":
+			_order_selected_units(_target_position(), "move")
+		"attack_target":
+			_order_selected_units(_target_position(), "attack")
+		"parade_target":
+			_order_selected_units(_target_position(), "parade")
+		"fighter_attack":
+			_order_fighter_attack(_target_position(), false)
+		"nuclear_attack":
+			_order_fighter_attack(_target_position(), true)
 		"status":
 			_log("یگان‌های فعال: %d | مأموریت‌های ثبت‌شده: %d | ساختمان‌های آسیب‌دیده: %d" % [units.size(), active_missions.size(), destroyed_buildings.size()])
 
@@ -184,6 +222,8 @@ func _spawn_unit(label: String, at: Vector3, paint: Color, speed: float, patrol:
 	root.name = "MilitaryUnit_%d" % next_unit_id
 	next_unit_id += 1
 	root.position = at
+	root.set_meta("department", selected_department)
+	root.set_meta("unit_label", label)
 	root.set_meta("destination", at + Vector3(0,0,-24))
 	root.set_meta("speed", speed)
 	root.set_meta("patrol", patrol)
@@ -208,6 +248,7 @@ func _spawn_aircraft(label: String, at: Vector3, paint: Color, patrol: bool) -> 
 	var craft := Node3D.new()
 	craft.name = label
 	craft.position = at
+	craft.set_meta("department", selected_department)
 	craft.set_meta("center", at)
 	craft.set_meta("phase", 0.0)
 	craft.set_meta("patrol", patrol)
@@ -226,6 +267,7 @@ func _spawn_ship(at: Vector3, label: String) -> void:
 	var ship := Node3D.new()
 	ship.name = label
 	ship.position = at
+	ship.set_meta("department", selected_department)
 	ship.set_meta("destination", at + Vector3(0,0,-20))
 	ship.set_meta("speed", 2.5)
 	ship.set_meta("patrol", true)
@@ -256,12 +298,13 @@ func _create_perimeter(center: Vector3) -> void:
 		barrier.rotation.y = -angle
 		_spawn_unit("گشتی محافظ", at, COLORS[0], 3.5, true, 4.0)
 	
-func _launch_missile(destination: Vector3) -> void:
+func _launch_missile(destination: Vector3, nuclear: bool = false, origin: Vector3 = Vector3.ZERO) -> void:
 	if missile_active:
 		_log("یک موشک دیگر در حال پرواز است.")
 		return
-	missile_from = (player.global_position if player else Vector3(0,1,12)) + Vector3(0,2,0)
+	missile_from = (origin if origin != Vector3.ZERO else (player.global_position if player else Vector3(0,1,12))) + Vector3(0,2,0)
 	missile_to = destination + Vector3(0,1.5,0)
+	active_projectile_nuclear = nuclear
 	missile_progress = 0.0
 	missile_active = true
 	missile_node = Node3D.new()
@@ -279,19 +322,19 @@ func _update_missile(delta: float) -> void:
 	if t >= 1.0:
 		missile_active = false
 		missile_node.queue_free()
-		_create_explosion(missile_to)
-		_damage_target(_target_position())
-		_log("انفجار ثبت شد؛ ساختمان مقصد آسیب دید.")
+		_create_explosion(missile_to, active_projectile_nuclear)
+		_damage_target(missile_to, active_projectile_nuclear)
+		_log("انفجار هسته‌ای نمایشی ثبت شد؛ محدوده وسیع شهر در بازی آسیب دید." if active_projectile_nuclear else "انفجار ثبت شد؛ محدوده مقصد آسیب دید.")
 
-func _create_explosion(at: Vector3) -> void:
+func _create_explosion(at: Vector3, nuclear: bool = false) -> void:
 	var fx := Node3D.new()
 	fx.name = "GameExplosion"
 	fx.position = at
 	add_child(fx)
 	var sphere := MeshInstance3D.new()
 	var mesh := SphereMesh.new()
-	mesh.radius = 2.0
-	mesh.height = 4.0
+	mesh.radius = 5.0 if nuclear else 2.0
+	mesh.height = 10.0 if nuclear else 4.0
 	sphere.mesh = mesh
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color(1.0,0.32,0.06,0.75)
@@ -301,8 +344,8 @@ func _create_explosion(at: Vector3) -> void:
 	sphere.material_override = material
 	fx.add_child(sphere)
 	var smoke := GPUParticles3D.new()
-	smoke.amount = 36
-	smoke.lifetime = 2.8
+	smoke.amount = 120 if nuclear else 36
+	smoke.lifetime = 8.0 if nuclear else 2.8
 	var particle_mat := ParticleProcessMaterial.new()
 	particle_mat.direction = Vector3(0,1,0)
 	particle_mat.spread = 45.0
@@ -312,37 +355,96 @@ func _create_explosion(at: Vector3) -> void:
 	smoke.process_material = particle_mat
 	smoke.emitting = true
 	fx.add_child(smoke)
+	if nuclear:
+		fx.scale = Vector3(7.0, 4.0, 7.0)
+		var flash := OmniLight3D.new()
+		flash.light_color = Color(1.0, 0.72, 0.32)
+		flash.light_energy = 8.0
+		flash.omni_range = 85.0
+		fx.add_child(flash)
 	explosion_nodes.append(fx)
 	var timer := get_tree().create_timer(4.0)
 	timer.timeout.connect(_remove_explosion.bind(fx))
 
-func _damage_target(center: Vector3) -> void:
-	var best: Node3D
-	var best_distance := 24.0
+func _damage_target(center: Vector3, nuclear: bool = false) -> void:
+	var radius: float = 65.0 if nuclear else 24.0
+	var damaged: int = 0
 	for candidate in get_tree().get_nodes_in_group("city_buildings"):
-		if not is_instance_valid(candidate):
+		if not is_instance_valid(candidate) or not candidate is Node3D:
 			continue
-		var d := candidate.global_position.distance_to(center)
-		if d < best_distance:
-			best_distance = d
-			best = candidate
-	if best:
-		var hp := int(best.get_meta("military_health",100)) - 60
-		best.set_meta("military_health",hp)
-		destroyed_buildings[best.name] = hp
+		var building: Node3D = candidate as Node3D
+		var distance_to_impact: float = building.global_position.distance_to(center)
+		if distance_to_impact > radius:
+			continue
+		var damage: int = 100 if nuclear else 60
+		var hp: int = int(building.get_meta("military_health", 100)) - damage
+		building.set_meta("military_health", hp)
+		destroyed_buildings[building.name] = hp
+		damaged += 1
 		if hp <= 0:
-			for child in best.get_children():
+			for child in building.get_children():
 				if child is CollisionObject3D:
-					child.set_collision_layer_value(1,false)
-					child.set_collision_mask_value(1,false)
-				if child is MeshInstance3D:
+					child.set_collision_layer_value(1, false)
+					child.set_collision_mask_value(1, false)
+				if child is VisualInstance3D:
 					child.visible = false
-			best.visible = false
-			_log("ساختمان %s تخریب شد؛ برای بازسازی به شهرداری مراجعه کن." % best.name)
-		else:
-			_log("ساختمان %s آسیب دید؛ سلامت باقی‌مانده: %d" % [best.name,hp])
+			building.visible = false
+	if damaged > 0:
+		_log("انفجار هسته‌ای نمایشی؛ %d ساختمان در شعاع بازی آسیب دید یا تخریب شد." % damaged if nuclear else "%d ساختمان در محدوده انفجار آسیب دید." % damaged)
 	else:
-		_log("انفجار در محدوده مقصد ثبت شد؛ ساختمان قابل تخریب نزدیک پیدا نشد.")
+		_log("انفجار در مختصات انتخابی ثبت شد؛ ساختمان شهری در شعاع اثر نبود.")
+
+
+func _order_selected_units(destination: Vector3, mode: String) -> void:
+	var matched: int = 0
+	for unit in units:
+		if not is_instance_valid(unit) or str(unit.get_meta("department", "")) != selected_department:
+			continue
+		matched += 1
+		unit.set_meta("destination", destination + Vector3(randf_range(-5.0, 5.0), 0.0, randf_range(-5.0, 5.0)))
+		if mode == "parade":
+			unit.set_meta("center", destination)
+			unit.set_meta("patrol", true)
+			unit.set_meta("radius", 14.0)
+		else:
+			unit.set_meta("patrol", false)
+	if matched == 0:
+		if selected_department == "نیروی هوایی":
+			_spawn_aircraft("جنگنده فرماندهی", Vector3(0, 16, 12), COLORS[1], false)
+		elif selected_department == "نیروی دریایی" or selected_department == "گارد ساحلی" or selected_department == "تفنگداران دریایی":
+			_spawn_ship(Vector3(-88, 0.2, 70), "شناور فرماندهی")
+		else:
+			_spawn_unit("یگان فرماندهی", Vector3(0, 0.6, 12), COLORS[0], 5.0, false, 0.0)
+		matched = 1
+		for unit in units:
+			if is_instance_valid(unit) and str(unit.get_meta("department", "")) == selected_department:
+				unit.set_meta("destination", destination)
+				unit.set_meta("center", destination)
+				unit.set_meta("patrol", mode == "parade")
+				unit.set_meta("radius", 14.0)
+	if mode == "attack":
+		var origin: Vector3 = player.global_position if player else Vector3(0, 12, 0)
+		for unit in units:
+			if is_instance_valid(unit) and str(unit.get_meta("department", "")) == selected_department:
+				origin = unit.global_position
+				break
+		_launch_missile(destination, false, origin)
+	_log("دستور %s برای %s به مختصات X=%.1f و Z=%.1f صادر شد؛ %d یگان." % [mode, selected_department, destination.x, destination.z, matched])
+
+func _order_fighter_attack(destination: Vector3, nuclear: bool) -> void:
+	var fighter: Node3D
+	for unit in units:
+		if is_instance_valid(unit) and str(unit.get_meta("department", "")) == "نیروی هوایی" and str(unit.name).contains("Aircraft"):
+			fighter = unit
+			break
+	if fighter == null:
+		var previous_department: String = selected_department
+		selected_department = "نیروی هوایی"
+		_spawn_aircraft("Aircraft_Fighter", Vector3(0, 18, 12), COLORS[1], false)
+		selected_department = previous_department
+		fighter = units.back()
+	_launch_missile(destination, nuclear, fighter.global_position)
+	_log("جنگنده به مختصات انتخابی حمله کرد." if not nuclear else "جنگنده بمب هسته‌ای خیالی را در بازی رها کرد؛ اثر بزرگ نمایشی فعال شد.")
 
 func _box(parent: Node3D, label: String, pos: Vector3, size: Vector3, color: Color) -> MeshInstance3D:
 	var mesh_node := MeshInstance3D.new()
