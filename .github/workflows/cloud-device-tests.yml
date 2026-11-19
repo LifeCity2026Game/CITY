@@ -1,0 +1,132 @@
+name: LIFE CITY cloud device tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "Optional successful Android build run ID (blank = latest successful build on godot-migration)"
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.pick.outputs.run_id }}
+      firebase_ready: ${{ steps.credentials.outputs.firebase_ready }}
+      appetize_ready: ${{ steps.credentials.outputs.appetize_ready }}
+    steps:
+      - name: Select successful APK build
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$REQUESTED_RUN_ID" ]; then
+            run_id="$REQUESTED_RUN_ID"
+          else
+            run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build-godot-android.yml/runs?branch=godot-migration&status=success&per_page=1" --jq '.workflow_runs[0].id')"
+          fi
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No successful Android APK build found on godot-migration." >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Selected build run: $run_id"
+
+      - name: Check cloud test credentials
+        id: credentials
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          firebase_ready=true
+          appetize_ready=true
+          if [ -z "$FIREBASE_PROJECT_ID" ] || [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            firebase_ready=false
+            echo "Firebase not configured: add repository variable FIREBASE_PROJECT_ID and secret FIREBASE_SERVICE_ACCOUNT_JSON."
+          fi
+          if [ -z "$APPETIZE_API_TOKEN" ]; then
+            appetize_ready=false
+            echo "Appetize not configured: add repository secret APPETIZE_API_TOKEN."
+          fi
+          echo "firebase_ready=$firebase_ready" >> "$GITHUB_OUTPUT"
+          echo "appetize_ready=$appetize_ready" >> "$GITHUB_OUTPUT"
+          {
+            echo "## LIFE CITY cloud test setup"
+            echo "- Firebase Test Lab configured: $firebase_ready"
+            echo "- Appetize configured: $appetize_ready"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  firebase-test-lab:
+    needs: prepare
+    if: needs.prepare.outputs.firebase_ready == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LIFE-CITY-Android-APK
+          path: artifacts
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.prepare.outputs.run_id }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run Firebase Test Lab Robo test
+        env:
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          apk="$(find artifacts -maxdepth 2 -name '*.apk' -print -quit)"
+          test -n "$apk"
+          gcloud firebase test android run \
+            --project="$FIREBASE_PROJECT_ID" \
+            --type=robo \
+            --app="$apk" \
+            --device=model=oriole,version=34,locale=en,orientation=portrait \
+            --timeout=5m
+
+  appetize-upload:
+    needs: prepare
+    if: needs.prepare.outputs.appetize_ready == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LIFE-CITY-Android-APK
+          path: artifacts
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.prepare.outputs.run_id }}
+
+      - name: Upload APK to Appetize
+        id: appetize
+        uses: appetizeio/github-action-appetize@v1.1.0
+        with:
+          apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
+          appFile: artifacts/LIFE_CITY.apk
+          platform: android
+          note: "LIFE CITY APK from selected successful GitHub build"
+
+      - name: Publish Appetize launch link
+        env:
+          APP_PUBLIC_KEY: ${{ steps.appetize.outputs.publicKey }}
+        run: |
+          echo "## Appetize interactive preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://appetize.io/app/$APP_PUBLIC_KEY" >> "$GITHUB_STEP_SUMMARY"
