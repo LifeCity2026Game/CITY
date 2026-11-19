@@ -60,6 +60,8 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 		ledger.prison_state_changed.connect(_on_prison_state_changed)
 	if ledger and ledger.has_signal("receipt_issued") and not ledger.receipt_issued.is_connected(_on_ownership_receipt):
 		ledger.receipt_issued.connect(_on_ownership_receipt)
+	if ledger and ledger._is_authority():
+		ledger.send_prison_status(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1)
 	if ledger and ledger.has_signal("central_bank_snapshot_received") and not ledger.central_bank_snapshot_received.is_connected(_on_central_bank_snapshot_received):
 		ledger.central_bank_snapshot_received.connect(_on_central_bank_snapshot_received)
 	if ledger and ledger.has_signal("citizen_record_received") and not ledger.citizen_record_received.is_connected(_on_citizen_record_received):
