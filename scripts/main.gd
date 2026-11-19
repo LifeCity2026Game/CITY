@@ -9,6 +9,7 @@ const CITY_FEATURES_SCRIPT = preload("res://scripts/city_features.gd")
 const VEHICLE_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const JOYSTICK_SCRIPT = preload("res://scripts/virtual_joystick.gd")
 const SERVICES_SCRIPT = preload("res://scripts/life_city_services.gd")
+const MILITARY_SCRIPT = preload("res://scripts/military_command.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
@@ -16,6 +17,7 @@ var world_environment: WorldEnvironment
 var sun: DirectionalLight3D
 var city_features: Node
 var vehicle_controller: CharacterBody3D
+var military_system: Node3D
 
 func _ready() -> void:
 	_build_world()
@@ -27,6 +29,7 @@ func _ready() -> void:
 	_build_stage_two()
 	_build_network()
 	_build_life_city_services()
+	_build_military_command()
 
 func _material(color: Color, roughness_value: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -37,6 +40,8 @@ func _material(color: Color, roughness_value: float = 0.82) -> StandardMaterial3
 func _add_box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color: Color, solid: bool = true) -> void:
 	var body := StaticBody3D.new() if solid else Node3D.new()
 	body.name = title
+	if title.begins_with("Building_"):
+		body.add_to_group("city_buildings")
 	body.position = pos
 	parent.add_child(body)
 	var mesh_instance := MeshInstance3D.new()
@@ -176,6 +181,7 @@ func _build_world() -> void:
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	var building := Node3D.new()
 	building.name = label_text.replace(" ", "_")
+	building.add_to_group("city_buildings")
 	building.position = pos
 	add_child(building)
 	_add_box(building, "ServiceFloor", Vector3(0, -3.82, 0), Vector3(17, 0.36, 13), Color(0.24, 0.25, 0.27))
@@ -307,3 +313,10 @@ func _build_life_city_services() -> void:
 	services.set_script(SERVICES_SCRIPT)
 	add_child(services)
 	services.configure(ownership_ledger, player, vehicle_controller, network_manager)
+
+func _build_military_command() -> void:
+	military_system = Node3D.new()
+	military_system.name = "MilitaryCommand"
+	military_system.set_script(MILITARY_SCRIPT)
+	add_child(military_system)
+	military_system.configure(player, ownership_ledger)
