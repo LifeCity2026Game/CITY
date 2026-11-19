@@ -21,6 +21,8 @@ var own_cheques_cache: Array = []
 var cheque_list_requested := false
 var account_list_requested := false
 var account_request_in_progress := false
+var is_imprisoned := false
+var previous_prison_position := Vector3.ZERO
 var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
 var roles: Dictionary = {1: "سازنده"}
@@ -54,6 +56,8 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 	network = network_node
 	if ledger and ledger.has_signal("balance_changed") and not ledger.balance_changed.is_connected(_on_balance_changed):
 		ledger.balance_changed.connect(_on_balance_changed)
+	if ledger and ledger.has_signal("prison_state_changed") and not ledger.prison_state_changed.is_connected(_on_prison_state_changed):
+		ledger.prison_state_changed.connect(_on_prison_state_changed)
 	if ledger and ledger.has_signal("central_bank_snapshot_received") and not ledger.central_bank_snapshot_received.is_connected(_on_central_bank_snapshot_received):
 		ledger.central_bank_snapshot_received.connect(_on_central_bank_snapshot_received)
 	if ledger and ledger.has_signal("citizen_record_received") and not ledger.citizen_record_received.is_connected(_on_citizen_record_received):
@@ -95,7 +99,29 @@ func _process(delta: float) -> void:
 				notice_changed.emit("سفارش تحویل شد: " + str(order.get("item", "")))
 	if delivery_changed:
 		_save_services()
+	if is_imprisoned and player:
+		player.global_position = Vector3(540, 1.2, 2.8)
+		player.velocity = Vector3.ZERO
 	_refresh_status()
+
+func _on_prison_state_changed(peer_id: int, _record_id: String, imprisoned: bool) -> void:
+	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	if peer_id != local_id or player == null:
+		return
+	if imprisoned:
+		if not is_imprisoned:
+			previous_prison_position = player.global_position
+		is_imprisoned = true
+		player.global_position = Vector3(540, 1.2, 2.8)
+		player.velocity = Vector3.ZERO
+		notice_changed.emit("به دلیل چک برگشتی به زندان منتقل شدی.")
+	else:
+		is_imprisoned = false
+		if previous_prison_position != Vector3.ZERO:
+			player.global_position = previous_prison_position
+			player.velocity = Vector3.ZERO
+		previous_prison_position = Vector3.ZERO
+		notice_changed.emit("با دستور مقام مجاز آزاد شدی.")
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
