@@ -40,14 +40,20 @@ func _run_server() -> void:
 	manager.connected = true
 	print("NETWORK_TEST_SERVER_READY")
 	var elapsed := 0.0
-	while elapsed < TEST_TIMEOUT and not manager.remote_players.has(2):
+	while elapsed < TEST_TIMEOUT and multiplayer.get_peers().is_empty():
 		await create_timer(0.1).timeout
 		elapsed += 0.1
-	assert(manager.remote_players.has(2), "Client did not spawn on host")
+	assert(not multiplayer.get_peers().is_empty(), "No client peer connected to host")
+	var client_peer_id := int(multiplayer.get_peers()[0])
+	elapsed = 0.0
+	while elapsed < TEST_TIMEOUT and not manager.remote_players.has(client_peer_id):
+		await create_timer(0.1).timeout
+		elapsed += 0.1
+	assert(manager.remote_players.has(client_peer_id), "Client %d did not spawn on host; peers=%s remote_players=%s" % [client_peer_id, str(multiplayer.get_peers()), str(manager.remote_players.keys())])
 	await create_timer(0.8).timeout
-	var remote_client: CharacterBody3D = manager.remote_players[2]
+	var remote_client: CharacterBody3D = manager.remote_players[client_peer_id]
 	var relayed_client_position: Vector3 = remote_client.get("target_position")
-	assert(relayed_client_position.distance_to(Vector3(10, 0, 0)) < 1.0, "Client movement was not relayed to host")
+	assert(relayed_client_position.distance_to(Vector3(10, 0, 0)) < 1.0, "Client movement was not relayed to host: %s" % str(relayed_client_position))
 	local_player.global_position = Vector3(20, 0, 0)
 	await create_timer(1.0).timeout
 	print("NETWORK_SMOKE_TEST_SERVER_PASS")
@@ -55,19 +61,25 @@ func _run_server() -> void:
 func _run_client() -> void:
 	manager.join_game("127.0.0.1")
 	var elapsed := 0.0
-	while elapsed < TEST_TIMEOUT and (not manager.connected or not manager.remote_players.has(1)):
+	while elapsed < TEST_TIMEOUT and not manager.connected:
 		await create_timer(0.1).timeout
 		elapsed += 0.1
 	assert(manager.connected, "Client failed to connect to local ENet host")
-	assert(manager.remote_players.has(1), "Host avatar was not spawned on client")
-	local_player.global_position = Vector3(10, 0, 0)
 	elapsed = 0.0
-	while elapsed < TEST_TIMEOUT:
-		var host_avatar: CharacterBody3D = manager.remote_players[1]
-		if host_avatar.global_position.distance_to(Vector3(20, 0, 0)) < 1.5:
-			break
+	while elapsed < TEST_TIMEOUT and not manager.remote_players.has(1):
 		await create_timer(0.1).timeout
 		elapsed += 0.1
-	var final_host_avatar: CharacterBody3D = manager.remote_players[1]
-	assert(final_host_avatar.global_position.distance_to(Vector3(20, 0, 0)) < 1.5, "Host movement was not relayed to client")
+	assert(manager.remote_players.has(1), "Host avatar was not spawned on client; remote_players=%s" % str(manager.remote_players.keys()))
+	local_player.global_position = Vector3(10, 0, 0)
+	elapsed = 0.0
+	var observed_host_movement := false
+	while elapsed < TEST_TIMEOUT:
+		if manager.remote_players.has(1):
+			var host_avatar: CharacterBody3D = manager.remote_players[1]
+			if host_avatar.global_position.distance_to(Vector3(20, 0, 0)) < 1.5:
+				observed_host_movement = true
+				break
+		await create_timer(0.1).timeout
+		elapsed += 0.1
+	assert(observed_host_movement, "Host movement was not relayed to client; remote_players=%s" % str(manager.remote_players.keys()))
 	print("NETWORK_SMOKE_TEST_CLIENT_PASS")
