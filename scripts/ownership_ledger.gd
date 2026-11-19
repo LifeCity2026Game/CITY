@@ -237,9 +237,9 @@ func _transfer_document(document_id: String, from_peer: int, to_peer: int, event
 	if _is_authority():
 		receipt_issued.emit(doc)
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-		if from_peer > 1:
+		if from_peer > 1 and multiplayer.get_peers().has(from_peer):
 			rpc_id(from_peer, "rpc_sync_document", doc)
-		if to_peer > 1 and to_peer != from_peer:
+		if to_peer > 1 and to_peer != from_peer and multiplayer.get_peers().has(to_peer):
 			rpc_id(to_peer, "rpc_sync_document", doc)
 
 @rpc("authority", "call_remote", "reliable")
@@ -299,7 +299,7 @@ func get_balance(peer_id: int) -> int:
 
 func _send_balance(peer_id: int) -> void:
 	var current_balance := get_balance(peer_id)
-	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
 		rpc_id(peer_id, "rpc_receive_balance", current_balance)
 
 @rpc("authority", "call_remote", "reliable")
