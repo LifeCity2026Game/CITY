@@ -794,7 +794,7 @@ func _render_page() -> void:
 				]
 				layout.add_child(_label(summary))
 				if _is_creator() and peer_id > 0 and owner_type == "player":
-					layout.add_child(_label("مقام‌های فعلی: " + "، ".join(_roles_for_peer(peer_id))))
+					layout.add_child(_label("مقام‌های فعلی: " + "، ".join(PackedStringArray(_roles_for_peer(peer_id)))))
 					_add_button(layout, "افزودن مقام «" + selected_role + "» برای " + name, "assign_role", str(peer_id))
 					_add_button(layout, "حذف مقام «" + selected_role + "» از " + name, "remove_role", str(peer_id))
 			if _is_creator():
@@ -1103,7 +1103,7 @@ func _refresh_status() -> void:
 	if is_instance_valid(details_label):
 		var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 		var current_roles := _roles_for_peer(peer_id)
-		details_label.text = "مقام‌ها: %s | روز بازی: %d" % ["، ".join(current_roles) if not current_roles.is_empty() else "شهروند", int(game_day_seconds / GAME_DAY_LENGTH) + 1]
+		details_label.text = "مقام‌ها: %s | روز بازی: %d" % ["، ".join(PackedStringArray(current_roles)) if not current_roles.is_empty() else "شهروند", int(game_day_seconds / GAME_DAY_LENGTH) + 1]
 
 func _refresh() -> void:
 	_refresh_status()
