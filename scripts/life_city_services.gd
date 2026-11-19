@@ -132,7 +132,7 @@ func _on_ownership_receipt(document: Dictionary) -> void:
 			if str(order.get("document_id", "")) == str(document.get("document_id", "")):
 				already_ordered = true
 		if not already_ordered:
-			order_list.append({"item": item_id, "document_id": str(document.get("document_id", "")), "remaining": GAME_DAY_LENGTH, "delivered": false})
+			order_list.append({"item": item_id, "document_id": str(document.get("document_id", "")), "remaining": 0.0 if document.has("cheque_id") else GAME_DAY_LENGTH, "delivered": document.has("cheque_id")})
 	_save_services()
 
 func _on_prison_state_changed(peer_id: int, _record_id: String, imprisoned: bool) -> void:
