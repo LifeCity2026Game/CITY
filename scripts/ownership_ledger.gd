@@ -467,30 +467,37 @@ func _actor_has_permission(actor_peer: int, permission: String) -> bool:
 	var permissions: Dictionary = role_permissions.get(str(actor_peer), {})
 	return bool(permissions.get(permission, false))
 
-func request_open_bank_account(pin: String) -> void:
+func request_open_bank_account(pin: String, sim_index: int = 0) -> void:
 	var peer_id := _local_peer_id()
 	if _is_authority():
-		_open_bank_account(peer_id, pin)
+		_open_bank_account(peer_id, pin, sim_index)
 	else:
-		rpc_id(1, "rpc_request_open_bank_account", pin)
+		rpc_id(1, "rpc_request_open_bank_account", pin, sim_index)
 
 @rpc("any_peer", "call_remote", "reliable")
-func rpc_request_open_bank_account(pin: String) -> void:
+func rpc_request_open_bank_account(pin: String, sim_index: int) -> void:
 	if multiplayer.is_server():
-		_open_bank_account(multiplayer.get_remote_sender_id(), pin)
+		_open_bank_account(multiplayer.get_remote_sender_id(), pin, sim_index)
 
-func _open_bank_account(peer_id: int, pin: String) -> void:
+func _open_bank_account(peer_id: int, pin: String, sim_index: int) -> void:
 	if pin.length() < 4 or pin.length() > 8 or not pin.is_valid_int():
 		_send_notice(peer_id, "رمز حساب باید ۴ تا ۸ رقم باشد.")
 		return
+	if sim_index < 0 or sim_index > 1:
+		_send_notice(peer_id, "سیم‌کارت انتخاب‌شده معتبر نیست.")
+		return
 	var citizen_id := _citizen_id_for_peer(peer_id)
-	if citizen_accounts.get(citizen_id, []).size() >= 3:
-		_send_notice(peer_id, "هر شهروند حداکثر سه حساب بانکی می‌تواند داشته باشد.")
+	var accounts_on_sim := 0
+	for existing_number in citizen_accounts.get(citizen_id, []):
+		if int(bank_accounts.get(str(existing_number), {}).get("sim_index", -1)) == sim_index:
+			accounts_on_sim += 1
+	if accounts_on_sim >= 3:
+		_send_notice(peer_id, "هر سیم‌کارت حداکثر سه حساب بانکی دارد.")
 		return
 	var number := _new_account_number()
 	bank_accounts[number] = {
 		"number": number, "citizen_id": citizen_id, "owner_type": "player",
-		"owner_peer_id": peer_id, "balance": get_balance(peer_id),
+		"owner_peer_id": peer_id, "sim_index": sim_index, "balance": get_balance(peer_id),
 		"pin_hash": _hash_pin(pin), "created_unix": int(Time.get_unix_time_from_system())
 	}
 	citizen_accounts[citizen_id].append(number)
