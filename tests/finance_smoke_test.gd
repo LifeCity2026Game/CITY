@@ -112,6 +112,17 @@ func _run() -> void:
 	assert(not npc_profile.is_empty(), "NPC citizen file could not be loaded")
 	assert(int(npc_profile.accounts[0].balance) == npc_before + 200, "NPC citizen file did not reflect the credited balance")
 	assert(not npc_profile.transactions.is_empty(), "NPC citizen file did not record incoming transfer")
+	var all_citizens: Array[Dictionary] = ledger.get_all_citizen_records()
+	assert(all_citizens.size() >= 7, "Ministry registry must include every seeded NPC and the creator")
+	var creator_record_found := false
+	var npc_record_found := false
+	for citizen_record in all_citizens:
+		var citizen_info: Dictionary = citizen_record.get("citizen", {})
+		if int(citizen_info.get("owner_peer_id", -999)) == 1:
+			creator_record_found = true
+		if str(citizen_info.get("owner_type", "")) == "npc":
+			npc_record_found = true
+	assert(creator_record_found and npc_record_found, "Ministry full citizen registry is incomplete")
 	assert(int(ledger.bank_accounts[primary_number].balance) == 2147483647, "unlimited creator account was reduced")
 	print("FINANCE_CHECKPOINT_SHARED_CARD")
 	ledger.balances[2] = 0
