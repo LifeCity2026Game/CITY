@@ -58,6 +58,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test city building exteriors, interiors and entry/exit
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/city_interiors_smoke_test.gd 2>&1 | tee city-interiors-test.log
+          if ! grep -q "CITY_INTERIORS_SMOKE_TEST_PASS" city-interiors-test.log; then
+            echo "City building interior smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" city-interiors-test.log; then
+            echo "City interior test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Test military command, aircraft strikes and city hall
         timeout-minutes: 3
         shell: bash
