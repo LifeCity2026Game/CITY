@@ -78,7 +78,7 @@ func _run() -> void:
 	assert(int(ledger.bank_accounts[account_number].balance) == before_shared_purchase - 4500, "shared card purchase did not debit owner account")
 	var shared_doc_found := false
 	for doc in ledger.documents.values():
-		if int(doc.get("owner_peer_id", -1)) == 2 and str(doc.get("event", "")) == "shared_card_purchase":
+		if int(doc.get("owner_peer_id", -1)) == 2 and str(doc.get("item_id", "")) == "گوشی هوشمند" and str(doc.get("history", []).back().get("event", "")) == "shared_card_purchase":
 			shared_doc_found = true
 	assert(shared_doc_found, "shared card purchase did not issue buyer ownership document")
 	ledger._set_account_share(1, account_number, 2, false)
