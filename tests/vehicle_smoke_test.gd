@@ -111,6 +111,13 @@ func _run_vehicle_checks() -> void:
 		_fail("Headlights did not turn on")
 		return
 	_press_button(car.controls_layer, "چراغ")
+	if not _press_button(car.controls_layer, "دوربین") or not car.interior_camera.current:
+		_fail("Interior camera button did not switch to driver view")
+		return
+	_press_button(car.controls_layer, "دوربین")
+	if not car.vehicle_camera.current:
+		_fail("Exterior camera button did not restore chase view")
+		return
 	var steering_button := car.controls_layer.get_node_or_null("Hold_right") as Button
 	if steering_button == null:
 		_fail("Right steering touch button is missing")
