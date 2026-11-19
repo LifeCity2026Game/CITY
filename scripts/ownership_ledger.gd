@@ -23,7 +23,7 @@ const CATALOG := {
 	"تیبا": 8000, "تیبا ۲": 9000, "پراید": 6000
 }
 const NPC_IDS := ["NPC-001", "NPC-002", "NPC-003", "NPC-004", "NPC-005", "NPC-006"]
-var balances: Dictionary = {1: 10000}
+var balances: Dictionary = {1: 0}
 var documents: Dictionary = {}
 var next_document_number := 1
 var cash_transactions: Dictionary = {}
@@ -488,20 +488,44 @@ func _seed_citizens() -> void:
 	if not _is_authority():
 		return
 	_ensure_citizen("11000001", "player", 1, "سازنده")
+	# Account 1 belongs to the creator and has an unlimited balance.
+	if citizen_accounts["11000001"].is_empty():
+		var primary_number := _new_account_number()
+		bank_accounts[primary_number] = {
+			"number": primary_number, "account_index": 1,
+			"citizen_id": "11000001", "owner_type": "player",
+			"owner_peer_id": 1, "balance": 2147483647,
+			"unlimited_balance": true, "pin_hash": _hash_pin("0000"),
+			"created_unix": int(Time.get_unix_time_from_system())
+		}
+		citizen_accounts["11000001"].append(primary_number)
+	else:
+		var primary_number := str(citizen_accounts["11000001"][0])
+		if bank_accounts.has(primary_number):
+			bank_accounts[primary_number]["account_index"] = 1
+			bank_accounts[primary_number]["unlimited_balance"] = true
+			bank_accounts[primary_number]["balance"] = 2147483647
+	# Accounts 2-6 are NPC citizen cards; they start empty.
 	for i in range(1, 7):
 		var npc_id := "NPC-%03d" % i
 		var citizen_id := "9900%04d" % i
 		_ensure_citizen(citizen_id, "npc", -i, "شهروند NPC %d" % i)
-		if not citizen_accounts[citizen_id].is_empty():
-			continue
-		var account_number := _new_account_number()
-		bank_accounts[account_number] = {
-			"number": account_number, "citizen_id": citizen_id,
-			"owner_type": "npc", "owner_peer_id": -i,
-			"balance": 25000, "pin_hash": _hash_pin("0000"),
-			"created_unix": int(Time.get_unix_time_from_system())
-		}
-		citizen_accounts[citizen_id].append(account_number)
+		if i <= 5:
+			if citizen_accounts[citizen_id].is_empty():
+				var account_number := _new_account_number()
+				bank_accounts[account_number] = {
+					"number": account_number, "account_index": i + 1,
+					"citizen_id": citizen_id, "owner_type": "npc",
+					"owner_peer_id": -i, "balance": 0,
+					"pin_hash": _hash_pin("0000"),
+					"created_unix": int(Time.get_unix_time_from_system())
+				}
+				citizen_accounts[citizen_id].append(account_number)
+			else:
+				var npc_account_number := str(citizen_accounts[citizen_id][0])
+				if bank_accounts.has(npc_account_number):
+					bank_accounts[npc_account_number]["account_index"] = i + 1
+					bank_accounts[npc_account_number]["balance"] = 0
 		if not citizen_registry[citizen_id].has("npc_id"):
 			citizen_registry[citizen_id]["npc_id"] = npc_id
 	_save_ledger()
@@ -595,11 +619,14 @@ func _account_transfer(actor_peer: int, source_account: String, pin: String, tar
 		_send_notice(actor_peer, "این حساب متعلق به تو نیست.")
 		return
 	var destination: Dictionary = bank_accounts[target_account]
-	if int(source.balance) < amount:
+	var source_is_unlimited := bool(source.get("unlimited_balance", false))
+	if not source_is_unlimited and int(source.balance) < amount:
 		_send_notice(actor_peer, "موجودی حساب کافی نیست.")
 		return
-	source.balance = int(source.balance) - amount
-	destination.balance = int(destination.balance) + amount
+	if not source_is_unlimited:
+		source.balance = int(source.balance) - amount
+	if not bool(destination.get("unlimited_balance", false)):
+		destination.balance = int(destination.balance) + amount
 	bank_accounts[source_account] = source
 	bank_accounts[target_account] = destination
 	var tx_id := "TR-%06d" % next_document_number
@@ -607,6 +634,10 @@ func _account_transfer(actor_peer: int, source_account: String, pin: String, tar
 	cash_transactions[tx_id] = {
 		"transaction_id": tx_id, "from_account": source_account,
 		"to_account": target_account, "amount": amount,
+		"from_citizen_id": str(source.get("citizen_id", "")),
+		"to_citizen_id": str(destination.get("citizen_id", "")),
+		"from_owner_peer_id": actor_peer,
+		"to_owner_peer_id": int(destination.get("owner_peer_id", -999)),
 		"time": int(Time.get_unix_time_from_system()), "status": "completed"
 	}
 	_save_ledger()
@@ -691,11 +722,13 @@ func _account_purchase(peer_id: int, account_number: String, pin: String, item_i
 		_send_notice(peer_id, "رمز حساب معتبر نیست.")
 		return
 	var price: int = CATALOG[item_id]
-	if int(account.balance) < price:
+	var account_is_unlimited := bool(account.get("unlimited_balance", false))
+	if not account_is_unlimited and int(account.balance) < price:
 		_send_notice(peer_id, "موجودی حساب کافی نیست.")
 		return
 	var tax := int(ceil(float(price) * 0.10))
-	account.balance = int(account.balance) - price
+	if not account_is_unlimited:
+		account.balance = int(account.balance) - price
 	bank_accounts[account_number] = account
 	central_bank_treasury += tax
 	var doc := _new_document(item_id, peer_id, price, "shared_card_purchase" if is_shared else "cash_purchase", account_number)
@@ -810,8 +843,9 @@ func _settle_due_cheques() -> void:
 			var account: Dictionary = bank_accounts.get(account_number, {})
 			var amount := int(spend.get("amount", 0))
 			var doc_id := str(spend.get("document_id", ""))
-			if not account.is_empty() and int(account.get("balance", 0)) >= amount:
-				account.balance = int(account.balance) - amount
+			if not account.is_empty() and (bool(account.get("unlimited_balance", false)) or int(account.get("balance", 0)) >= amount):
+				if not bool(account.get("unlimited_balance", false)):
+					account.balance = int(account.balance) - amount
 				bank_accounts[account_number] = account
 				var tax := int(ceil(float(amount) * 0.10))
 				central_bank_treasury += tax
@@ -913,7 +947,8 @@ func central_bank_withdraw(actor_peer: int, target_account: String, amount: int,
 	if not _is_authority() or not _actor_has_permission(actor_peer, "central_bank_withdraw") or amount <= 0 or amount > central_bank_treasury or not bank_accounts.has(target_account):
 		return false
 	central_bank_treasury -= amount
-	bank_accounts[target_account].balance = int(bank_accounts[target_account].balance) + amount
+	if not bool(bank_accounts[target_account].get("unlimited_balance", false)):
+		bank_accounts[target_account].balance = int(bank_accounts[target_account].balance) + amount
 	var tx_id := "CB-%06d" % next_document_number
 	next_document_number += 1
 	cash_transactions[tx_id] = {
@@ -926,6 +961,10 @@ func central_bank_withdraw(actor_peer: int, target_account: String, amount: int,
 	var recipient_peer := int(bank_accounts[target_account].get("owner_peer_id", -999))
 	if recipient_peer > 0:
 		_send_own_accounts(recipient_peer)
+	var citizen_id := str(bank_accounts[target_account].get("citizen_id", ""))
+	if not citizen_id.is_empty():
+		citizen_record_changed.emit(citizen_id)
+	_send_notice(actor_peer, "برداشت %d سکه از خزانه مرکزی به کارت %s ثبت شد." % [amount, target_account])
 	return true
 
 func release_prisoner(actor_peer: int, record_id: String, reason: String) -> bool:
@@ -1012,6 +1051,10 @@ func get_accounts_for_peer(peer_id: int) -> Array[Dictionary]:
 		var account: Dictionary = bank_accounts.get(str(number), {}).duplicate(true)
 		account.erase("pin_hash")
 		account["pin_security"] = "رمز محرمانه و هش‌شده"
+		if bool(account.get("unlimited_balance", false)):
+			account["balance_display"] = "نامحدود"
+		else:
+			account["balance_display"] = str(account.get("balance", 0))
 		result.append(account)
 	return result
 
