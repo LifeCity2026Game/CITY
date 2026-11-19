@@ -17,6 +17,8 @@ var account_input: LineEdit
 var reason_input: LineEdit
 var permissions_draft: Dictionary = {}
 var own_accounts_cache: Array = []
+var own_cheques_cache: Array = []
+var cheque_list_requested := false
 var account_list_requested := false
 var account_request_in_progress := false
 var order_list: Array[Dictionary] = []
@@ -58,6 +60,8 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 		ledger.citizen_record_received.connect(_on_citizen_record_received)
 	if ledger and ledger.has_signal("own_accounts_received") and not ledger.own_accounts_received.is_connected(_on_own_accounts_received):
 		ledger.own_accounts_received.connect(_on_own_accounts_received)
+	if ledger and ledger.has_signal("own_cheques_received") and not ledger.own_cheques_received.is_connected(_on_own_cheques_received):
+		ledger.own_cheques_received.connect(_on_own_cheques_received)
 	if not multiplayer.peer_connected.is_connected(_on_peer_list_changed):
 		multiplayer.peer_connected.connect(_on_peer_list_changed)
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_list_changed):
@@ -269,8 +273,11 @@ func _render_page() -> void:
 			target_input = _add_input("کد چک برای خرید")
 			for item in ONLINE_PRODUCTS:
 				_add_button(layout, "خرید %s با چک" % item, "cheque_purchase", item)
-			for cheque in (ledger.cheque_book.values() if ledger else []):
-				layout.add_child(_label("%s | %s | اعتبار باقی‌مانده: %d" % [cheque.id, cheque.status, int(cheque.remaining_value)]))
+			if ledger and not cheque_list_requested:
+				cheque_list_requested = true
+				ledger.request_own_cheques()
+			for cheque in own_cheques_cache:
+				layout.add_child(_label("%s | %s | اعتبار باقی‌مانده: %d | سابقه خرید: %d" % [str(cheque.get("id", "")), str(cheque.get("status", "")), int(cheque.get("remaining_value", 0)), cheque.get("spends", []).size()]))
 		"transactions":
 			notice_changed.emit("سوابق تراکنش در دفترکل بانکی ثبت می‌شوند.")
 			if ledger:
@@ -427,6 +434,9 @@ func _render_page() -> void:
 
 func _on_own_accounts_received(accounts: Array) -> void:
 	own_accounts_cache = accounts.duplicate(true)
+
+func _on_own_cheques_received(cheques: Array) -> void:
+	own_cheques_cache = cheques.duplicate(true)
 
 func _on_central_bank_snapshot_received(data: Dictionary) -> void:
 	if data.is_empty():
