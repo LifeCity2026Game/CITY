@@ -604,6 +604,7 @@ func _account_purchase(peer_id: int, account_number: String, pin: String, item_i
 	doc["tax_paid"] = tax
 	documents[doc.document_id] = doc
 	_save_ledger()
+	_send_receipt(peer_id, doc)
 	_send_notice(peer_id, "خرید نقدی ثبت شد؛ مالیات %d سکه به خزانه رفت." % tax)
 	citizen_record_changed.emit(str(account.citizen_id))
 
@@ -689,6 +690,7 @@ func _cheque_purchase(peer_id: int, cheque_id: String, item_id: String) -> void:
 	cheque_book[cheque_id] = cheque
 	_save_ledger()
 	_send_own_cheques(peer_id)
+	_send_receipt(peer_id, doc)
 	_send_notice(peer_id, "خرید با چک ثبت شد؛ تسویه پس از یک روز بازی انجام می‌شود.")
 	citizen_record_changed.emit(str(cheque.issuer_citizen_id))
 
@@ -715,6 +717,7 @@ func _settle_due_cheques() -> void:
 				if documents.has(doc_id):
 					documents[doc_id]["status"] = "valid"
 					documents[doc_id]["tax_paid"] = tax
+					_send_receipt(int(cheque.issuer_peer_id), documents[doc_id])
 				_send_notice(int(cheque.issuer_peer_id), "چک %s با موفقیت پاس شد." % cheque_id)
 			else:
 				spend.status = "برگشت‌خورده"
@@ -727,6 +730,7 @@ func _settle_due_cheques() -> void:
 					documents[doc_id]["owner_peer_id"] = -3
 					documents[doc_id]["owner_name"] = "اموال توقیف‌شده"
 					documents[doc_id]["history"].append({"event": "repossession", "from": int(cheque.issuer_peer_id), "to": -3, "time": int(Time.get_unix_time_from_system())})
+					_send_receipt(int(cheque.issuer_peer_id), documents[doc_id])
 				var record_id := "JAIL-%06d" % next_document_number
 				next_document_number += 1
 				prison_records[record_id] = {
