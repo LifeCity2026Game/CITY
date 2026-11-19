@@ -82,6 +82,7 @@ func _ready() -> void:
 	var selector := controls_layer.get_node_or_null("ModelSelector") as Button
 	if selector:
 		selector.text = "انتخاب خودرو: " + vehicle_name
+	_update_gear_label()
 
 func configure(player_node: CharacterBody3D) -> void:
 	driver = player_node
@@ -592,7 +593,7 @@ func _update_gear_label() -> void:
 	if gear_label:
 		gear_label.text = "دنده: " + gear
 	if dashboard_label:
-		dashboard_label.text = "%d km/h   %s" % [int(absf(current_speed) * 3.6), gear]
+		dashboard_label.text = "%s | %d km/h | %s" % [vehicle_name, int(absf(current_speed) * 3.6), gear]
 
 func _toggle_camera() -> void:
 	if not occupied:
