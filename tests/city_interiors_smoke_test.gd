@@ -31,7 +31,7 @@ func _run_city_checks() -> void:
 	for entry in city.generic_interior_positions:
 		var category := str(entry.category)
 		categories[category] = int(categories.get(category, 0)) + 1
-		var room := city.get_node_or_null("GenericInterior_%02d_%02d_%s" % [int(round(float(entry.world.x / 24.0))), int(round(float(entry.world.z / 24.0))), category])
+		var room := entry.node as Node3D
 		if room == null:
 			_fail("A generated interior room node is missing for category %s" % category)
 			return
