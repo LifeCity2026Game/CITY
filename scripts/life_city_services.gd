@@ -64,12 +64,16 @@ func _seed_phone() -> void:
 
 func _process(delta: float) -> void:
 	game_day_seconds += delta
+	var delivery_changed := false
 	for order in order_list:
 		if not bool(order.get("delivered", false)):
 			order["remaining"] = maxf(0.0, float(order.get("remaining", GAME_DAY_LENGTH)) - delta)
 			if float(order["remaining"]) <= 0.0:
 				order["delivered"] = true
+				delivery_changed = true
 				notice_changed.emit("سفارش تحویل شد: " + str(order.get("item", "")))
+	if delivery_changed:
+		_save_services()
 	_refresh_status()
 
 func _build_ui() -> void:
@@ -432,6 +436,7 @@ func _assign_role(peer_id: int) -> void:
 		return
 	var role: String = selected_role
 	roles[peer_id] = role
+	_save_services()
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc("sync_role", peer_id, role)
 	notice_changed.emit("مقام شهروند %d تغییر کرد: %s" % [peer_id, role])
