@@ -62,6 +62,12 @@ func _new_document(item_id: String, owner_peer: int, price: int, event_name: Str
 		"history": [{"event": event_name, "from": source, "to": owner_peer, "time": now}],
 		"status": "valid"
 	}
+	if item_id in ["خانه اقتصادی", "آپارتمان اقتصادی", "خانه جنوب شهر", "آپارتمان شهری", "خانه شمال شهر", "خانه ساحلی", "ویلای ساحلی", "پنت‌هاوس"]:
+		var districts := ["مرکز شهر", "شمال شهر", "جنوب شهر", "ساحل"]
+		var district := districts[abs(owner_peer + next_document_number) % districts.size()]
+		doc["address"] = "شهر LIFE CITY، محله %s، خیابان اصلی، پلاک %04d" % [district, next_document_number]
+	if item_id in ["دنا", "پژو ۲۰۷", "لندکروزر", "لکسوس RX", "فراری", "لامبورگینی", "تیبا", "تیبا ۲", "پراید"]:
+		doc["plate"] = "LC-%05d" % next_document_number
 	next_document_number += 1
 	return doc
 
@@ -227,7 +233,11 @@ func _commit_npc_sale(peer_id: int, document_id: String, npc_id: String) -> void
 		_send_notice(peer_id, "کالای این سند در فهرست معتبر نیست.")
 		return
 	var resale_value := int(CATALOG[item_id] * 0.5)
-	balances[peer_id] = int(balances.get(peer_id, 10000)) + resale_value
+	var tax := int(ceil(float(resale_value) * 0.10))
+	balances[peer_id] = int(balances.get(peer_id, 10000)) + resale_value - tax
+	central_bank_treasury += tax
+	cash_transactions["NPC-SALE-%06d" % next_document_number] = {"type": "npc_purchase", "buyer_npc": npc_id, "seller_peer": peer_id, "amount": resale_value, "tax_paid": tax, "time": int(Time.get_unix_time_from_system())}
+	next_document_number += 1
 	_transfer_document(document_id, peer_id, -1, "npc_sale:" + npc_id, npc_id)
 	simulate_npc_to_npc_trade(document_id, "NPC-002" if npc_id == "NPC-001" else "NPC-001")
 	_send_balance(peer_id)
