@@ -17,6 +17,7 @@ var current_speed := 0.0
 var gear := "P"
 var lights_on := false
 var handbrake := false
+var brake_pressed := false
 var indicators := 0
 var interior_camera_on := false
 var vehicle_camera: Camera3D
@@ -351,7 +352,7 @@ func _hold_button(parent: Node, caption: String, action: String) -> void:
 func _set_control(action: String, pressed: bool) -> void:
 	match action:
 		"accelerate": throttle = 1.0 if pressed else 0.0
-		"brake": throttle = -1.0 if pressed else 0.0
+		"brake": brake_pressed = pressed
 		"left": steering = -1.0 if pressed else 0.0
 		"right": steering = 1.0 if pressed else 0.0
 		"handbrake": handbrake = pressed
@@ -369,10 +370,12 @@ func _toggle_transmission() -> void:
 		return
 	transmission_mode = "manual" if transmission_mode == "automatic" else "automatic"
 	clutch_pressed = transmission_mode == "automatic"
+	if transmission_mode == "manual":
+		gear = "N"
+	else:
+		gear = "P"
 	if transmission_label:
 		transmission_label.text = "گیربکس: دستی" if transmission_mode == "manual" else "گیربکس: اتومات"
-	if gear == "P":
-		gear = "N"
 	_update_gear_label()
 
 func _cycle_climate() -> void:
@@ -650,27 +653,28 @@ func _physics_process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 		key_steer += 1.0
 	var active_steer := key_steer if key_steer != 0.0 else steering
+	var drive_input := maxf(active_throttle, 0.0)
+	var braking_input := brake_pressed or active_throttle < 0.0
 	if gear == "P" or gear == "N" or handbrake:
-		active_throttle = 0.0
+		drive_input = 0.0
 	elif gear == "R":
-		active_throttle = -absf(active_throttle)
+		drive_input = -drive_input
 	elif gear == "D" or gear in ["1", "2", "3", "4", "5"]:
-		active_throttle = maxf(active_throttle, 0.0)
+		drive_input = maxf(drive_input, 0.0)
 	if transmission_mode == "manual" and not clutch_pressed:
-		active_throttle = 0.0
-	if active_throttle > 0.0:
+		drive_input = 0.0
+	if braking_input:
+		current_speed = move_toward(current_speed, 0.0, brake_strength * delta)
+	elif drive_input > 0.0:
 		var gear_limit := max_forward_speed
 		if transmission_mode == "manual":
 			var gear_number := int(gear)
 			gear_limit = max_forward_speed * (0.22 + float(gear_number) * 0.16)
 		current_speed = move_toward(current_speed, gear_limit, acceleration * delta)
-	elif active_throttle < 0.0:
-		if current_speed > 0.5:
-			current_speed = move_toward(current_speed, 0.0, brake_strength * delta)
-		else:
-			current_speed = move_toward(current_speed, -max_reverse_speed, acceleration * 0.6 * delta)
+	elif drive_input < 0.0:
+		current_speed = move_toward(current_speed, -max_reverse_speed, acceleration * 0.6 * delta)
 	else:
-		current_speed = move_toward(current_speed, 0.0, (brake_strength if handbrake else 3.2) * delta)
+		current_speed = move_toward(current_speed, 0.0, 3.2 * delta)
 	if absf(current_speed) > 0.12:
 		rotation.y += active_steer * steering_speed * delta * clampf(absf(current_speed) / 7.0, 0.2, 1.0) * signf(current_speed)
 	var forward := -global_transform.basis.z
@@ -703,7 +707,7 @@ func _physics_process(delta: float) -> void:
 	if driver and driver.has_method("set_body_temperature"):
 		driver.set_body_temperature(cabin_temperature)
 	_update_climate_label()
-	var braking := active_throttle < 0.0 or handbrake
+	var braking := brake_pressed or active_throttle < 0.0 or handbrake
 	if braking != brake_lights_active:
 		brake_lights_active = braking
 		for tail in tail_lamps:
