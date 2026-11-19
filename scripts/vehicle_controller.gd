@@ -27,6 +27,7 @@ var speed_label: Label
 var gear_label: Label
 var enter_button: Button
 var wheel_nodes: Array[Node3D] = []
+var front_wheels: Array[Node3D] = []
 var steering_wheel: Node3D
 var left_door: Node3D
 var right_door: Node3D
@@ -153,6 +154,9 @@ func _build_vehicle() -> void:
 	_box(self, "FrontGrille", Vector3(0, 0.77, -2.035), Vector3(0.72, 0.22, 0.035), Color(0.025, 0.03, 0.04), 0.7)
 	_box(self, "FrontPlate", Vector3(0, 0.48, -2.18), Vector3(0.55, 0.15, 0.025), Color(0.88, 0.88, 0.82))
 	_box(self, "RearPlate", Vector3(0, 0.52, 2.18), Vector3(0.55, 0.15, 0.025), Color(0.88, 0.88, 0.82))
+	_box(self, "EngineBlock", Vector3(0, 0.82, -1.40), Vector3(0.86, 0.34, 0.72), Color(0.16, 0.17, 0.18), 0.55)
+	_box(self, "Battery", Vector3(0.62, 0.78, -1.48), Vector3(0.30, 0.28, 0.34), Color(0.10, 0.13, 0.11))
+	_box(self, "TrunkLining", Vector3(0, 0.77, 1.58), Vector3(1.42, 0.12, 0.58), Color(0.075, 0.08, 0.09))
 
 	# Four tires, alloy hubs and wheel rotation.
 	for side in [-1.0, 1.0]:
@@ -166,6 +170,8 @@ func _build_vehicle() -> void:
 			var hub := _cylinder(wheel, "AlloyRim", Vector3(side * -0.13, 0, 0), 0.23, 0.035, Color(0.58, 0.60, 0.64), 0.85)
 			hub.rotation.z = PI / 2.0
 			wheel_nodes.append(wheel)
+			if axle < 0.0:
+				front_wheels.append(wheel)
 
 	# Detailed cabin: seats, dashboard, steering wheel, console and pedals.
 	var cabin := Node3D.new()
@@ -694,6 +700,7 @@ func _physics_process(delta: float) -> void:
 			var impact := get_slide_collision(collision_index)
 			if absf(impact.get_normal().y) < 0.65 and speed_before_collision > 3.0:
 				current_speed = move_toward(current_speed, 0.0, maxf(brake_strength, speed_before_collision * 2.0) * delta * 3.0)
+				apply_impact(speed_before_collision * 0.25)
 				if impact.get_collider() is CharacterBody3D:
 					var other := impact.get_collider() as CharacterBody3D
 					if other.has_method("apply_impact"):
@@ -701,6 +708,8 @@ func _physics_process(delta: float) -> void:
 				break
 	for wheel in wheel_nodes:
 		wheel.rotate_x(current_speed * delta / 0.39)
+	for front_wheel in front_wheels:
+		front_wheel.rotation.y = active_steer * 0.42
 	if steering_wheel:
 		steering_wheel.rotation.z = -active_steer * 0.65
 	if climate_mode != "off":
