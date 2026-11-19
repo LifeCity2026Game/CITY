@@ -149,6 +149,9 @@ func _build_world() -> void:
 	sun.shadow_enabled = true
 	add_child(sun)
 	_add_box(self, "City Ground", Vector3(0, -0.3, 0), Vector3(230, 0.5, 230), Color(0.22, 0.34, 0.25))
+	_add_box(self, "Ocean", Vector3(0, -0.02, 105), Vector3(230, 0.08, 20), Color(0.035, 0.22, 0.38), false)
+	for wave_x in range(-100, 101, 20):
+		_add_box(self, "OceanWave", Vector3(float(wave_x), 0.04, 105), Vector3(9, 0.025, 0.12), Color(0.18, 0.48, 0.62), false)
 	_add_box(self, "Main Road", Vector3(0, 0.0, 0), Vector3(18, 0.08, 230), Color(0.11, 0.12, 0.14), false)
 	_add_box(self, "Cross Road", Vector3(0, 0.01, 0), Vector3(230, 0.08, 18), Color(0.11, 0.12, 0.14), false)
 	for i in range(-96, 97, 12):
@@ -176,6 +179,7 @@ func _build_world() -> void:
 	_add_service("REAL ESTATE OFFICE", Vector3(-29, 4, -28), Color(0.52, 0.42, 0.28))
 	_add_service("TELECOM CENTER", Vector3(29, 4, -28), Color(0.20, 0.46, 0.62))
 	_add_service("CENTRAL PRISON", Vector3(0, 4, 82), Color(0.34, 0.30, 0.29))
+	_add_service("CITY HALL", Vector3(55, 4, 92), Color(0.48, 0.56, 0.43))
 	_build_city_details()
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
