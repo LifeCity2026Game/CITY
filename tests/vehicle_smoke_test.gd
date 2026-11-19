@@ -85,6 +85,19 @@ func _run_vehicle_checks() -> void:
 	if car.global_position.distance_to(player.global_position) < 3.0:
 		_fail("Garage spawn did not place owned vehicle near the player")
 		return
+	services.owned_homes.append("آپارتمان اقتصادی")
+	services._enter_home()
+	if not services.inside_owned_home or player.global_position.distance_to(services.home_interior.global_position) > 8.0:
+		_fail("Purchased home interior could not be entered")
+		return
+	services._place_item("مبل")
+	if services.home_interior.get_node_or_null("Furniture_مبل") == null:
+		_fail("Purchased furniture was not placed visibly inside the home")
+		return
+	services._exit_home()
+	if services.inside_owned_home:
+		_fail("Home exit did not restore player to city")
+		return
 	var city := game.get_node_or_null("CityFeatures")
 	if city == null or not city.interior_positions.has("repair_garage"):
 		_fail("Vehicle repair garage or its enterable interior is missing")
