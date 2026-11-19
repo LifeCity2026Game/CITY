@@ -9,7 +9,17 @@ const CATALOG := {
 	"لباس رسمی": 600,
 	"لباس ورزشی": 350,
 	"خانه کوچک": 5000,
-	"خودروی شهری": 7500
+	"خودروی شهری": 7500,
+	"گوشی هوشمند": 4500, "گوشی پرچمدار": 9000,
+	"کامپیوتر گیمینگ": 18000, "مانیتور گیمینگ": 4200,
+	"کنسول بازی": 7000, "دسته بازی": 1200,
+	"مبل": 1800, "تخت خواب": 2400, "یخچال": 3200,
+	"تلویزیون": 2800, "میز ناهارخوری": 1500, "کمد": 1100,
+	"آپارتمان اقتصادی": 22000, "آپارتمان شهری": 48000,
+	"ویلای ساحلی": 95000, "پنت‌هاوس": 140000,
+	"دنا": 14000, "پژو ۲۰۷": 16000, "لندکروزر": 95000,
+	"لکسوس RX": 78000, "فراری": 240000, "لامبورگینی": 320000,
+	"تیبا": 8000, "تیبا ۲": 9000, "پراید": 6000
 }
 const NPC_IDS := ["NPC-001", "NPC-002"]
 var balances: Dictionary = {1: 10000}
@@ -51,6 +61,19 @@ func _new_document(item_id: String, owner_peer: int, price: int, event_name: Str
 	}
 	next_document_number += 1
 	return doc
+
+func request_adjust_balance(amount: int, reason: String = "adjustment") -> void:
+	var peer_id := _local_peer_id()
+	if _is_authority():
+		adjust_balance(peer_id, amount, reason)
+	else:
+		rpc_id(1, "rpc_request_adjust_balance", amount, reason)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_adjust_balance(amount: int, reason: String) -> void:
+	if multiplayer.is_server():
+		var sender := multiplayer.get_remote_sender_id()
+		adjust_balance(sender, amount, reason)
 
 func adjust_balance(peer_id: int, amount: int, reason: String = "adjustment") -> bool:
 	if not _is_authority():
@@ -98,7 +121,7 @@ func _commit_purchase(peer_id: int, item_id: String) -> void:
 		_send_notice(peer_id, "این کالا در فروشگاه وجود ندارد.")
 		return
 	var price: int = CATALOG[item_id]
-	var balance := int(balances.get(peer_id, 10000))
+	var balance := int(balances.get(peer_id, 0))
 	if balance < price:
 		_send_notice(peer_id, "موجودی کافی نیست.")
 		return
@@ -272,7 +295,7 @@ func _commit_player_cash_transfer(from_peer: int, target_peer: int, amount: int)
 	_send_notice(target_peer, "%d سکه از بازیکن %d دریافت کردی؛ رسید %s" % [amount, from_peer, transaction_id])
 
 func get_balance(peer_id: int) -> int:
-	return int(balances.get(peer_id, 10000))
+	return int(balances.get(peer_id, 0))
 
 func _send_balance(peer_id: int) -> void:
 	var current_balance := get_balance(peer_id)
