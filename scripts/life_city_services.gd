@@ -77,18 +77,18 @@ func _build_ui() -> void:
 	var toggle := Button.new()
 	toggle.name = "ServicesToggle"
 	toggle.text = "موبایل و خدمات"
-	toggle.position = Vector2(18, 18)
+	toggle.position = Vector2(18, 136)
 	toggle.custom_minimum_size = Vector2(170, 48)
 	layer.add_child(toggle)
 	toggle.pressed.connect(_toggle_panel)
 	phone_panel = PanelContainer.new()
 	phone_panel.name = "ServicesPanel"
-	phone_panel.anchor_left = 1.0
-	phone_panel.anchor_right = 1.0
-	phone_panel.offset_left = -360
-	phone_panel.offset_right = -12
-	phone_panel.offset_top = 72
-	phone_panel.offset_bottom = 690
+	phone_panel.anchor_left = 0.0
+	phone_panel.anchor_right = 0.0
+	phone_panel.offset_left = 12
+	phone_panel.offset_right = 360
+	phone_panel.offset_top = 190
+	phone_panel.offset_bottom = 680
 	layer.add_child(phone_panel)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
