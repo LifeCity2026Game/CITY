@@ -64,7 +64,7 @@ func _new_document(item_id: String, owner_peer: int, price: int, event_name: Str
 	}
 	if item_id in ["خانه اقتصادی", "آپارتمان اقتصادی", "خانه جنوب شهر", "آپارتمان شهری", "خانه شمال شهر", "خانه ساحلی", "ویلای ساحلی", "پنت‌هاوس"]:
 		var districts := ["مرکز شهر", "شمال شهر", "جنوب شهر", "ساحل"]
-		var district := districts[abs(owner_peer + next_document_number) % districts.size()]
+		var district: String = str(districts[abs(owner_peer + next_document_number) % districts.size()])
 		doc["address"] = "شهر LIFE CITY، محله %s، خیابان اصلی، پلاک %04d" % [district, next_document_number]
 	if item_id in ["دنا", "پژو ۲۰۷", "لندکروزر", "لکسوس RX", "فراری", "لامبورگینی", "تیبا", "تیبا ۲", "پراید"]:
 		doc["plate"] = "LC-%05d" % next_document_number
