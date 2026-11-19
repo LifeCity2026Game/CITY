@@ -259,37 +259,59 @@ func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	building.name = label_text.replace(" ", "_")
 	building.add_to_group("city_buildings")
 	building.position = pos
+	var floors := 4
+	if label_text == "ARMED FORCES HQ":
+		floors = 10
+	elif label_text in ["BANK CENTRAL", "CITY BANK", "GOVERNMENT", "MINISTRY OF INTELLIGENCE", "PRESIDENTIAL PALACE", "CITY HALL"]:
+		floors = 6
+	elif label_text == "CENTRAL PRISON":
+		floors = 5
+	building.set_meta("floor_count", floors)
+	building.set_meta("building_id", label_text)
 	add_child(building)
-	_add_box(building, "ServiceFloor", Vector3(0, -3.82, 0), Vector3(17, 0.36, 13), Color(0.24, 0.25, 0.27))
-	_add_box(building, "BackWall", Vector3(0, 0, -6.38), Vector3(17, 8, 0.24), color)
-	_add_box(building, "LeftWall", Vector3(-8.38, 0, 0), Vector3(0.24, 8, 13), color)
-	_add_box(building, "RightWall", Vector3(8.38, 0, 0), Vector3(0.24, 8, 13), color)
-	_add_box(building, "Roof", Vector3(0, 3.9, 0), Vector3(17, 0.24, 13), color.darkened(0.18))
-	# Front facade is split into pillars and lintels so the glass does not sit over an opaque wall.
-	for x in [-7.5, -3.75, 0.0, 3.75, 7.5]:
-		_add_box(building, "FacadePillar", Vector3(x, 0, 6.38), Vector3(0.30, 8, 0.28), color.darkened(0.22))
-	for y in [-3.55, 3.55]:
-		_add_box(building, "FacadeLintel", Vector3(0, y, 6.38), Vector3(17, 0.55, 0.28), color.darkened(0.12))
+	var total_height := float(floors) * 3.6
+	# Open-front, glass-fronted structure: each storey remains visually readable.
+	_add_box(building, "BackWall", Vector3(0, -3.82 + total_height * 0.5, -6.38), Vector3(17, total_height, 0.24), color)
+	_add_box(building, "LeftWall", Vector3(-8.38, -3.82 + total_height * 0.5, 0), Vector3(0.24, total_height, 13), color)
+	_add_box(building, "RightWall", Vector3(8.38, -3.82 + total_height * 0.5, 0), Vector3(0.24, total_height, 13), color)
 	var glass_material := StandardMaterial3D.new()
-	glass_material.albedo_color = Color(0.24, 0.62, 0.82, 0.30)
+	glass_material.albedo_color = Color(0.24, 0.62, 0.82, 0.24)
 	glass_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	glass_material.roughness = 0.12
-	for row in range(2):
+	for floor_index in range(floors):
+		var floor_y := -3.82 + float(floor_index) * 3.6
+		_add_box(building, "FloorSlab_%02d" % floor_index, Vector3(0, floor_y, 0), Vector3(17, 0.28, 13), Color(0.24, 0.25, 0.27))
+		_add_box(building, "FrontLintel_%02d" % floor_index, Vector3(0, floor_y + 3.38, 6.38), Vector3(17, 0.22, 0.28), color.darkened(0.12))
+		for x in [-7.5, -3.75, 0.0, 3.75, 7.5]:
+			_add_box(building, "FacadePillar_%02d" % floor_index, Vector3(x, floor_y + 1.75, 6.38), Vector3(0.30, 3.45, 0.28), color.darkened(0.22))
 		for column in range(4):
 			var glass := MeshInstance3D.new()
-			glass.name = "TransparentShopWindow"
+			glass.name = "Floor_%02d_Window_%02d" % [floor_index + 1, column + 1]
 			var pane := BoxMesh.new()
-			pane.size = Vector3(3.25, 2.55, 0.07)
+			pane.size = Vector3(3.25, 2.85, 0.07)
 			glass.mesh = pane
 			glass.material_override = glass_material
-			glass.position = Vector3(-5.625 + float(column) * 3.75, -1.65 + float(row) * 3.25, 6.38)
+			glass.position = Vector3(-5.625 + float(column) * 3.75, floor_y + 1.78, 6.38)
 			building.add_child(glass)
-	_add_box(building, "ReceptionCounter", Vector3(0, -1.7, 1.6), Vector3(4.8, 1.1, 1.0), color.lightened(0.15), false)
-	_add_box(building, "InteriorShelf", Vector3(-5.6, -1.6, -3.4), Vector3(1.1, 3.2, 0.5), Color(0.30, 0.22, 0.15), false)
-	_add_box(building, "InteriorSofa", Vector3(5.1, -2.7, -2.2), Vector3(2.5, 0.9, 1.1), Color(0.20, 0.25, 0.30), false)
+		var floor_label := Label3D.new()
+		floor_label.text = "FLOOR %02d" % (floor_index + 1)
+		floor_label.position = Vector3(-7.6, floor_y + 2.95, 6.72)
+		floor_label.font_size = 16
+		building.add_child(floor_label)
+		_add_box(building, "OfficeDesk_%02d" % floor_index, Vector3(-2.8, floor_y + 0.82, -1.6), Vector3(3.0, 1.1, 1.1), color.lightened(0.15), false)
+		_add_box(building, "OfficeCabinet_%02d" % floor_index, Vector3(5.6, floor_y + 1.0, -3.6), Vector3(1.0, 2.0, 0.8), Color(0.30, 0.25, 0.19), false)
+		var ceiling_light := OmniLight3D.new()
+		ceiling_light.position = Vector3(0, floor_y + 3.0, 0)
+		ceiling_light.light_energy = 0.75
+		ceiling_light.omni_range = 12.0
+		building.add_child(ceiling_light)
+	_add_box(building, "Roof", Vector3(0, -3.82 + total_height + 0.12, 0), Vector3(17, 0.24, 13), color.darkened(0.18))
+	_add_box(building, "EntranceDoor", Vector3(0, -2.55, 6.52), Vector3(1.6, 2.4, 0.12), Color(0.20, 0.15, 0.11), false)
+	_add_box(building, "ReceptionCounter", Vector3(0, -2.7, 1.6), Vector3(4.8, 1.1, 1.0), color.lightened(0.15), false)
+	_add_box(building, "ElevatorShaft", Vector3(6.0, -3.82 + total_height * 0.5, -3.4), Vector3(2.0, total_height - 0.3, 2.0), color.darkened(0.35), false)
 	var label := Label3D.new()
 	label.text = label_text
-	label.position = Vector3(0, 4.9, 6.75)
+	label.position = Vector3(0, total_height - 2.8, 6.75)
 	label.font_size = 32
 	label.modulate = Color.WHITE
 	building.add_child(label)
