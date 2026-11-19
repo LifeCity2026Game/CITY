@@ -58,6 +58,8 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 		ledger.balance_changed.connect(_on_balance_changed)
 	if ledger and ledger.has_signal("prison_state_changed") and not ledger.prison_state_changed.is_connected(_on_prison_state_changed):
 		ledger.prison_state_changed.connect(_on_prison_state_changed)
+	if ledger and ledger.has_signal("receipt_issued") and not ledger.receipt_issued.is_connected(_on_ownership_receipt):
+		ledger.receipt_issued.connect(_on_ownership_receipt)
 	if ledger and ledger.has_signal("central_bank_snapshot_received") and not ledger.central_bank_snapshot_received.is_connected(_on_central_bank_snapshot_received):
 		ledger.central_bank_snapshot_received.connect(_on_central_bank_snapshot_received)
 	if ledger and ledger.has_signal("citizen_record_received") and not ledger.citizen_record_received.is_connected(_on_citizen_record_received):
@@ -103,6 +105,35 @@ func _process(delta: float) -> void:
 		player.global_position = Vector3(540, 1.2, 2.8)
 		player.velocity = Vector3.ZERO
 	_refresh_status()
+
+func _on_ownership_receipt(document: Dictionary) -> void:
+	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var owner_id := int(document.get("owner_peer_id", -999))
+	var previous_owner := int(document.get("previous_owner_peer_id", -999))
+	var item_id := str(document.get("item_id", ""))
+	var status := str(document.get("status", ""))
+	if status == "repossessed" and previous_owner == local_id:
+		owned_homes.erase(item_id)
+		owned_vehicles.erase(item_id)
+		for index in range(order_list.size() - 1, -1, -1):
+			if str(order_list[index].get("document_id", "")) == str(document.get("document_id", "")):
+				order_list.remove_at(index)
+		_save_services()
+		return
+	if owner_id != local_id or status != "valid":
+		return
+	if HOME_CATALOG.has(item_id) and not owned_homes.has(item_id):
+		owned_homes.append(item_id)
+	elif CAR_PRICES.has(item_id) and not owned_vehicles.has(item_id):
+		owned_vehicles.append(item_id)
+	elif ONLINE_PRODUCTS.has(item_id):
+		var already_ordered := false
+		for order in order_list:
+			if str(order.get("document_id", "")) == str(document.get("document_id", "")):
+				already_ordered = true
+		if not already_ordered:
+			order_list.append({"item": item_id, "document_id": str(document.get("document_id", "")), "remaining": GAME_DAY_LENGTH, "delivered": false})
+	_save_services()
 
 func _on_prison_state_changed(peer_id: int, _record_id: String, imprisoned: bool) -> void:
 	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
@@ -542,7 +573,6 @@ func _buy_online(item: String) -> void:
 		return
 	if ledger:
 		ledger.request_purchase(item)
-	order_list.append({"item":item, "remaining":GAME_DAY_LENGTH, "delivered":false})
 	notice_changed.emit("سفارش ثبت شد؛ تحویل پس از یک روز کامل درون‌بازی.")
 
 func _buy_home(home: String) -> void:
@@ -552,7 +582,6 @@ func _buy_home(home: String) -> void:
 		return
 	if ledger:
 		ledger.request_purchase(home)
-	owned_homes.append(home)
 	notice_changed.emit("ملک خریداری شد؛ خانه در ابتدا خالی است و باید وسایل بخری.")
 
 func _buy_car(car: String) -> void:
@@ -562,7 +591,6 @@ func _buy_car(car: String) -> void:
 		return
 	if ledger:
 		ledger.request_purchase(car)
-	owned_vehicles.append(car)
 	notice_changed.emit("خودرو خریداری شد و به پنل پارکینگ اضافه شد.")
 
 func _spawn_car(car: String) -> void:
