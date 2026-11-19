@@ -32,6 +32,21 @@ func _run_vehicle_checks() -> void:
 	if car.driver != player:
 		_fail("Vehicle driver was not configured with the player")
 		return
+	var character_joystick := game.get_node_or_null("CharacterControls/CharacterJoystick")
+	if character_joystick == null:
+		_fail("On-foot character joystick is missing")
+		return
+	if not character_joystick.has_signal("vector_changed"):
+		_fail("Character joystick vector signal is missing")
+		return
+	character_joystick.vector_changed.emit(Vector2(0.6, 0.8))
+	if player.mobile_direction.distance_to(Vector2(0.6, 0.8)) > 0.01:
+		_fail("Character joystick did not send movement direction to player")
+		return
+	character_joystick.vector_changed.emit(Vector2.ZERO)
+	if player.mobile_direction.length() > 0.01:
+		_fail("Character joystick did not release movement")
+		return
 	var city := game.get_node_or_null("CityFeatures")
 	if city == null or not city.interior_positions.has("repair_garage"):
 		_fail("Vehicle repair garage or its enterable interior is missing")
