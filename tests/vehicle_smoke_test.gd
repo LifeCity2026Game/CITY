@@ -118,7 +118,7 @@ func _run_vehicle_checks() -> void:
 	if not car.vehicle_camera.current:
 		_fail("Exterior camera button did not restore chase view")
 		return
-	var steering_button := car.controls_layer.get_node_or_null("Hold_right") as Button
+	var steering_button := car.controls_layer.find_child("Hold_right", true, false) as Button
 	if steering_button == null:
 		_fail("Right steering touch button is missing")
 		return
@@ -198,7 +198,7 @@ func _run_vehicle_checks() -> void:
 	if car.transmission_mode != "manual":
 		_fail("Manual transmission mode did not activate")
 		return
-	var clutch_button := car.controls_layer.get_node_or_null("Hold_clutch") as Button
+	var clutch_button := car.controls_layer.find_child("Hold_clutch", true, false) as Button
 	if clutch_button == null:
 		_fail("Manual clutch touch button is missing")
 		return
@@ -212,7 +212,7 @@ func _run_vehicle_checks() -> void:
 	if car.gear != "1":
 		_fail("Manual gear selector did not engage first gear")
 		return
-	var accelerator_button := car.controls_layer.get_node_or_null("Hold_accelerate") as Button
+	var accelerator_button := car.controls_layer.find_child("Hold_accelerate", true, false) as Button
 	if accelerator_button == null:
 		_fail("Accelerator touch button is missing")
 		return
@@ -234,7 +234,7 @@ func _run_vehicle_checks() -> void:
 		_fail("Manual first gear did not drive after clutch release")
 		return
 	accelerator_button.button_up.emit()
-	var brake_button := car.controls_layer.get_node_or_null("Hold_brake") as Button
+	var brake_button := car.controls_layer.find_child("Hold_brake", true, false) as Button
 	if brake_button == null:
 		_fail("Brake touch button is missing")
 		return
