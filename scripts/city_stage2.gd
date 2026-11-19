@@ -107,7 +107,8 @@ func _build_interface() -> void:
 func _add_button(parent: VBoxContainer, caption: String, action: String) -> Button:
 	var b := Button.new()
 	b.text = caption
-	b.custom_minimum_size = Vector2(290, 38)
+	b.custom_minimum_size = Vector2(290, 46)
+	_style_button(b)
 	b.pressed.connect(_on_action.bind(action))
 	parent.add_child(b)
 	return b
@@ -115,7 +116,8 @@ func _add_button(parent: VBoxContainer, caption: String, action: String) -> Butt
 func _add_action_button(caption: String, action: String, arg: String = "") -> void:
 	var b := Button.new()
 	b.text = caption
-	b.custom_minimum_size = Vector2(290, 34)
+	b.custom_minimum_size = Vector2(290, 42)
+	_style_button(b)
 	b.pressed.connect(_on_action.bind(action, arg))
 	panel.get_child(0).add_child(b)
 
@@ -292,3 +294,25 @@ func _on_action(action: String, arg: String = "") -> void:
 		"help":
 			notice = "این مرحله نمونه اولیه سیستم‌های بانک، فروشگاه، پرونده، خدمات دولتی و ستاد کل است."
 	_refresh()
+
+func _style_button(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color("2878d5")
+	normal.corner_radius_top_left = 14
+	normal.corner_radius_top_right = 14
+	normal.corner_radius_bottom_left = 14
+	normal.corner_radius_bottom_right = 14
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 8
+	normal.content_margin_bottom = 8
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("3689e8")
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color("1e5eaa")
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_font_size_override("font_size", 16)
