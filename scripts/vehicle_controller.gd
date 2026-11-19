@@ -568,6 +568,8 @@ func _physics_process(delta: float) -> void:
 		cabin_temperature = move_toward(cabin_temperature, target_temperature, delta * 0.22)
 	else:
 		cabin_temperature = move_toward(cabin_temperature, 22.0, delta * 0.035)
+	if driver and driver.has_method("set_body_temperature"):
+		driver.set_body_temperature(cabin_temperature)
 	_update_climate_label()
 	var braking := active_throttle < 0.0 or handbrake
 	if braking != brake_lights_active:
