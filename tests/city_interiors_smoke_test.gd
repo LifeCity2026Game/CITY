@@ -55,8 +55,8 @@ func _run_city_checks() -> void:
 			if building.get_node_or_null("RoofFrontParapet") == null:
 				_fail("A generic building lacks roofline details: " + str(building.name))
 				return
-	if generic_building_count != 64:
-		_fail("Expected 64 detailed exterior buildings, found %d" % generic_building_count)
+	if generic_building_count != 72:
+		_fail("Expected 72 detailed exterior buildings, found %d" % generic_building_count)
 		return
 	var target: Dictionary = city.generic_interior_positions[0]
 	player.global_position = target.world + Vector3(0, 1.2, 0)
