@@ -966,13 +966,35 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 			citizen_prison.append(record.duplicate(true))
 	var assets: Array[Dictionary] = []
 	var owner_peer := int(citizen.get("owner_peer_id", -999))
+	var total_purchases := 0
+	var total_tax_paid := 0
 	for doc in documents.values():
 		if int(doc.get("purchased_by_peer_id", doc.get("owner_peer_id", -999))) == owner_peer:
 			assets.append(doc.duplicate(true))
+			total_purchases += int(doc.get("purchase_price", 0))
+			total_tax_paid += int(doc.get("tax_paid", 0))
+	var citizen_transactions: Array = []
+	var own_account_numbers: Array = citizen_accounts.get(citizen_id, [])
+	for transaction in cash_transactions.values():
+		var tx: Dictionary = transaction
+		if str(tx.get("from_account", "")) in own_account_numbers or str(tx.get("to_account", "")) in own_account_numbers or int(tx.get("peer_id", -999)) == owner_peer or int(tx.get("from_peer", -999)) == owner_peer or int(tx.get("to_peer", -999)) == owner_peer:
+			citizen_transactions.append(tx.duplicate(true))
+	var honoured_count := 0
+	var dishonoured_count := 0
+	for cheque in citizen_cheques:
+		for spend in cheque.get("spends", []):
+			if str(spend.get("status", "")) == "پاس‌شده":
+				honoured_count += 1
+			elif str(spend.get("status", "")) == "برگشت‌خورده":
+				dishonoured_count += 1
 	return {
 		"citizen": citizen.duplicate(true), "accounts": accounts,
-		"cheques": citizen_cheques, "prison_records": citizen_prison,
-		"assets": assets, "cheque_banned": bool(cheque_spending_ban.get(str(citizen.get("owner_peer_id", -999)), false))
+		"cheques": citizen_cheques, "honoured_cheque_spends": honoured_count,
+		"dishonoured_cheque_spends": dishonoured_count,
+		"prison_records": citizen_prison, "assets": assets,
+		"transactions": citizen_transactions,
+		"total_purchases": total_purchases, "total_tax_paid": total_tax_paid,
+		"cheque_banned": bool(cheque_spending_ban.get(str(citizen.get("owner_peer_id", -999)), false))
 	}
 
 func can_access_permission(actor_peer: int, permission: String) -> bool:
