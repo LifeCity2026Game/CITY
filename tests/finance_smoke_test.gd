@@ -53,10 +53,17 @@ func _run() -> void:
 	assert(profile.accounts.size() == 1, "citizen bank account missing from profile")
 	assert(not profile.cheques.is_empty(), "citizen cheque history missing from profile")
 	var npc_account_count := 0
-	for npc_account in ledger.bank_accounts.values():
+	var npc_account_number := ""
+	for npc_number in ledger.bank_accounts.keys():
+		var npc_account: Dictionary = ledger.bank_accounts[npc_number]
 		if str(npc_account.get("owner_type", "")) == "npc":
 			npc_account_count += 1
+			npc_account_number = str(npc_number)
 	assert(npc_account_count >= 6, "NPC bank accounts were not seeded")
+	assert(ledger.set_role_permissions(1, 2, {"view_central_bank": true, "central_bank_withdraw": true, "view_prison_records": true}), "creator could not assign Central Bank manager permissions")
+	assert(not ledger.get_central_bank_snapshot(2).is_empty(), "authorized Central Bank manager could not view the treasury")
+	assert(ledger.central_bank_withdraw(2, npc_account_number, 50, "آزمون مدیر بانک مرکزی"), "authorized manager could not withdraw treasury funds")
+	assert(not ledger.central_bank_withdraw(3, npc_account_number, 50, "unauthorized"), "unauthorized player withdrew Central Bank funds")
 
 	print("FINANCE_SMOKE_TEST_PASS")
 	quit(0)
