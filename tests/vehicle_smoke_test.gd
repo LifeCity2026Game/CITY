@@ -31,6 +31,9 @@ func _run_vehicle_checks() -> void:
 	if car.wheel_nodes.size() != 4:
 		_fail("Vehicle must have four wheels")
 		return
+	if car.front_wheels.size() != 2:
+		_fail("Front steering wheels are missing")
+		return
 	if car.interior_camera == null or car.vehicle_camera == null:
 		_fail("Vehicle cameras are missing")
 		return
