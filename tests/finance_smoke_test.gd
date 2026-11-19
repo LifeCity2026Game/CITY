@@ -41,7 +41,7 @@ func _run() -> void:
 	for npc_number in ledger.bank_accounts.keys():
 		var seeded_card: Dictionary = ledger.bank_accounts[npc_number]
 		var card_index := int(seeded_card.get("account_index", 0))
-		if card_index >= 2 and card_index <= 6:
+		if str(seeded_card.get("owner_type", "")) == "npc" and card_index >= 2 and card_index <= 6:
 			npc_card_indexes[card_index] = true
 			assert(int(seeded_card.get("balance", -1)) == 10000, "NPC accounts 2-6 must start with 10,000")
 	assert(npc_card_indexes.size() == 5, "NPC cards 2-6 were not seeded")
