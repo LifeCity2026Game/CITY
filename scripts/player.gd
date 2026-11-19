@@ -181,6 +181,8 @@ func _physics_process(delta: float) -> void:
 	var direction := keyboard if keyboard.length() > 0.0 else mobile_direction
 	direction = direction.normalized()
 	var move := Vector3(direction.x, 0.0, -direction.y)
+	# Keep touch movement aligned with the camera: pushing up always moves toward the view direction.
+	move = move.rotated(Vector3.UP, camera_yaw)
 	velocity.x = move.x * move_speed
 	velocity.z = move.z * move_speed
 	if not is_on_floor():
