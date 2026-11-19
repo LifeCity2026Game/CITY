@@ -33,7 +33,7 @@ func _run() -> void:
 	assert(ledger.cheque_book[cheque_id].spends.size() == 1, "cheque purchase was not recorded")
 
 	ledger.bank_accounts[account_number].balance = 0
-	ledger.game_clock_seconds = 360.0
+	ledger.game_clock_seconds = 1440.0
 	print("FINANCE_CHECKPOINT_SETTLEMENT")
 	ledger._settle_due_cheques()
 	assert(bool(ledger.cheque_spending_ban.get("1", false)), "dishonoured cheque did not restrict cheque issuance")
