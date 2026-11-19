@@ -690,7 +690,7 @@ func _physics_process(delta: float) -> void:
 		drive_input = -drive_input
 	elif gear == "D" or gear in ["1", "2", "3", "4", "5"]:
 		drive_input = maxf(drive_input, 0.0)
-	if transmission_mode == "manual" and not clutch_pressed:
+	if transmission_mode == "manual" and clutch_pressed:
 		drive_input = 0.0
 	if braking_input:
 		current_speed = move_toward(current_speed, 0.0, brake_strength * delta)
