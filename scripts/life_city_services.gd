@@ -11,6 +11,7 @@ var notice_label: Label
 var details_label: Label
 var target_input: LineEdit
 var amount_input: LineEdit
+var pin_input: LineEdit
 var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
 var roles: Dictionary = {1: "سازنده"}
@@ -54,9 +55,9 @@ func _ready() -> void:
 		ledger.balance_changed.connect(_on_balance_changed)
 
 func _seed_phone() -> void:
+	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 	sim_cards = [
-		{"number":"09120000001", "carrier":"همراه اول", "data_mb": 0, "accounts":[]},
-		{"number":"09350000002", "carrier":"ایرانسل", "data_mb": 0, "accounts":[]}
+		{"number":"0912%07d" % (1200000 + peer_id), "carrier":"همراه اول", "data_mb": 0, "accounts":[]}
 	]
 
 func _process(delta: float) -> void:
@@ -159,6 +160,8 @@ func _action(action: String, arg: String = "") -> void:
 		_create_account(int(arg))
 	elif action == "buy_data":
 		_buy_data(int(arg))
+	elif action == "buy_sim":
+		_buy_sim()
 	elif action == "transfer":
 		_transfer()
 	elif action == "issue_cheque":
@@ -181,6 +184,9 @@ func _render_page() -> void:
 			notice_changed.emit("خدمات بازی از این پنل جداگانه باز می‌شوند.")
 		"phone":
 			notice_changed.emit("حداکثر دو سیم‌کارت؛ هر سیم‌کارت حداکثر سه حساب بانکی.")
+			pin_input = _add_input("رمز چهار تا هشت رقمی حساب")
+			if sim_cards.size() < 2:
+				_add_button(layout, "خرید سیم‌کارت دوم", "buy_sim")
 			for i in range(sim_cards.size()):
 				var sim: Dictionary = sim_cards[i]
 				layout.add_child(_label("%s | %s | اینترنت: %d MB" % [sim.number, sim.carrier, int(sim.data_mb)]))
@@ -347,10 +353,28 @@ func _create_account(sim_index: int) -> void:
 	if accounts.size() >= 3:
 		notice_changed.emit("برای این سیم‌کارت سه حساب ساخته شده است.")
 		return
-	var account_number := "LC-%d-%03d" % [sim_index + 1, accounts.size() + 1]
-	accounts.append({"number":account_number, "balance":0, "pin":"0000"})
+	if pin_input == null or pin_input.text.length() < 4 or pin_input.text.length() > 8 or not pin_input.text.is_valid_int():
+		notice_changed.emit("رمز حساب باید بین ۴ تا ۸ رقم باشد.")
+		return
+	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var account_number := "LC-%04d-%d-%03d" % [peer_id, sim_index + 1, accounts.size() + 1]
+	accounts.append({"number":account_number, "balance":_get_balance(), "pin":pin_input.text})
 	sim_cards[sim_index].accounts = accounts
 	notice_changed.emit("حساب جدید ساخته شد: " + account_number)
+
+
+func _buy_sim() -> void:
+	if sim_cards.size() >= 2:
+		notice_changed.emit("هر شهروند حداکثر دو سیم‌کارت می‌تواند داشته باشد.")
+		return
+	if _get_balance() < 500:
+		notice_changed.emit("برای خرید سیم‌کارت ۵۰۰ سکه لازم است.")
+		return
+	if ledger:
+		ledger.request_adjust_balance(-500, "telecom_sim_purchase")
+	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	sim_cards.append({"number":"0935%07d" % (2300000 + peer_id), "carrier":"ایرانسل", "data_mb":0, "accounts":[]})
+	notice_changed.emit("سیم‌کارت دوم خریداری شد.")
 
 func _buy_data(sim_index: int) -> void:
 	if sim_index < 0 or sim_index >= sim_cards.size() or _get_balance() < 250:
