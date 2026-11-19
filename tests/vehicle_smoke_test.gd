@@ -247,8 +247,8 @@ func _run_vehicle_checks() -> void:
 	if car.current_speed >= 0.0:
 		_fail("Vehicle did not move in reverse")
 		return
-	car._set_control("accelerate", false)
-	car._set_control("brake", true)
+	accelerator_button.button_up.emit()
+	brake_button.button_down.emit()
 	for reverse_brake_frame in range(30):
 		await physics_frame
 	if absf(car.current_speed) > 1.0:
