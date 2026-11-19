@@ -7,6 +7,14 @@ func _fail(message: String) -> void:
 	push_error("VEHICLE_SMOKE_TEST_FAIL: " + message)
 	quit(1)
 
+func _press_button(root_node: Node, caption: String) -> bool:
+	for item in root_node.find_children("*", "Button", true, false):
+		var button := item as Button
+		if button and button.text == caption:
+			button.pressed.emit()
+			return true
+	return false
+
 func _run_vehicle_checks() -> void:
 	var packed := load("res://scenes/main.tscn") as PackedScene
 	if packed == null:
@@ -63,8 +71,12 @@ func _run_vehicle_checks() -> void:
 		_fail("Climate or transmission status display is missing")
 		return
 	var selected_names: Array[String] = [str(car.vehicle_name)]
+	var model_button := car.controls_layer.get_node_or_null("ModelSelector") as Button
+	if model_button == null:
+		_fail("Vehicle model selection button is missing")
+		return
 	for model_step in range(8):
-		car._cycle_vehicle_model()
+		model_button.pressed.emit()
 		selected_names.append(str(car.vehicle_name))
 	if selected_names.size() != 9 or selected_names.has("City Sedan"):
 		_fail("Vehicle selector did not expose all nine named cars")
@@ -82,21 +94,23 @@ func _run_vehicle_checks() -> void:
 	if car.global_position.distance_to(player.global_position) > 7.0:
 		_fail("Player starts too far from the test vehicle")
 		return
-	car._toggle_vehicle()
+	car.enter_button.pressed.emit()
 	if not car.occupied:
 		_fail("Player could not enter the vehicle")
 		return
 
-	car._toggle_doors()
+	if not _press_button(car.controls_layer, "درها"):
+		_fail("Door control button is missing")
+		return
 	if absf(car.left_door.rotation.y) < 0.1 or absf(car.right_door.rotation.y) < 0.1:
 		_fail("Vehicle doors did not open")
 		return
-	car._toggle_doors()
-	car._toggle_lights()
+	_press_button(car.controls_layer, "درها")
+	_press_button(car.controls_layer, "چراغ")
 	if not car.headlamps[0].visible or not car.headlamps[1].visible:
 		_fail("Headlights did not turn on")
 		return
-	car._toggle_lights()
+	_press_button(car.controls_layer, "چراغ")
 	var steering_button := car.controls_layer.get_node_or_null("Hold_right") as Button
 	if steering_button == null:
 		_fail("Right steering touch button is missing")
@@ -108,17 +122,19 @@ func _run_vehicle_checks() -> void:
 		_fail("Steering failed: input=%s front=%s wheel=%s" % [str(car.steering), str(car.front_wheels[0].rotation.y), str(car.steering_wheel.rotation.z)])
 		return
 	steering_button.button_up.emit()
-	car._toggle_hood()
+	if not _press_button(car.controls_layer, "کاپوت"):
+		_fail("Hood control button is missing")
+		return
 	if not car.hood_open:
 		_fail("Hood did not open")
 		return
-	car._toggle_hood()
-	car._toggle_trunk()
+	_press_button(car.controls_layer, "کاپوت")
+	_press_button(car.controls_layer, "صندوق")
 	if not car.trunk_open:
 		_fail("Trunk did not open")
 		return
-	car._toggle_trunk()
-	car._cycle_climate()
+	_press_button(car.controls_layer, "صندوق")
+	_press_button(car.controls_layer, "کولر/بخاری")
 	if car.climate_mode != "cool":
 		_fail("Climate system did not switch to cooling")
 		return
@@ -133,7 +149,7 @@ func _run_vehicle_checks() -> void:
 		_fail("Vehicle climate did not affect player body temperature")
 		return
 	var cool_temperature: float = car.cabin_temperature
-	car._cycle_climate()
+	_press_button(car.controls_layer, "کولر/بخاری")
 	if car.climate_mode != "heat":
 		_fail("Climate system did not switch to heating")
 		return
@@ -142,8 +158,8 @@ func _run_vehicle_checks() -> void:
 	if car.cabin_temperature <= cool_temperature or player.body_temperature <= cool_temperature:
 		_fail("Heater did not warm the cabin and player")
 		return
-	car._cycle_climate()
-	car._cycle_indicators()
+	_press_button(car.controls_layer, "کولر/بخاری")
+	_press_button(car.controls_layer, "راهنما")
 	if car.indicators != 1:
 		_fail("Left indicator did not activate")
 		return
@@ -162,12 +178,16 @@ func _run_vehicle_checks() -> void:
 		_fail("Collision did not reduce vehicle condition and performance")
 		return
 	car.global_position = Vector3(-55.0, 0.2, 64.0)
-	car.repair_vehicle()
+	if not _press_button(car.controls_layer, "تعمیر خودرو"):
+		_fail("Vehicle repair button is missing")
+		return
 	if car.vehicle_health != 100.0 or car.max_forward_speed != max_speed_before_damage:
 		_fail("Garage repair did not restore vehicle condition and performance")
 		return
 	car.global_position = Vector3(4.0, 0.2, 7.0)
-	car._toggle_transmission()
+	if not _press_button(car.controls_layer, "گیربکس"):
+		_fail("Transmission mode button is missing")
+		return
 	if car.transmission_mode != "manual":
 		_fail("Manual transmission mode did not activate")
 		return
@@ -179,7 +199,9 @@ func _run_vehicle_checks() -> void:
 	if not car.clutch_pressed:
 		_fail("Manual clutch pedal did not engage")
 		return
-	car._cycle_gear()
+	if not _press_button(car.controls_layer, "دنده"):
+		_fail("Gear selector button is missing")
+		return
 	if car.gear != "1":
 		_fail("Manual gear selector did not engage first gear")
 		return
@@ -216,7 +238,7 @@ func _run_vehicle_checks() -> void:
 	if absf(car.current_speed) > 1.0:
 		_fail("Manual transmission test vehicle did not stop")
 		return
-	car._toggle_transmission()
+	_press_button(car.controls_layer, "گیربکس")
 	if car.transmission_mode != "automatic":
 		_fail("Automatic transmission mode did not restore")
 		return
@@ -257,7 +279,7 @@ func _run_vehicle_checks() -> void:
 	brake_button.button_up.emit()
 	car.current_speed = 0.0
 	car.gear = "P"
-	car._toggle_vehicle()
+	car.enter_button.pressed.emit()
 	if car.occupied:
 		_fail("Player could not exit the stopped vehicle")
 		return
