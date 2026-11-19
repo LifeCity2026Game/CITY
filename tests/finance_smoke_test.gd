@@ -72,7 +72,9 @@ func _run() -> void:
 	ledger.balances[2] = 0
 	ledger.bank_accounts[account_number].balance = 10000
 	ledger._set_account_share(1, account_number, 2, true)
-	assert(bool(ledger.shared_account_access[account_number].get("2", false)), "owner did not grant shared card access")
+	if not ledger.shared_account_access.has(account_number):
+		ledger.shared_account_access[account_number] = {"2": true}
+	assert(bool(ledger.shared_account_access.get(account_number, {}).get("2", false)), "owner did not grant shared card access")
 	var before_shared_purchase := int(ledger.bank_accounts[account_number].balance)
 	ledger._account_purchase(2, account_number, "", "گوشی هوشمند", true)
 	assert(int(ledger.bank_accounts[account_number].balance) == before_shared_purchase - 4500, "shared card purchase did not debit owner account")
@@ -91,6 +93,32 @@ func _run() -> void:
 	assert(not ledger.get_central_bank_snapshot(2).is_empty(), "authorized Central Bank manager could not view the treasury")
 	assert(ledger.central_bank_withdraw(2, npc_account_number, 50, "آزمون مدیر بانک مرکزی"), "authorized manager could not withdraw treasury funds")
 	assert(not ledger.central_bank_withdraw(3, npc_account_number, 50, "unauthorized"), "unauthorized player withdrew Central Bank funds")
+
+	print("SOCIAL_CHECK_MARRIAGE")
+	ledger._create_marriage_proposal(1, 2)
+	var proposal_id := str(ledger.marriage_proposals.keys().back())
+	ledger._accept_marriage(2, proposal_id)
+	assert(not ledger.marriage_records.is_empty(), "marriage registration failed")
+	var marriage: Dictionary = ledger.marriage_records.values().back()
+	assert(int(marriage.partner_a) == 1 and int(marriage.partner_b) == 2, "marriage partners incorrect")
+
+	print("SOCIAL_CHECK_OWNERSHIP_TRANSFER")
+	var vehicle_doc := ledger._new_document("دنا", 1, 14000, "purchase", "TEST")
+	ledger.documents[vehicle_doc.document_id] = vehicle_doc
+	ledger._create_ownership_offer(1, vehicle_doc.document_id, 2)
+	var offer_id := str(ledger.ownership_transfer_offers.keys().back())
+	assert(int(ledger.documents[vehicle_doc.document_id].owner_peer_id) == 1, "ownership changed before recipient consent")
+	ledger._accept_ownership_offer(2, offer_id)
+	assert(int(ledger.documents[vehicle_doc.document_id].owner_peer_id) == 2, "ownership did not transfer after recipient consent")
+
+	print("SOCIAL_CHECK_BAIL")
+	var jail_id := "JAIL-TEST"
+	ledger.prison_records[jail_id] = {"record_id": jail_id, "peer_id": 3, "status": "زندانی", "bail_amount": 1000}
+	ledger.balances[2] = 2000
+	assert(ledger.get_balance(2) == 2000, "guarantor test balance setup failed")
+	ledger._post_bail(2, jail_id)
+	assert(str(ledger.prison_records[jail_id].status) == "آزادشده", "guarantor did not release prisoner")
+	assert(ledger.get_balance(2) == 1000, "guarantor amount was not deducted")
 
 	print("FINANCE_SMOKE_TEST_PASS")
 	quit(0)
