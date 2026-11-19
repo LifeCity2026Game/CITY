@@ -894,12 +894,21 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 		"assets": assets, "cheque_banned": bool(cheque_spending_ban.get(str(citizen.get("owner_peer_id", -999)), false))
 	}
 
+func can_access_permission(actor_peer: int, permission: String) -> bool:
+	return _actor_has_permission(actor_peer, permission)
+
 func get_central_bank_snapshot(actor_peer: int) -> Dictionary:
 	if not _actor_has_permission(actor_peer, "view_central_bank"):
 		return {}
+	var safe_accounts: Dictionary = {}
+	for number in bank_accounts.keys():
+		var safe_account: Dictionary = bank_accounts[number].duplicate(true)
+		safe_account.erase("pin_hash")
+		safe_account["pin_security"] = "رمز محرمانه و هش‌شده؛ قابل مشاهده نیست"
+		safe_accounts[number] = safe_account
 	return {
 		"treasury": central_bank_treasury,
-		"accounts": bank_accounts.duplicate(true),
+		"accounts": safe_accounts,
 		"cheques": cheque_book.duplicate(true),
 		"prison_records": prison_records.duplicate(true),
 		"transactions": cash_transactions.duplicate(true),
