@@ -11,6 +11,7 @@ var is_remote := false
 var target_position := Vector3.ZERO
 var target_yaw := 0.0
 var animation_clock := 0.0
+var body_temperature := 22.0
 var left_arm: Node3D
 var right_arm: Node3D
 var left_leg: Node3D
@@ -136,6 +137,9 @@ func configure_remote() -> void:
 func set_remote_state(pos: Vector3, yaw: float) -> void:
 	target_position = pos
 	target_yaw = yaw
+
+func set_body_temperature(value: float) -> void:
+	body_temperature = clampf(value, 15.0, 35.0)
 
 func set_camera_sensitivity(value: float) -> void:
 	camera_sensitivity = clampf(value, 0.1, 3.0)
