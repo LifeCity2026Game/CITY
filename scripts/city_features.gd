@@ -324,22 +324,22 @@ func _build_interiors() -> void:
 		elif str(entry.id) == "dealership":
 			_add_showroom_car(room, "خودروی اسپرت", Vector3(-3.6, 0.0, 0.8), Color(0.72, 0.10, 0.08))
 			_add_showroom_car(room, "خودروی خانوادگی", Vector3(3.5, 0.0, 0.8), Color(0.12, 0.28, 0.68))
-			_add_box(room, "ShowroomInfoDesk", Vector3(0, 0.65, -3.2), Vector3(4.2, 1.3, 0.9), Color(0.20, 0.25, 0.30))
+			_box(room, "ShowroomInfoDesk", Vector3(0, 0.65, -3.2), Vector3(4.2, 1.3, 0.9), Color(0.20, 0.25, 0.30))
 			_add_interior_person(room, "فروشنده خودرو", Vector3(0, 0.0, -4.2), Color(0.16, 0.30, 0.52))
 			_add_interior_person(room, "مشتری نمایشگاه", Vector3(-5.0, 0.0, -1.8), Color(0.42, 0.25, 0.18))
 		elif str(entry.id) == "real_estate":
 			_add_house_maquette(room, "ماکت ویلای ساحلی", Vector3(-3.6, 0.0, -1.0), Color(0.78, 0.68, 0.48))
 			_add_house_maquette(room, "ماکت آپارتمان", Vector3(3.4, 0.0, -1.0), Color(0.68, 0.72, 0.76))
-			_add_box(room, "PropertyBrochureStand", Vector3(0, 0.75, 2.0), Vector3(2.8, 1.5, 0.65), Color(0.32, 0.24, 0.16))
+			_box(room, "PropertyBrochureStand", Vector3(0, 0.75, 2.0), Vector3(2.8, 1.5, 0.65), Color(0.32, 0.24, 0.16))
 			_add_interior_person(room, "مشاور املاک", Vector3(-1.6, 0.0, -3.6), Color(0.18, 0.34, 0.26))
 			_add_interior_person(room, "مشتری املاک", Vector3(2.0, 0.0, -3.6), Color(0.42, 0.25, 0.18))
 		elif str(entry.id) == "repair_garage":
 			_add_showroom_car(room, "خودروی در حال تعمیر", Vector3(0, 0.0, 0.4), Color(0.42, 0.44, 0.48))
-			_add_box(room, "MechanicWorkbench", Vector3(-4.6, 0.65, -3.4), Vector3(2.5, 1.3, 0.8), Color(0.22, 0.24, 0.26))
+			_box(room, "MechanicWorkbench", Vector3(-4.6, 0.65, -3.4), Vector3(2.5, 1.3, 0.8), Color(0.22, 0.24, 0.26))
 			_add_interior_person(room, "مکانیک", Vector3(4.4, 0.0, -3.2), Color(0.24, 0.30, 0.36))
 		elif str(entry.id) == "city_bank" or str(entry.id) == "central_bank":
-			_add_box(room, "BankQueueCounter", Vector3(-3.8, 0.65, 0.0), Vector3(3.0, 1.3, 0.8), Color(0.35, 0.38, 0.42))
-			_add_box(room, "ATM", Vector3(5.2, 1.0, 2.6), Vector3(0.9, 2.0, 0.55), Color(0.12, 0.16, 0.20))
+			_box(room, "BankQueueCounter", Vector3(-3.8, 0.65, 0.0), Vector3(3.0, 1.3, 0.8), Color(0.35, 0.38, 0.42))
+			_box(room, "ATM", Vector3(5.2, 1.0, 2.6), Vector3(0.9, 2.0, 0.55), Color(0.12, 0.16, 0.20))
 			_add_interior_person(room, "کارمند بانک", Vector3(-3.8, 0.0, -1.8), Color(0.18, 0.28, 0.48))
 			_add_interior_person(room, "مشتری بانک", Vector3(2.4, 0.0, 2.0), Color(0.40, 0.26, 0.18))
 		elif str(entry.id) == "telecom":
@@ -347,8 +347,8 @@ func _build_interiors() -> void:
 				_box(room, "ServerRack_%d" % rack_index, Vector3(-4.5 + float(rack_index) * 4.5, 1.35, -3.8), Vector3(1.2, 2.7, 0.8), Color(0.12, 0.17, 0.22))
 			_add_interior_person(room, "تکنسین مخابرات", Vector3(0, 0.0, 1.6), Color(0.18, 0.34, 0.42))
 		elif str(entry.id) == "government" or str(entry.id) == "intelligence":
-			_add_box(room, "OfficeWorkTable", Vector3(-3.4, 0.65, 0.2), Vector3(2.8, 1.3, 1.0), Color(0.30, 0.22, 0.16))
-			_add_box(room, "OfficeFilingCabinet", Vector3(5.0, 1.0, -3.8), Vector3(1.0, 2.0, 0.8), Color(0.34, 0.37, 0.40))
+			_box(room, "OfficeWorkTable", Vector3(-3.4, 0.65, 0.2), Vector3(2.8, 1.3, 1.0), Color(0.30, 0.22, 0.16))
+			_box(room, "OfficeFilingCabinet", Vector3(5.0, 1.0, -3.8), Vector3(1.0, 2.0, 0.8), Color(0.34, 0.37, 0.40))
 			_add_interior_person(room, "کارمند اداره", Vector3(-3.4, 0.0, -1.4), Color(0.20, 0.30, 0.48))
 		var door_marker := MeshInstance3D.new()
 		var door_mesh := BoxMesh.new()
