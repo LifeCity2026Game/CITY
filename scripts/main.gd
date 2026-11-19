@@ -7,6 +7,7 @@ const LEDGER_SCRIPT = preload("res://scripts/ownership_ledger.gd")
 const GRAPHICS_SCRIPT = preload("res://scripts/graphics_settings.gd")
 const CITY_FEATURES_SCRIPT = preload("res://scripts/city_features.gd")
 const VEHICLE_SCRIPT = preload("res://scripts/vehicle_controller.gd")
+const JOYSTICK_SCRIPT = preload("res://scripts/virtual_joystick.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
@@ -185,27 +186,22 @@ func _build_player() -> void:
 
 func _build_mobile_controls() -> void:
 	var layer := CanvasLayer.new()
+	layer.name = "CharacterControls"
 	add_child(layer)
-	var panel := HBoxContainer.new()
-	panel.position = Vector2(24, -112)
-	panel.anchor_top = 1.0
-	panel.anchor_bottom = 1.0
-	panel.add_theme_constant_override("separation", 8)
-	layer.add_child(panel)
-	_add_control_button(panel, "◀", "left")
-	_add_control_button(panel, "▲", "forward")
-	_add_control_button(panel, "▼", "back")
-	_add_control_button(panel, "▶", "right")
-
-func _add_control_button(parent: HBoxContainer, caption: String, axis: String) -> void:
-	var button := Button.new()
-	button.text = caption
-	button.custom_minimum_size = Vector2(66, 66)
-	_style_mobile_button(button)
-	button.add_theme_font_size_override("font_size", 25)
-	parent.add_child(button)
-	button.button_down.connect(func(): player.set_mobile_axis(axis, true))
-	button.button_up.connect(func(): player.set_mobile_axis(axis, false))
+	var joystick := Control.new()
+	joystick.name = "CharacterJoystick"
+	joystick.set_script(JOYSTICK_SCRIPT)
+	joystick.custom_minimum_size = Vector2(176, 176)
+	joystick.anchor_left = 0.0
+	joystick.anchor_top = 1.0
+	joystick.anchor_right = 0.0
+	joystick.anchor_bottom = 1.0
+	joystick.offset_left = 28.0
+	joystick.offset_top = -204.0
+	joystick.offset_right = 204.0
+	joystick.offset_bottom = -28.0
+	layer.add_child(joystick)
+	joystick.vector_changed.connect(player.set_mobile_direction)
 
 func _build_city_features() -> void:
 	city_features = Node3D.new()
