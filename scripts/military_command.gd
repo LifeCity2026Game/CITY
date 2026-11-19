@@ -35,6 +35,24 @@ func _ready() -> void:
 	_build_targets()
 	_build_interface()
 
+func _ai_profile_for_department(department: String) -> String:
+	match department:
+		"نیروی زمینی":
+			return "ground_road_navigation_and_patrol"
+		"نیروی هوایی":
+			return "air_altitude_and_orbit_patrol"
+		"نیروی دریایی":
+			return "sea_lane_navigation_and_patrol"
+		"گارد ساحلی":
+			return "coastal_search_and_rescue_patrol"
+		"تفنگداران دریایی":
+			return "amphibious_shore_transition"
+		"نیروی فضایی":
+			return "orbital_stationkeeping"
+		"گارد ملی":
+			return "urban_security_route_patrol"
+	return "general_unit_navigation"
+
 func _build_targets() -> void:
 	targets.clear()
 	for node in get_tree().get_nodes_in_group("city_buildings"):
@@ -323,6 +341,7 @@ func _spawn_unit(label: String, at: Vector3, paint: Color, speed: float, patrol:
 	root.set_meta("radius", radius)
 	root.set_meta("phase", 0.0)
 	root.set_meta("ai_enabled", true)
+	root.set_meta("ai_profile", _ai_profile_for_department(selected_department))
 	root.set_meta("ai_state", "idle")
 	root.set_meta("ai_decision_timer", 0.0)
 	add_child(root)
@@ -352,6 +371,7 @@ func _spawn_aircraft(label: String, at: Vector3, paint: Color, patrol: bool) -> 
 	craft.set_meta("radius", 20.0)
 	craft.set_meta("destination", at + Vector3(18,0,0))
 	craft.set_meta("ai_enabled", true)
+	craft.set_meta("ai_profile", _ai_profile_for_department(selected_department))
 	craft.set_meta("ai_state", "air_patrol")
 	craft.set_meta("ai_decision_timer", 0.0)
 	add_child(craft)
@@ -374,6 +394,7 @@ func _spawn_ship(at: Vector3, label: String) -> void:
 	ship.set_meta("radius", 12.0)
 	ship.set_meta("phase", 0.0)
 	ship.set_meta("ai_enabled", true)
+	ship.set_meta("ai_profile", _ai_profile_for_department(selected_department))
 	ship.set_meta("ai_state", "sea_patrol")
 	ship.set_meta("ai_decision_timer", 0.0)
 	add_child(ship)
@@ -388,6 +409,7 @@ func _spawn_satellite() -> void:
 	satellite.position = Vector3(0,45,0)
 	satellite.set_meta("department", "نیروی فضایی")
 	satellite.set_meta("ai_enabled", true)
+	satellite.set_meta("ai_profile", _ai_profile_for_department("نیروی فضایی"))
 	satellite.set_meta("ai_state", "orbital_stationkeeping")
 	satellite.set_meta("ai_decision_timer", 0.0)
 	units.append(satellite)
