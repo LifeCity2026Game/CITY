@@ -770,7 +770,10 @@ func _render_page() -> void:
 					])
 				var name := str(citizen.get("name", "شهروند"))
 				var peer_id := int(citizen.get("owner_peer_id", -999))
-				var kind := "بازیکن" if str(citizen.get("owner_type", "")) == "player" else "NPC"
+				var local_peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				var is_online := peer_id > 0 and (peer_id == local_peer_id or (multiplayer.has_multiplayer_peer() and multiplayer.get_peers().has(peer_id)))
+				var owner_type := str(citizen.get("owner_type", ""))
+				var kind := "NPC" if owner_type != "player" else ("آنلاین" if is_online else "آفلاین")
 				var summary := "%s | %s | وضعیت تأهل: %s | شناسه شبکه: %s\nحساب‌ها و موجودی: %s\nدارایی‌ها، نشانی و پلاک: %s\nتراکنش‌ها: %s\nسوابق چک: %s\nپرونده‌های زندان: %s\nچک پاس‌شده: %d | برگشتی: %d | مجموع خرید: %d | مالیات: %d | محرومیت چک: %s" % [
 					name, kind, str(record.get("marital_status", "نامشخص")), str(peer_id),
 					str(account_lines) if not account_lines.is_empty() else "بدون حساب بانکی",
@@ -783,8 +786,8 @@ func _render_page() -> void:
 					"بله" if bool(record.get("cheque_banned", false)) else "خیر"
 				]
 				layout.add_child(_label(summary))
-				if _is_creator() and peer_id > 0:
-					_add_button(layout, "انتصاب مقام برای " + name, "assign_role", str(peer_id))
+				if _is_creator() and peer_id > 0 and owner_type == "player":
+					_add_button(layout, "انتصاب مقام برای " + name + " (" + kind + ")", "assign_role", str(peer_id))
 			if _is_creator():
 				target_input = _add_input("شناسه بازیکن برای برداشت سازنده")
 				amount_input = _add_input("مبلغ برداشت")
