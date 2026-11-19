@@ -753,6 +753,114 @@ func release_prisoner(actor_peer: int, record_id: String, reason: String) -> boo
 	_send_notice(int(record.get("peer_id", -1)), "با دستور مقام مجاز از زندان آزاد شدی.")
 	return true
 
+
+signal central_bank_snapshot_received(data: Dictionary)
+signal citizen_record_received(data: Dictionary)
+
+func get_accounts_for_peer(peer_id: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var citizen_id := _citizen_id_for_peer(peer_id) if _is_authority() else ""
+	if citizen_id.is_empty():
+		return result
+	for number in citizen_accounts.get(citizen_id, []):
+		var account: Dictionary = bank_accounts.get(str(number), {}).duplicate(true)
+		account.erase("pin_hash")
+		account["pin_security"] = "رمز محرمانه و هش‌شده"
+		result.append(account)
+	return result
+
+func request_central_bank_snapshot() -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		central_bank_snapshot_received.emit(get_central_bank_snapshot(actor))
+	else:
+		rpc_id(1, "rpc_request_central_bank_snapshot")
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_central_bank_snapshot() -> void:
+	if multiplayer.is_server():
+		var sender := multiplayer.get_remote_sender_id()
+		var data := get_central_bank_snapshot(sender)
+		if not data.is_empty():
+			rpc_id(sender, "rpc_receive_central_bank_snapshot", data)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_central_bank_snapshot(data: Dictionary) -> void:
+	central_bank_snapshot_received.emit(data)
+
+func request_citizen_record(citizen_id: String) -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		var data := get_citizen_full_record(citizen_id) if _actor_has_permission(actor, "view_citizen_records") else {}
+		citizen_record_received.emit(data)
+	else:
+		rpc_id(1, "rpc_request_citizen_record", citizen_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_citizen_record(citizen_id: String) -> void:
+	if multiplayer.is_server():
+		var sender := multiplayer.get_remote_sender_id()
+		if not _actor_has_permission(sender, "view_citizen_records"):
+			return
+		rpc_id(sender, "rpc_receive_citizen_record", get_citizen_full_record(citizen_id))
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_citizen_record(data: Dictionary) -> void:
+	citizen_record_received.emit(data)
+
+func request_pardon_cheque_ban(target_peer: int, reason: String) -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		if pardon_cheque_ban(actor, target_peer, reason):
+			_send_notice(actor, "محرومیت چک با ثبت سابقه بخشیده شد.")
+	else:
+		rpc_id(1, "rpc_request_pardon_cheque_ban", target_peer, reason)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_pardon_cheque_ban(target_peer: int, reason: String) -> void:
+	if multiplayer.is_server():
+		pardon_cheque_ban(multiplayer.get_remote_sender_id(), target_peer, reason)
+
+func request_release_prisoner(record_id: String, reason: String) -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		release_prisoner(actor, record_id, reason)
+	else:
+		rpc_id(1, "rpc_request_release_prisoner", record_id, reason)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_release_prisoner(record_id: String, reason: String) -> void:
+	if multiplayer.is_server():
+		release_prisoner(multiplayer.get_remote_sender_id(), record_id, reason)
+
+func request_central_bank_withdraw(target_account: String, amount: int, reason: String) -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		if central_bank_withdraw(actor, target_account, amount, reason):
+			_send_notice(actor, "برداشت از خزانه ثبت شد.")
+	else:
+		rpc_id(1, "rpc_request_central_bank_withdraw", target_account, amount, reason)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_central_bank_withdraw(target_account: String, amount: int, reason: String) -> void:
+	if multiplayer.is_server():
+		var actor := multiplayer.get_remote_sender_id()
+		if central_bank_withdraw(actor, target_account, amount, reason):
+			_send_notice(actor, "برداشت از خزانه ثبت شد.")
+
+func request_role_permissions(target_peer: int, permissions: Dictionary) -> void:
+	if _local_peer_id() != 1:
+		return
+	if _is_authority():
+		set_role_permissions(1, target_peer, permissions)
+	else:
+		rpc_id(1, "rpc_request_role_permissions", target_peer, permissions)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_role_permissions(target_peer: int, permissions: Dictionary) -> void:
+	if multiplayer.is_server() and multiplayer.get_remote_sender_id() == 1:
+		set_role_permissions(1, target_peer, permissions)
+
 func get_citizen_full_record(citizen_id: String) -> Dictionary:
 	if not _is_authority():
 		return {}
