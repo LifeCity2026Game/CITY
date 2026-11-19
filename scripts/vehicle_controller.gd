@@ -632,6 +632,10 @@ func repair_vehicle() -> void:
 		if speed_label:
 			speed_label.text = "برای تعمیر خودرو توقف کن"
 		return
+	if global_position.distance_to(Vector3(-55.0, 0.2, 55.0)) > 18.0:
+		if speed_label:
+			speed_label.text = "برای تعمیر به تعمیرگاه خودرو برو"
+		return
 	vehicle_health = 100.0
 	acceleration = base_acceleration
 	max_forward_speed = base_max_forward_speed
