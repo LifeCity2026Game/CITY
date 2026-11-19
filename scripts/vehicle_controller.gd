@@ -297,7 +297,9 @@ func _build_controls() -> void:
 	col.add_child(row3)
 	_hold_button(row3, "ترمز دستی", "handbrake")
 	_button(row3, "دنده", _cycle_gear)
-	_hold_button(row3, "کلاچ", "clutch")
+	var row3b := HBoxContainer.new()
+	col.add_child(row3b)
+	_hold_button(row3b, "کلاچ", "clutch")
 	var row4 := HBoxContainer.new()
 	col.add_child(row4)
 	_button(row4, "دوربین", _toggle_camera)
@@ -314,7 +316,6 @@ func _build_controls() -> void:
 	col.add_child(row7)
 	_button(row7, "کولر/بخاری", _cycle_climate)
 	_button(row7, "گیربکس", _toggle_transmission)
-	_button(row7, "مدل خودرو", _cycle_vehicle_model)
 	climate_label = Label.new()
 	climate_label.text = "تهویه: خاموش | دمای کابین: ۲۲°"
 	col.add_child(climate_label)
