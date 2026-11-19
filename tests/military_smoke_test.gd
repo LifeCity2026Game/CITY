@@ -42,7 +42,7 @@ func _run_military_checks() -> void:
 		return
 	services.selected_role = "شهردار"
 	services._assign_role(2)
-	if str(services.roles.get(2, "")) != "شهردار":
+	if not services._has_role(2, "شهردار"):
 		_fail("Creator could not appoint an online citizen as mayor")
 		return
 	services.active_page = "city_hall"
