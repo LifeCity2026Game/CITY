@@ -40,6 +40,9 @@ func _run_vehicle_checks() -> void:
 	if car.headlamps.size() != 2 or car.tail_lamps.size() != 2:
 		_fail("Vehicle lamps are missing")
 		return
+	if car.left_indicator_lamps.size() != 2 or car.right_indicator_lamps.size() != 2:
+		_fail("Front and rear turn signal lamps are missing")
+		return
 	if car.VEHICLE_CATALOG.size() != 9:
 		_fail("The requested nine vehicle presets are not registered")
 		return
@@ -82,10 +85,22 @@ func _run_vehicle_checks() -> void:
 		_fail("Climate system did not switch to cooling")
 		return
 	var temperature_before := car.cabin_temperature
+	var player_temperature_before: float = player.body_temperature
 	for climate_frame in range(90):
 		await physics_frame
 	if car.cabin_temperature >= temperature_before:
 		_fail("Cooling did not change cabin temperature")
+		return
+	if player.body_temperature >= player_temperature_before:
+		_fail("Vehicle climate did not affect player body temperature")
+		return
+	car._cycle_indicators()
+	if car.indicators != 1:
+		_fail("Left indicator did not activate")
+		return
+	await process_frame
+	if not car.left_indicator_lamps[0].visible and not car.left_indicator_lamps[1].visible:
+		_fail("Left indicator lamps did not illuminate")
 		return
 	car._toggle_transmission()
 	if car.transmission_mode != "manual":
