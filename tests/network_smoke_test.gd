@@ -36,7 +36,7 @@ func _run_server() -> void:
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(GAME_PORT, 1)
 	assert(err == OK, "ENet server could not start: %s" % err)
-	multiplayer.multiplayer_peer = peer
+	get_multiplayer().multiplayer_peer = peer
 	manager.connected = true
 	print("NETWORK_TEST_SERVER_READY")
 	var elapsed := 0.0
