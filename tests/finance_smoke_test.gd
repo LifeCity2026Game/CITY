@@ -37,7 +37,7 @@ func _run() -> void:
 	print("FINANCE_CHECKPOINT_SETTLEMENT")
 	ledger._settle_due_cheques()
 	assert(bool(ledger.cheque_spending_ban.get("1", false)), "dishonoured cheque did not restrict cheque issuance")
-	var cheque_count_after_bounce := ledger.cheque_book.size()
+	var cheque_count_after_bounce: int = ledger.cheque_book.size()
 	ledger._issue_cheque_for_peer(1, account_number, "1234", 1000)
 	assert(ledger.cheque_book.size() == cheque_count_after_bounce, "banned player was able to issue another cheque")
 	assert(not ledger.prison_records.is_empty(), "dishonoured cheque did not create prison record")
