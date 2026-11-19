@@ -54,9 +54,10 @@ func _run_vehicle_checks() -> void:
 	if services.ONLINE_PRODUCTS.size() < 10 or services.HOME_CATALOG.size() < 4 or services.CAR_PRICES.size() != 9:
 		_fail("Online shop, physical property store or vehicle catalog is incomplete")
 		return
-	if game.get_node("Stage2Systems").get("player_black_money") != null:
-		_fail("Black money field should be removed")
-		return
+	for property_info in game.get_node("Stage2Systems").get_property_list():
+		if str(property_info.name) == "player_black_money":
+			_fail("Black money field should be removed")
+			return
 	if game.ownership_ledger.get_balance(2) != 0:
 		_fail("New online citizen must start with zero balance")
 		return
