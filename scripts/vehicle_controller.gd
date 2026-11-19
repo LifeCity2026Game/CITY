@@ -37,6 +37,30 @@ var brake_lights_active := false
 var dashboard_label: Label3D
 var controls_layer: CanvasLayer
 
+const VEHICLE_CATALOG := [
+	{"name":"دنا","color":Color(0.12,0.30,0.66),"scale":Vector3(1.0,1.0,1.0),"speed":34.0,"accel":11.0,"style":"sedan"},
+	{"name":"پژو ۲۰۷","color":Color(0.72,0.12,0.10),"scale":Vector3(0.92,0.94,0.82),"speed":31.0,"accel":12.0,"style":"hatch"},
+	{"name":"لندکروزر","color":Color(0.16,0.23,0.18),"scale":Vector3(1.12,1.16,1.12),"speed":32.0,"accel":9.0,"style":"suv"},
+	{"name":"لکسوس RX","color":Color(0.18,0.20,0.23),"scale":Vector3(1.08,1.08,1.04),"speed":36.0,"accel":10.5,"style":"luxury"},
+	{"name":"فراری","color":Color(0.78,0.025,0.02),"scale":Vector3(1.02,0.78,1.08),"speed":49.0,"accel":17.0,"style":"sport"},
+	{"name":"لامبورگینی","color":Color(0.82,0.66,0.02),"scale":Vector3(1.04,0.74,1.12),"speed":52.0,"accel":18.0,"style":"supercar"},
+	{"name":"تیبا","color":Color(0.68,0.70,0.72),"scale":Vector3(0.91,0.90,0.94),"speed":28.0,"accel":8.5,"style":"compact"},
+	{"name":"تیبا ۲","color":Color(0.08,0.36,0.24),"scale":Vector3(0.92,0.92,0.90),"speed":29.0,"accel":9.0,"style":"hatch"},
+	{"name":"پراید","color":Color(0.80,0.80,0.76),"scale":Vector3(0.86,0.86,0.88),"speed":25.0,"accel":7.5,"style":"compact"}
+]
+var model_index := 0
+var transmission_mode := "automatic"
+var clutch_pressed := false
+var climate_mode := "off"
+var cabin_temperature := 22.0
+var target_temperature := 22.0
+var hood_hinge: Node3D
+var trunk_hinge: Node3D
+var hood_open := false
+var trunk_open := false
+var climate_label: Label
+var transmission_label: Label
+
 func _ready() -> void:
 	_build_vehicle()
 	_build_cameras()
@@ -87,8 +111,20 @@ func _build_vehicle() -> void:
 	# Exterior body, hood, trunk, bumpers, trim and glass.
 	_box(self, "LowerChassis", Vector3(0, 0.54, 0), Vector3(1.92, 0.35, 3.95), Color(0.12, 0.13, 0.15), 0.55)
 	_box(self, "BodyShell", Vector3(0, 0.78, 0), Vector3(2.0, 0.62, 4.0), Color(0.12, 0.30, 0.66), 0.62)
-	_box(self, "Hood", Vector3(0, 1.04, -1.32), Vector3(1.91, 0.18, 1.25), Color(0.15, 0.36, 0.76), 0.58)
-	_box(self, "Trunk", Vector3(0, 1.00, 1.55), Vector3(1.88, 0.20, 0.82), Color(0.12, 0.30, 0.66), 0.58)
+	var hood_static := _box(self, "HoodStatic", Vector3(0, 1.04, -1.32), Vector3(1.91, 0.18, 1.25), Color(0.15, 0.36, 0.76), 0.58)
+	var trunk_static := _box(self, "TrunkStatic", Vector3(0, 1.00, 1.55), Vector3(1.88, 0.20, 0.82), Color(0.12, 0.30, 0.66), 0.58)
+	hood_static.visible = false
+	trunk_static.visible = false
+	hood_hinge = Node3D.new()
+	hood_hinge.name = "InteractiveHoodHinge"
+	hood_hinge.position = Vector3(0, 1.04, -1.92)
+	add_child(hood_hinge)
+	_box(hood_hinge, "HoodPanel", Vector3(0, 0, 0.60), Vector3(1.91, 0.18, 1.25), Color(0.15, 0.36, 0.76), 0.58)
+	trunk_hinge = Node3D.new()
+	trunk_hinge.name = "InteractiveTrunkHinge"
+	trunk_hinge.position = Vector3(0, 1.00, 1.96)
+	add_child(trunk_hinge)
+	_box(trunk_hinge, "TrunkPanel", Vector3(0, 0, -0.41), Vector3(1.88, 0.20, 0.82), Color(0.12, 0.30, 0.66), 0.58)
 	_box(self, "Roof", Vector3(0, 1.78, 0.10), Vector3(1.62, 0.16, 1.92), Color(0.10, 0.25, 0.54), 0.55)
 	_box(self, "FrontWindshield", Vector3(0, 1.48, -0.82), Vector3(1.52, 0.55, 0.055), Color(0.12, 0.22, 0.29), 0.25)
 	_box(self, "RearWindshield", Vector3(0, 1.48, 1.08), Vector3(1.50, 0.52, 0.055), Color(0.12, 0.22, 0.29), 0.25)
@@ -223,6 +259,7 @@ func _build_controls() -> void:
 	col.add_child(row3)
 	_hold_button(row3, "ترمز دستی", "handbrake")
 	_button(row3, "دنده", _cycle_gear)
+	_button(row3, "کلاچ", _toggle_clutch)
 	var row4 := HBoxContainer.new()
 	col.add_child(row4)
 	_button(row4, "دوربین", _toggle_camera)
@@ -231,6 +268,21 @@ func _build_controls() -> void:
 	col.add_child(row5)
 	_button(row5, "درها", _toggle_doors)
 	_button(row5, "راهنما", _cycle_indicators)
+	var row6 := HBoxContainer.new()
+	col.add_child(row6)
+	_button(row6, "کاپوت", _toggle_hood)
+	_button(row6, "صندوق", _toggle_trunk)
+	var row7 := HBoxContainer.new()
+	col.add_child(row7)
+	_button(row7, "کولر/بخاری", _cycle_climate)
+	_button(row7, "گیربکس", _toggle_transmission)
+	_button(row7, "مدل خودرو", _cycle_vehicle_model)
+	climate_label = Label.new()
+	climate_label.text = "تهویه: خاموش | دمای کابین: ۲۲°"
+	col.add_child(climate_label)
+	transmission_label = Label.new()
+	transmission_label.text = "گیربکس: اتومات"
+	col.add_child(transmission_label)
 	speed_label = Label.new()
 	speed_label.text = "سرعت: ۰ km/h"
 	col.add_child(speed_label)
@@ -262,6 +314,77 @@ func _set_control(action: String, pressed: bool) -> void:
 		"left": steering = -1.0 if pressed else 0.0
 		"right": steering = 1.0 if pressed else 0.0
 		"handbrake": handbrake = pressed
+
+
+func _toggle_clutch() -> void:
+	if not occupied or transmission_mode != "manual":
+		return
+	clutch_pressed = not clutch_pressed
+	if speed_label:
+		speed_label.text = "کلاچ گرفته شد" if clutch_pressed else "کلاچ رها شد"
+
+func _toggle_transmission() -> void:
+	if not occupied or absf(current_speed) > 0.5:
+		return
+	transmission_mode = "manual" if transmission_mode == "automatic" else "automatic"
+	clutch_pressed = transmission_mode == "automatic"
+	if transmission_label:
+		transmission_label.text = "گیربکس: دستی" if transmission_mode == "manual" else "گیربکس: اتومات"
+	if gear == "P":
+		gear = "N"
+	_update_gear_label()
+
+func _cycle_climate() -> void:
+	if not occupied:
+		return
+	var modes := ["off", "cool", "heat"]
+	var idx := modes.find(climate_mode)
+	climate_mode = modes[(idx + 1) % modes.size()]
+	target_temperature = 22.0
+	if climate_mode == "cool":
+		target_temperature = 18.0
+	elif climate_mode == "heat":
+		target_temperature = 28.0
+	_update_climate_label()
+
+func _update_climate_label() -> void:
+	if climate_label:
+		var mode_text := "خاموش" if climate_mode == "off" else ("کولر" if climate_mode == "cool" else "بخاری")
+		climate_label.text = "تهویه: %s | دمای کابین: %.1f°" % [mode_text, cabin_temperature]
+
+func _toggle_hood() -> void:
+	if not occupied or absf(current_speed) > 0.5:
+		return
+	hood_open = not hood_open
+	hood_hinge.rotation.x = -0.82 if hood_open else 0.0
+
+func _toggle_trunk() -> void:
+	if not occupied or absf(current_speed) > 0.5:
+		return
+	trunk_open = not trunk_open
+	trunk_hinge.rotation.x = 0.72 if trunk_open else 0.0
+
+func _cycle_vehicle_model() -> void:
+	if occupied or absf(current_speed) > 0.1:
+		return
+	model_index = (model_index + 1) % VEHICLE_CATALOG.size()
+	var spec: Dictionary = VEHICLE_CATALOG[model_index]
+	vehicle_name = str(spec.name)
+	max_forward_speed = float(spec.speed)
+	acceleration = float(spec.accel)
+	var body := get_node_or_null("BodyShell") as MeshInstance3D
+	if body:
+		var material := body.material_override as StandardMaterial3D
+		if material:
+			material.albedo_color = spec.color
+	var roof := get_node_or_null("Roof") as MeshInstance3D
+	if roof:
+		var roof_material := roof.material_override as StandardMaterial3D
+		if roof_material:
+			roof_material.albedo_color = spec.color.darkened(0.18)
+	scale = spec.scale
+	if speed_label:
+		speed_label.text = "خودرو انتخاب شد: " + vehicle_name
 
 func _toggle_vehicle() -> void:
 	if driver == null:
@@ -368,6 +491,8 @@ func _physics_process(delta: float) -> void:
 		active_throttle = -absf(active_throttle)
 	elif gear == "D":
 		active_throttle = maxf(active_throttle, 0.0)
+	if transmission_mode == "manual" and not clutch_pressed:
+		active_throttle = 0.0
 	if active_throttle > 0.0:
 		current_speed = move_toward(current_speed, max_forward_speed, acceleration * delta)
 	elif active_throttle < 0.0:
@@ -402,6 +527,11 @@ func _physics_process(delta: float) -> void:
 		wheel.rotate_x(current_speed * delta / 0.39)
 	if steering_wheel:
 		steering_wheel.rotation.z = -active_steer * 0.65
+	if climate_mode != "off":
+		cabin_temperature = move_toward(cabin_temperature, target_temperature, delta * 0.22)
+	else:
+		cabin_temperature = move_toward(cabin_temperature, 22.0, delta * 0.035)
+	_update_climate_label()
 	var braking := active_throttle < 0.0 or handbrake
 	if braking != brake_lights_active:
 		brake_lights_active = braking
