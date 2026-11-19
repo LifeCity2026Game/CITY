@@ -390,7 +390,7 @@ func _build_generic_interiors() -> void:
 			sign.font_size = 24
 			sign.position = Vector3(0, 2.7, -4.28)
 			room.add_child(sign)
-			generic_interior_positions.append({"world": world_pos, "interior": room_pos, "category": category})
+			generic_interior_positions.append({"world": world_pos, "interior": room_pos, "category": category, "node": room})
 			index += 1
 
 func _generic_building_category(gx: int, gz: int) -> String:
