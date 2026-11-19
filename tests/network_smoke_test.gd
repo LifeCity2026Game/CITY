@@ -40,16 +40,16 @@ func _run_server() -> void:
 	manager.connected = true
 	print("NETWORK_TEST_SERVER_READY")
 	var elapsed := 0.0
-	while elapsed < TEST_TIMEOUT and multiplayer.get_peers().is_empty():
+	while elapsed < TEST_TIMEOUT and root.get_multiplayer().get_peers().is_empty():
 		await create_timer(0.1).timeout
 		elapsed += 0.1
-	assert(not multiplayer.get_peers().is_empty(), "No client peer connected to host")
-	var client_peer_id := int(multiplayer.get_peers()[0])
+	assert(not root.get_multiplayer().get_peers().is_empty(), "No client peer connected to host")
+	var client_peer_id := int(root.get_multiplayer().get_peers()[0])
 	elapsed = 0.0
 	while elapsed < TEST_TIMEOUT and not manager.remote_players.has(client_peer_id):
 		await create_timer(0.1).timeout
 		elapsed += 0.1
-	assert(manager.remote_players.has(client_peer_id), "Client %d did not spawn on host; peers=%s remote_players=%s" % [client_peer_id, str(multiplayer.get_peers()), str(manager.remote_players.keys())])
+	assert(manager.remote_players.has(client_peer_id), "Client %d did not spawn on host; peers=%s remote_players=%s" % [client_peer_id, str(root.get_multiplayer().get_peers()), str(manager.remote_players.keys())])
 	await create_timer(0.8).timeout
 	var remote_client: CharacterBody3D = manager.remote_players[client_peer_id]
 	var relayed_client_position: Vector3 = remote_client.get("target_position")
