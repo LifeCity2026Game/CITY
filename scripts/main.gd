@@ -242,6 +242,7 @@ func _add_hq_person(parent: Node3D, job_title: String, at: Vector3, uniform: Col
 	var person := Node3D.new()
 	person.name = "HQ_" + job_title.replace(" ", "_")
 	person.position = at
+	person.add_to_group("hq_personnel")
 	person.set_meta("npc_role", job_title)
 	person.set_meta("interactive_npc", true)
 	parent.add_child(person)
