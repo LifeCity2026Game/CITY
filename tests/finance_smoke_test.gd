@@ -68,6 +68,24 @@ func _run() -> void:
 			npc_account_count += 1
 			npc_account_number = str(npc_number)
 	assert(npc_account_count >= 6, "NPC bank accounts were not seeded")
+	print("FINANCE_CHECKPOINT_SHARED_CARD")
+	ledger.balances[2] = 0
+	ledger.bank_accounts[account_number].balance = 10000
+	ledger._set_account_share(1, account_number, 2, true)
+	assert(bool(ledger.shared_account_access[account_number].get("2", false)), "owner did not grant shared card access")
+	var before_shared_purchase := int(ledger.bank_accounts[account_number].balance)
+	ledger._account_purchase(2, account_number, "", "گوشی هوشمند", true)
+	assert(int(ledger.bank_accounts[account_number].balance) == before_shared_purchase - 4500, "shared card purchase did not debit owner account")
+	var shared_doc_found := false
+	for doc in ledger.documents.values():
+		if int(doc.get("owner_peer_id", -1)) == 2 and str(doc.get("event", "")) == "shared_card_purchase":
+			shared_doc_found = true
+	assert(shared_doc_found, "shared card purchase did not issue buyer ownership document")
+	ledger._set_account_share(1, account_number, 2, false)
+	assert(not bool(ledger.shared_account_access[account_number].get("2", false)), "owner could not revoke shared card access")
+	var balance_after_revoke := int(ledger.bank_accounts[account_number].balance)
+	ledger._account_purchase(2, account_number, "", "گوشی هوشمند", true)
+	assert(int(ledger.bank_accounts[account_number].balance) == balance_after_revoke, "revoked player was still able to spend")
 	print("FINANCE_CHECKPOINT_CENTRAL_BANK")
 	assert(ledger.set_role_permissions(1, 2, {"view_central_bank": true, "central_bank_withdraw": true, "view_prison_records": true}), "creator could not assign Central Bank manager permissions")
 	assert(not ledger.get_central_bank_snapshot(2).is_empty(), "authorized Central Bank manager could not view the treasury")
