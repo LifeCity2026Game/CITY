@@ -167,13 +167,17 @@ func _run_vehicle_checks() -> void:
 	if car.transmission_mode != "manual":
 		_fail("Manual transmission mode did not activate")
 		return
-	car._toggle_clutch()
+	car._set_control("clutch", true)
 	if not car.clutch_pressed:
-		_fail("Manual clutch did not engage")
+		_fail("Manual clutch pedal did not engage")
 		return
 	car._cycle_gear()
 	if car.gear != "1":
 		_fail("Manual gear selector did not engage first gear")
+		return
+	car._set_control("clutch", false)
+	if car.clutch_pressed:
+		_fail("Manual clutch pedal did not release")
 		return
 	car._toggle_transmission()
 	if car.transmission_mode != "automatic":
