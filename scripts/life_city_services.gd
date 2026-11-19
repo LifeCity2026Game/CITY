@@ -180,11 +180,13 @@ func _build_ui() -> void:
 	top_bar.add_theme_constant_override("separation", 12)
 	layer.add_child(top_bar)
 
-	for entry in [
+	var main_entries: Array = [
 		["خدمات عمومی", "public"],
-		["موبایل", "phone_home"],
-		["پنل سازنده", "creator"]
-	]:
+		["موبایل", "phone_home"]
+	]
+	if _is_creator():
+		main_entries.append(["پنل سازنده", "creator"])
+	for entry in main_entries:
 		var menu_button := Button.new()
 		menu_button.text = entry[0]
 		menu_button.custom_minimum_size = Vector2(0, 54)
@@ -311,6 +313,7 @@ func _add_button(parent: Node, caption: String, action: String, arg: String = ""
 	button.text = caption
 	button.custom_minimum_size = Vector2(0, 46)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_menu_button(button)
 	parent.add_child(button)
 	button.pressed.connect(_action.bind(action, arg))
 	return button
