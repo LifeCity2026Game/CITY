@@ -44,7 +44,7 @@ func _run_city_checks() -> void:
 	if categories.size() != 8:
 		_fail("Not all eight building categories were generated: %s" % str(categories.keys()))
 		return
-	var city_buildings := game.get_nodes_in_group("city_buildings")
+	var city_buildings := get_nodes_in_group("city_buildings")
 	var generic_building_count := 0
 	for building in city_buildings:
 		if str(building.name).begins_with("Building_"):
