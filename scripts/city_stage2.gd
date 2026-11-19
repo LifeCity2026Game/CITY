@@ -55,7 +55,8 @@ func _is_owner() -> bool:
 
 func _ready() -> void:
 	_seed_npcs()
-	_build_interface()
+	# The old Stage 2 overlay is retired. The current LifeCityServices UI
+	# replaces it; keep the underlying systems and data without duplicate buttons.
 	_refresh()
 
 func _seed_npcs() -> void:
