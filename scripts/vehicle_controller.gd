@@ -655,7 +655,10 @@ func _physics_process(delta: float) -> void:
 	var active_steer := key_steer if key_steer != 0.0 else steering
 	var drive_input := maxf(active_throttle, 0.0)
 	var braking_input := brake_pressed or active_throttle < 0.0
-	if gear == "P" or gear == "N" or handbrake:
+	if gear == "P" or handbrake:
+		drive_input = 0.0
+		braking_input = true
+	elif gear == "N":
 		drive_input = 0.0
 	elif gear == "R":
 		drive_input = -drive_input
