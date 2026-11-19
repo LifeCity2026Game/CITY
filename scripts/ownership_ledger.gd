@@ -640,6 +640,7 @@ func _issue_cheque_for_peer(peer_id: int, account_number: String, pin: String, f
 		"spends": [], "dishonoured_count": 0
 	}
 	_save_ledger()
+	_send_own_cheques(peer_id)
 	_send_notice(peer_id, "چک %s صادر شد؛ اعتبار اولیه %d سکه." % [cheque_id, face_value])
 	citizen_record_changed.emit(str(account.citizen_id))
 
@@ -686,6 +687,7 @@ func _cheque_purchase(peer_id: int, cheque_id: String, item_id: String) -> void:
 	})
 	cheque_book[cheque_id] = cheque
 	_save_ledger()
+	_send_own_cheques(peer_id)
 	_send_notice(peer_id, "خرید با چک ثبت شد؛ تسویه پس از یک روز بازی انجام می‌شود.")
 	citizen_record_changed.emit(str(cheque.issuer_citizen_id))
 
@@ -809,6 +811,33 @@ signal citizen_record_received(data: Dictionary)
 
 
 signal own_accounts_received(accounts: Array)
+signal own_cheques_received(cheques: Array)
+
+func _send_own_cheques(peer_id: int) -> void:
+	var result: Array = []
+	for cheque in cheque_book.values():
+		if int(cheque.get("issuer_peer_id", -999)) == peer_id:
+			result.append(cheque.duplicate(true))
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "rpc_receive_own_cheques", result)
+	elif peer_id == _local_peer_id():
+		own_cheques_received.emit(result)
+
+func request_own_cheques() -> void:
+	var peer_id := _local_peer_id()
+	if _is_authority():
+		_send_own_cheques(peer_id)
+	else:
+		rpc_id(1, "rpc_request_own_cheques")
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_own_cheques() -> void:
+	if multiplayer.is_server():
+		_send_own_cheques(multiplayer.get_remote_sender_id())
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_own_cheques(cheques: Array) -> void:
+	own_cheques_received.emit(cheques)
 
 func _send_own_accounts(peer_id: int) -> void:
 	var accounts := get_accounts_for_peer(peer_id)
