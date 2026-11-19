@@ -350,6 +350,7 @@ func _button(parent: Node, caption: String, callback: Callable) -> Button:
 
 func _hold_button(parent: Node, caption: String, action: String) -> void:
 	var b := Button.new()
+	b.name = "Hold_" + action
 	b.text = caption
 	b.custom_minimum_size = Vector2(105, 48)
 	parent.add_child(b)
