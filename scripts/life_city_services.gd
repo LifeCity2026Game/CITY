@@ -451,7 +451,8 @@ func _on_balance_changed(_peer_id: int, _balance: int) -> void:
 
 func _refresh_status() -> void:
 	if is_instance_valid(details_label):
-		details_label.text = "نقش: %s | روز بازی: %d" % [str(roles.get(1, "شهروند")), int(game_day_seconds / GAME_DAY_LENGTH) + 1]
+		var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+		details_label.text = "نقش: %s | روز بازی: %d" % [str(roles.get(peer_id, "شهروند")), int(game_day_seconds / GAME_DAY_LENGTH) + 1]
 
 func _refresh() -> void:
 	_refresh_status()
