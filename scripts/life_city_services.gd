@@ -114,12 +114,17 @@ func _on_ownership_receipt(document: Dictionary) -> void:
 	var previous_owner := int(document.get("previous_owner_peer_id", -999))
 	var item_id := str(document.get("item_id", ""))
 	var status := str(document.get("status", ""))
-	if status == "repossessed" and previous_owner == local_id:
+	if previous_owner == local_id and owner_id != local_id:
 		owned_homes.erase(item_id)
 		owned_vehicles.erase(item_id)
 		for index in range(order_list.size() - 1, -1, -1):
 			if str(order_list[index].get("document_id", "")) == str(document.get("document_id", "")):
 				order_list.remove_at(index)
+		_save_services()
+		return
+	if status == "repossessed" and previous_owner == local_id:
+		owned_homes.erase(item_id)
+		owned_vehicles.erase(item_id)
 		_save_services()
 		return
 	if owner_id != local_id or status != "valid":
