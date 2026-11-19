@@ -389,6 +389,7 @@ func rpc_receive_snapshot(server_documents: Dictionary, own_balance: int, next_n
 signal account_created(peer_id: int, account_number: String)
 signal cheque_updated(cheque_id: String, status: String)
 signal citizen_record_changed(citizen_id: String)
+signal prison_state_changed(peer_id: int, record_id: String, imprisoned: bool)
 
 var bank_accounts: Dictionary = {}
 var citizen_registry: Dictionary = {}
@@ -738,6 +739,7 @@ func _settle_due_cheques() -> void:
 					"release_reason": ""
 				}
 				_send_notice(int(cheque.issuer_peer_id), "چک برگشت خورد؛ سند خرید توقیف شد و پرونده زندان ثبت شد.")
+				_notify_prison_state(int(cheque.issuer_peer_id), record_id, true)
 			spends[index] = spend
 			changed = true
 		cheque.spends = spends
@@ -754,6 +756,16 @@ func _settle_due_cheques() -> void:
 				_send_own_cheques(cheque_owner)
 		for citizen_id in citizen_registry.keys():
 			citizen_record_changed.emit(str(citizen_id))
+
+func _notify_prison_state(peer_id: int, record_id: String, imprisoned: bool) -> void:
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "rpc_receive_prison_state", record_id, imprisoned)
+	elif peer_id == _local_peer_id():
+		prison_state_changed.emit(peer_id, record_id, imprisoned)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_prison_state(record_id: String, imprisoned: bool) -> void:
+	prison_state_changed.emit(_local_peer_id(), record_id, imprisoned)
 
 func pardon_cheque_ban(actor_peer: int, target_peer: int, reason: String) -> bool:
 	if not _is_authority() or not _actor_has_permission(actor_peer, "pardon_cheque_ban") or target_peer <= 0:
@@ -808,7 +820,9 @@ func release_prisoner(actor_peer: int, record_id: String, reason: String) -> boo
 	record.released_game_time = game_clock_seconds
 	prison_records[record_id] = record
 	_save_ledger()
-	_send_notice(int(record.get("peer_id", -1)), "با دستور مقام مجاز از زندان آزاد شدی.")
+	var released_peer := int(record.get("peer_id", -1))
+	_send_notice(released_peer, "با دستور مقام مجاز از زندان آزاد شدی.")
+	_notify_prison_state(released_peer, record_id, false)
 	return true
 
 
