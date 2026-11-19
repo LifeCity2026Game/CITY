@@ -39,6 +39,8 @@ func _update_from_position(point: Vector2) -> void:
 	var center := size * 0.5
 	var radius := minf(size.x, size.y) * 0.38
 	var offset := (point - center) / maxf(radius, 1.0)
+	# Screen Y grows downward; invert it so dragging the stick upward means forward.
+	offset.y = -offset.y
 	_set_value(offset.limit_length(1.0))
 
 func _set_value(value: Vector2) -> void:
