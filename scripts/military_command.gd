@@ -115,12 +115,12 @@ func _build_interface() -> void:
 	layout.add_child(target_picker)
 	target_x_input = LineEdit.new()
 	target_x_input.placeholder_text = "مختصات X مقصد (مثلاً ۳۰)"
-	target_x_input.text = "0"
+	target_x_input.text = ""
 	target_x_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	layout.add_child(target_x_input)
 	target_z_input = LineEdit.new()
 	target_z_input.placeholder_text = "مختصات Z مقصد (مثلاً -۴۰)"
-	target_z_input.text = "0"
+	target_z_input.text = ""
 	target_z_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 	layout.add_child(target_z_input)
 	for i in range(DEPARTMENTS.size()):
@@ -174,6 +174,7 @@ func _on_action(action: String, arg: String = "") -> void:
 		return
 	match action:
 		"ground_patrol":
+			selected_department = "نیروی زمینی"
 			_spawn_unit("خودروی گشت زمینی", Vector3(0,0.6,12), COLORS[0], 5.0, true, 15.0)
 			_spawn_unit("نفربر گشت", Vector3(3,0.6,12), COLORS[0].darkened(0.12), 4.0, true, 18.0)
 			_log("گشت زمینی در مسیرهای شهر آغاز شد.")
@@ -181,6 +182,7 @@ func _on_action(action: String, arg: String = "") -> void:
 			_create_perimeter(_target_position())
 			_log("محاصره حفاظتی پیرامون ساختمان انتخاب‌شده مستقر شد.")
 		"ground_logistics":
+			selected_department = "نیروی زمینی"
 			_spawn_logistics(Vector3(-12,0.4,8), _target_position())
 			_log("کاروان انتقال تجهیزات به مقصد حرکت کرد.")
 		"air_patrol":
