@@ -45,6 +45,10 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 	network = network_node
 	if ledger and ledger.has_signal("balance_changed") and not ledger.balance_changed.is_connected(_on_balance_changed):
 		ledger.balance_changed.connect(_on_balance_changed)
+	if not multiplayer.peer_connected.is_connected(_on_peer_list_changed):
+		multiplayer.peer_connected.connect(_on_peer_list_changed)
+	if not multiplayer.peer_disconnected.is_connected(_on_peer_list_changed):
+		multiplayer.peer_disconnected.connect(_on_peer_list_changed)
 
 func _ready() -> void:
 	_seed_phone()
@@ -446,6 +450,10 @@ func sync_role(peer_id: int, role: String) -> void:
 	roles[peer_id] = role
 
 func _on_balance_changed(_peer_id: int, _balance: int) -> void:
+	if active_page == "intel":
+		_render_page()
+
+func _on_peer_list_changed(_peer_id: int) -> void:
 	if active_page == "intel":
 		_render_page()
 
