@@ -108,8 +108,11 @@ func _spawn_remote(peer_id: int) -> void:
 	avatar.name = "RemotePlayer_%d" % peer_id
 	avatar.set_script(PLAYER_SCRIPT)
 	avatar.configure_remote()
-	avatar.global_position = local_player.global_position + Vector3(2.0, 0.0, 0.0)
+	var spawn_position := local_player.global_position + Vector3(2.0, 0.0, 0.0)
+	avatar.target_position = spawn_position
+	# global_position is only valid after the node enters the scene tree.
 	get_parent().add_child(avatar)
+	avatar.global_position = spawn_position
 	remote_players[peer_id] = avatar
 
 func _remove_remote(peer_id: int) -> void:
