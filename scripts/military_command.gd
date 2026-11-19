@@ -68,7 +68,12 @@ func _process(delta: float) -> void:
 func _can_command() -> bool:
 	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
 		return true
-	var peer_id := multiplayer.get_unique_id()
+	var peer_id: int = multiplayer.get_unique_id()
+	var services: Node = get_parent().get_node_or_null("LifeCityServices")
+	if services != null:
+		var role_name: String = str(services.roles.get(peer_id, ""))
+		if role_name == "فرمانده کل ارتش" or role_name == "فرمانده " + selected_department:
+			return true
 	return ledger != null and ledger.can_access_permission(peer_id, "command_military")
 
 func _build_interface() -> void:
@@ -179,28 +184,34 @@ func _on_action(action: String, arg: String = "") -> void:
 			_spawn_logistics(Vector3(-12,0.4,8), _target_position())
 			_log("کاروان انتقال تجهیزات به مقصد حرکت کرد.")
 		"air_patrol":
+			selected_department = "نیروی هوایی"
 			_spawn_aircraft("بالگرد گشت", Vector3(-12,12,0), COLORS[1], true)
 			_spawn_aircraft("هلیکوپتر پشتیبانی", Vector3(12,15,0), COLORS[2], true)
 			_log("گشت هوایی فعال شد.")
 		"missile":
 			_launch_missile(_target_position())
 		"naval":
-			_spawn_ship(Vector3(-88,0.2,78), "ناو پشتیبانی")
-			_spawn_aircraft("جنگنده ناونشین", Vector3(-78,13,70), COLORS[1], true)
-			_spawn_logistics(Vector3(-82,0.5,82), Vector3(-25,0,35))
+			selected_department = "نیروی دریایی"
+			_spawn_ship(Vector3(-88,0.2,104), "ناو پشتیبانی")
+			_spawn_aircraft("جنگنده ناونشین", Vector3(-78,13,96), COLORS[1], true)
+			_spawn_logistics(Vector3(-82,0.5,104), Vector3(-25,0,35))
 			_log("ناو و کاروان پشتیبانی دریایی اعزام شدند.")
 		"coast":
-			_spawn_ship(Vector3(-92,0.2,62), "شناور گارد ساحلی")
-			_spawn_unit("قایق گشت دریایی", Vector3(-88,0.4,58), COLORS[3], 6.0, true, 10.0)
+			selected_department = "گارد ساحلی"
+			_spawn_ship(Vector3(-92,0.2,102), "شناور گارد ساحلی")
+			_spawn_unit("قایق گشت دریایی", Vector3(-88,0.4,101), COLORS[3], 6.0, true, 10.0)
 			_log("گشت ساحلی؛ رویداد دزدی دریایی شبیه‌سازی و رهگیری شد.")
 		"marines":
-			_spawn_ship(Vector3(-90,0.2,45), "شناور آبی‌خاکی")
-			_spawn_unit("نفربر آبی‌خاکی", Vector3(-86,0.5,42), COLORS[4], 4.5, false, 0.0)
+			selected_department = "تفنگداران دریایی"
+			_spawn_ship(Vector3(-90,0.2,100), "شناور آبی‌خاکی")
+			_spawn_unit("نفربر آبی‌خاکی", Vector3(-86,0.5,96), COLORS[4], 4.5, false, 0.0)
 			_log("یگان تفنگداران از دریا به ساحل منتقل شد.")
 		"space":
+			selected_department = "نیروی فضایی"
 			_spawn_satellite()
 			_log("ماهواره ارتباطی فعال؛ اینترنت نقشه و هشدار رهگیری فضایی فعال شد.")
 		"national_guard":
+			selected_department = "گارد ملی"
 			_spawn_unit("خودروی گارد ملی", Vector3(0,0.6,16), COLORS[6], 4.5, true, 12.0)
 			_create_perimeter(_target_position())
 			_log("گارد ملی برای امنیت شهری و مدیریت رویدادهای بازی اعزام شد.")
@@ -247,6 +258,7 @@ func _spawn_logistics(at: Vector3, destination: Vector3) -> void:
 func _spawn_aircraft(label: String, at: Vector3, paint: Color, patrol: bool) -> void:
 	var craft := Node3D.new()
 	craft.name = label
+	craft.set_meta("is_aircraft", true)
 	craft.position = at
 	craft.set_meta("department", selected_department)
 	craft.set_meta("center", at)
@@ -434,7 +446,7 @@ func _order_selected_units(destination: Vector3, mode: String) -> void:
 func _order_fighter_attack(destination: Vector3, nuclear: bool) -> void:
 	var fighter: Node3D
 	for unit in units:
-		if is_instance_valid(unit) and str(unit.get_meta("department", "")) == "نیروی هوایی" and str(unit.name).contains("Aircraft"):
+		if is_instance_valid(unit) and str(unit.get_meta("department", "")) == "نیروی هوایی" and bool(unit.get_meta("is_aircraft", false)):
 			fighter = unit
 			break
 	if fighter == null:
