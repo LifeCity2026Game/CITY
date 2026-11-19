@@ -26,6 +26,17 @@ func _run_military_checks() -> void:
 	if not game.get_node("CITY_HALL").is_in_group("city_buildings"):
 		_fail("City Hall is not registered as a city building")
 		return
+	var hq := game.get_node_or_null("ARMED_FORCES_HQ")
+	if hq == null:
+		_fail("Army General Staff headquarters building is missing")
+		return
+	if hq.get_tree().get_nodes_in_group("hq_personnel").size() < 5:
+		_fail("Headquarters must contain a commander and four soldier/officer NPCs")
+		return
+	military.open_panel()
+	if not military.panel.visible:
+		_fail("The real military command panel could not be opened")
+		return
 	if not services.ROLES.has("شهردار"):
 		_fail("Mayor role is not available in the creator role list")
 		return
