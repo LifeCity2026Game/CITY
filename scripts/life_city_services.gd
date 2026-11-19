@@ -413,6 +413,10 @@ func _action(action: String, arg: String = "") -> void:
 		if ledger and account_input and amount_input and reason_input: ledger.request_central_bank_withdraw(account_input.text.strip_edges(), int(amount_input.text), reason_input.text)
 	elif action == "save_permissions":
 		if ledger and target_input: ledger.request_role_permissions(int(target_input.text), permissions_draft)
+	elif action == "military_open":
+		_open_military_command("")
+	elif action == "military_branch":
+		_open_military_command(arg)
 	elif action == "teleport":
 		_teleport_to(arg)
 	elif action == "city_report":
@@ -717,31 +721,46 @@ func _render_page() -> void:
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "command_military"):
 				notice_changed.emit("دسترسی فرماندهی ارتش برای این مقام فعال نشده است.")
 				return
-			notice_changed.emit("فرماندهی کل ارتش | هفت نیروی نظامی در ساختار فرماندهی")
-			for role_name in ROLES:
-				layout.add_child(_label(role_name))
+			notice_changed.emit("ستاد کل ارتش | پنل واقعی یگان‌ها، انتخاب شاخه و صدور دستور")
+			_add_button(layout, "باز کردن پنل عملیات و کنترل یگان‌ها", "military_open")
+			for department in ["نیروی زمینی", "نیروی هوایی", "نیروی دریایی", "گارد ساحلی", "تفنگداران دریایی", "نیروی فضایی", "گارد ملی"]:
+				_add_button(layout, "ورود به فرماندهی " + department, "military_branch", department)
 		"intel":
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_intelligence"):
 				notice_changed.emit("دسترسی وزارت اطلاعات برای این مقام فعال نشده است.")
 				return
-			notice_changed.emit("وزارت اطلاعات | اطلاعات شهروندان، تمام اسناد مالکیت فعال، پلاک خودروها و نشانی املاک")
+			notice_changed.emit("وزارت اطلاعات | پرونده کامل همه شهروندان، NPCها و بازیکنان ثبت‌شده")
 			if _is_creator():
 				var role_picker := OptionButton.new()
 				for role_name in ROLES:
 					role_picker.add_item(role_name)
 				role_picker.item_selected.connect(func(index: int): selected_role = ROLES[index])
 				layout.add_child(role_picker)
-			var peers: Array[int] = [1]
-			if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-				for peer_id in multiplayer.get_peers():
-					peers.append(int(peer_id))
-			for peer_id in peers:
-				var balance := int(ledger.get_balance(peer_id)) if ledger else 0
-				layout.add_child(_label("شهروند %d | %s | موجودی %d" % [peer_id, str(roles.get(peer_id, "شهروند")), balance]))
-				if _is_creator():
-					_add_button(layout, "انتصاب مقام برای شهروند %d" % peer_id, "assign_role", str(peer_id))
+			var citizen_records: Array = ledger.get_all_citizen_records()
+			layout.add_child(_label("تعداد پرونده‌های ثبت‌شده: %d" % citizen_records.size()))
+			for record in citizen_records:
+				var citizen: Dictionary = record.get("citizen", {})
+				var account_lines: Array[String] = []
+				for account in record.get("accounts", []):
+					account_lines.append("%s: %s" % [str(account.get("number", "حساب")), str(account.get("balance_display", "0"))])
+				var asset_lines: Array[String] = []
+				for asset in record.get("assets", []):
+					asset_lines.append(str(asset.get("item_id", "دارایی")))
+				var name := str(citizen.get("name", "شهروند"))
+				var peer_id := int(citizen.get("owner_peer_id", -999))
+				var kind := "بازیکن" if str(citizen.get("owner_type", "")) == "player" else "NPC"
+				var summary := "%s | %s | وضعیت تأهل: %s\nحساب‌ها: %s\nدارایی‌ها: %s\nچک پاس‌شده: %d | برگشتی: %d | تراکنش: %d | پرونده زندان: %d" % [
+					name, kind, str(record.get("marital_status", "نامشخص")),
+					"؛ ".join(account_lines) if not account_lines.is_empty() else "بدون حساب بانکی",
+					"؛ ".join(asset_lines) if not asset_lines.is_empty() else "بدون دارایی ثبت‌شده",
+					int(record.get("honoured_cheque_spends", 0)), int(record.get("dishonoured_cheque_spends", 0)),
+					record.get("transactions", []).size(), record.get("prison_records", []).size()
+				]
+				layout.add_child(_label(summary))
+				if _is_creator() and peer_id > 0:
+					_add_button(layout, "انتصاب مقام برای " + name, "assign_role", str(peer_id))
 			if _is_creator():
-				target_input = _add_input("شناسه شهروند برای برداشت")
+				target_input = _add_input("شناسه بازیکن برای برداشت سازنده")
 				amount_input = _add_input("مبلغ برداشت")
 				amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 				_add_button(layout, "برداشت سازنده از حساب شهروند", "owner_withdraw")
@@ -795,6 +814,19 @@ func _on_citizen_record_received(data: Dictionary) -> void:
 	layout.add_child(_label("تراکنش‌های بانکی: " + str(data.get("transactions", []))))
 	layout.add_child(_label("محرومیت چک: " + str(data.get("cheque_banned", false))))
 
+func _open_military_command(department: String = "") -> void:
+	if not _is_creator() and (not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "command_military")):
+		notice_changed.emit("دسترسی ستاد کل ارتش برای این مقام فعال نیست.")
+		return
+	var command := get_parent().get_node_or_null("MilitaryCommand") if get_parent() else null
+	if command == null:
+		notice_changed.emit("سامانه فرماندهی ارتش بارگذاری نشده است.")
+		return
+	if not department.is_empty():
+		command.selected_department = department
+	command.open_panel()
+	notice_changed.emit("پنل فرماندهی فعال شد؛ شاخه انتخابی: %s" % (department if not department.is_empty() else "همه نیروها"))
+
 func _teleport_to(place: String) -> void:
 	if not _is_creator() or player == null:
 		return
@@ -805,9 +837,13 @@ func _teleport_to(place: String) -> void:
 		"مرکز مخابرات": Vector3(29, 4, -28)
 	}
 	if locations.has(place):
-		player.global_position = locations[place] + Vector3(0, 1.2, 10)
+		if place == "ستاد کل ارتش":
+			# The HQ teleport lands inside the building, not outside its entrance.
+			player.global_position = locations[place] + Vector3(0, -2.8, 2.0)
+		else:
+			player.global_position = locations[place] + Vector3(0, 1.2, 10)
 		player.velocity = Vector3.ZERO
-		notice_changed.emit("به %s منتقل شدی." % place)
+		notice_changed.emit("به فضای داخلی %s منتقل شدی." % place)
 
 func _label(value: String) -> Label:
 	var label := Label.new()
