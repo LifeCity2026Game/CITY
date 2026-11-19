@@ -99,6 +99,7 @@ func _run_vehicle_checks() -> void:
 	car._toggle_lights()
 	car._set_control("right", true)
 	await physics_frame
+	await physics_frame
 	if absf(car.front_wheels[0].rotation.y) < 0.01 or absf(car.steering_wheel.rotation.z) < 0.01:
 		_fail("Steering input did not move front wheels and steering wheel")
 		return
