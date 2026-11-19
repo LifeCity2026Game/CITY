@@ -401,6 +401,7 @@ var next_account_number: int = 41000001
 var next_citizen_number: int = 11000001
 var game_clock_seconds: float = 0.0
 var role_permissions: Dictionary = {}
+var shared_account_access: Dictionary = {}
 var cheque_spending_ban: Dictionary = {}
 
 func _process(delta: float) -> void:
@@ -579,22 +580,74 @@ func _account_transfer(actor_peer: int, source_account: String, pin: String, tar
 func request_account_purchase(account_number: String, pin: String, item_id: String) -> void:
 	var peer_id := _local_peer_id()
 	if _is_authority():
-		_account_purchase(peer_id, account_number, pin, item_id)
+		_account_purchase(peer_id, account_number, pin, item_id, false)
 	else:
 		rpc_id(1, "rpc_request_account_purchase", account_number, pin, item_id)
 
 @rpc("any_peer", "call_remote", "reliable")
 func rpc_request_account_purchase(account_number: String, pin: String, item_id: String) -> void:
 	if multiplayer.is_server():
-		_account_purchase(multiplayer.get_remote_sender_id(), account_number, pin, item_id)
+		_account_purchase(multiplayer.get_remote_sender_id(), account_number, pin, item_id, false)
 
-func _account_purchase(peer_id: int, account_number: String, pin: String, item_id: String) -> void:
-	if not CATALOG.has(item_id) or not _account_pin_matches(account_number, pin):
-		_send_notice(peer_id, "کالا، شماره حساب یا رمز معتبر نیست.")
+func request_shared_account_purchase(account_number: String, item_id: String) -> void:
+	var peer_id := _local_peer_id()
+	if _is_authority():
+		_account_purchase(peer_id, account_number, "", item_id, true)
+	else:
+		rpc_id(1, "rpc_request_shared_account_purchase", account_number, item_id)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_shared_account_purchase(account_number: String, item_id: String) -> void:
+	if multiplayer.is_server():
+		_account_purchase(multiplayer.get_remote_sender_id(), account_number, "", item_id, true)
+
+func request_share_account_with_peer(account_number: String, target_peer_id: int, enabled: bool) -> void:
+	var actor := _local_peer_id()
+	if _is_authority():
+		_set_account_share(actor, account_number, target_peer_id, enabled)
+	else:
+		rpc_id(1, "rpc_request_share_account_with_peer", account_number, target_peer_id, enabled)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_share_account_with_peer(account_number: String, target_peer_id: int, enabled: bool) -> void:
+	if multiplayer.is_server():
+		_set_account_share(multiplayer.get_remote_sender_id(), account_number, target_peer_id, enabled)
+
+func _set_account_share(owner_peer: int, account_number: String, target_peer_id: int, enabled: bool) -> void:
+	if not bank_accounts.has(account_number) or target_peer_id <= 0 or target_peer_id == owner_peer:
+		_send_notice(owner_peer, "شماره حساب یا شناسه بازیکن معتبر نیست.")
 		return
 	var account: Dictionary = bank_accounts[account_number]
-	if int(account.get("owner_peer_id", -1)) != peer_id or str(account.get("owner_type", "")) != "player":
-		_send_notice(peer_id, "این حساب متعلق به تو نیست.")
+	if int(account.get("owner_peer_id", -1)) != owner_peer or str(account.get("owner_type", "")) != "player":
+		_send_notice(owner_peer, "فقط صاحب حساب می‌تواند دسترسی خرید بدهد.")
+		return
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and target_peer_id != 1 and not multiplayer.get_peers().has(target_peer_id):
+		_send_notice(owner_peer, "بازیکن مقصد آنلاین نیست.")
+		return
+	var access: Dictionary = shared_account_access.get(account_number, {})
+	if enabled:
+		access[str(target_peer_id)] = true
+	else:
+		access.erase(str(target_peer_id))
+	shared_account_access[account_number] = access
+	_save_ledger()
+	_send_notice(owner_peer, "اجازه خرید با حساب %s برای بازیکن %d %s شد." % [account_number, target_peer_id, "فعال" if enabled else "لغو"])
+	if enabled:
+		_send_notice(target_peer_id, "صاحب حساب %s اجازه خرید با کارت بازی‌اش را به تو داد؛ رمز او لازم نیست." % account_number)
+
+func _account_purchase(peer_id: int, account_number: String, pin: String, item_id: String, use_shared_access: bool = false) -> void:
+	if not CATALOG.has(item_id) or not bank_accounts.has(account_number):
+		_send_notice(peer_id, "کالا یا شماره حساب معتبر نیست.")
+		return
+	var account: Dictionary = bank_accounts[account_number]
+	var owner_peer := int(account.get("owner_peer_id", -1))
+	var is_owner := owner_peer == peer_id and str(account.get("owner_type", "")) == "player"
+	var is_shared := use_shared_access and bool(shared_account_access.get(account_number, {}).get(str(peer_id), false))
+	if not is_owner and not is_shared:
+		_send_notice(peer_id, "صاحب حساب اجازه خرید با این کارت را به تو نداده است.")
+		return
+	if is_owner and not _account_pin_matches(account_number, pin):
+		_send_notice(peer_id, "رمز حساب معتبر نیست.")
 		return
 	var price: int = CATALOG[item_id]
 	if int(account.balance) < price:
@@ -604,13 +657,17 @@ func _account_purchase(peer_id: int, account_number: String, pin: String, item_i
 	account.balance = int(account.balance) - price
 	bank_accounts[account_number] = account
 	central_bank_treasury += tax
-	var doc := _new_document(item_id, peer_id, price, "cash_purchase", account_number)
+	var doc := _new_document(item_id, peer_id, price, "shared_card_purchase" if is_shared else "cash_purchase", account_number)
+	doc["paid_by_peer_id"] = owner_peer
+	doc["payment_account"] = account_number
 	doc["tax_paid"] = tax
 	documents[doc.document_id] = doc
 	_save_ledger()
-	_send_own_accounts(peer_id)
+	_send_own_accounts(owner_peer)
 	_send_receipt(peer_id, doc)
-	_send_notice(peer_id, "خرید نقدی ثبت شد؛ مالیات %d سکه به خزانه رفت." % tax)
+	_send_notice(peer_id, "خرید با کارت بازی انجام شد؛ مالیات %d سکه به خزانه رفت." % tax)
+	if is_shared:
+		_send_notice(owner_peer, "بازیکن %d با اجازه تو خرید کرد؛ مبلغ %d سکه از حساب %s کم شد." % [peer_id, price, account_number])
 	citizen_record_changed.emit(str(account.citizen_id))
 
 func request_issue_cheque(account_number: String, pin: String, face_value: int) -> void:
@@ -1097,7 +1154,7 @@ func _save_ledger() -> void:
 	var saved_balances: Dictionary = {}
 	for peer_key in balances.keys():
 		saved_balances[str(peer_key)] = balances[peer_key]
-	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions, "bank_accounts": bank_accounts, "citizen_registry": citizen_registry, "citizen_accounts": citizen_accounts, "cheque_book": cheque_book, "prison_records": prison_records, "central_bank_treasury": central_bank_treasury, "next_account_number": next_account_number, "next_citizen_number": next_citizen_number, "game_clock_seconds": game_clock_seconds, "role_permissions": role_permissions, "cheque_spending_ban": cheque_spending_ban}
+	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions, "bank_accounts": bank_accounts, "citizen_registry": citizen_registry, "citizen_accounts": citizen_accounts, "cheque_book": cheque_book, "prison_records": prison_records, "central_bank_treasury": central_bank_treasury, "next_account_number": next_account_number, "next_citizen_number": next_citizen_number, "game_clock_seconds": game_clock_seconds, "role_permissions": role_permissions, "cheque_spending_ban": cheque_spending_ban, "shared_account_access": shared_account_access}
 	var file := FileAccess.open("user://ownership_ledger.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(payload))
@@ -1128,3 +1185,4 @@ func _load_ledger() -> void:
 		game_clock_seconds = float(parsed.get("game_clock_seconds", 0.0))
 		role_permissions = parsed.get("role_permissions", {})
 		cheque_spending_ban = parsed.get("cheque_spending_ban", {})
+		shared_account_access = parsed.get("shared_account_access", {})
