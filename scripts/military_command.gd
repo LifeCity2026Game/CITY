@@ -314,7 +314,7 @@ func _create_explosion(at: Vector3) -> void:
 	fx.add_child(smoke)
 	explosion_nodes.append(fx)
 	var timer := get_tree().create_timer(4.0)
-	timer.timeout.connect(func(): if is_instance_valid(fx): fx.queue_free())
+	timer.timeout.connect(_remove_explosion.bind(fx))
 
 func _damage_target(center: Vector3) -> void:
 	var best: Node3D
@@ -375,3 +375,7 @@ func _log(message: String) -> void:
 	status_label.text = message
 	active_missions.append({"time": Time.get_ticks_msec(), "department": selected_department, "report": message})
 	report_changed.emit(message)
+
+func _remove_explosion(fx: Node3D) -> void:
+	if is_instance_valid(fx):
+		fx.queue_free()
