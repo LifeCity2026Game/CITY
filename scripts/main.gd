@@ -175,6 +175,7 @@ func _build_world() -> void:
 	_add_service("MINISTRY OF INTELLIGENCE", Vector3(-55, 4, -55), Color(0.25, 0.29, 0.38))
 	_add_service("PRESIDENTIAL PALACE", Vector3(55, 4, -55), Color(0.68, 0.57, 0.32))
 	_add_service("ARMED FORCES HQ", Vector3(55, 4, 55), Color(0.30, 0.39, 0.34))
+	_build_hq_personnel()
 	_add_service("VEHICLE REPAIR GARAGE", Vector3(-55, 4, 55), Color(0.34, 0.38, 0.42))
 	_add_service("REAL ESTATE OFFICE", Vector3(-29, 4, -28), Color(0.52, 0.42, 0.28))
 	_add_service("TELECOM CENTER", Vector3(29, 4, -28), Color(0.20, 0.46, 0.62))
@@ -225,6 +226,71 @@ func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
 	label.font_size = 32
 	label.modulate = Color.WHITE
 	building.add_child(label)
+
+func _build_hq_personnel() -> void:
+	var hq := get_node_or_null("ARMED_FORCES_HQ") as Node3D
+	if hq == null:
+		return
+	# A staffed headquarters: a commander at the desk and four visible soldiers on duty.
+	_add_hq_person(hq, "فرمانده ستاد کل", Vector3(0, -3.72, -2.8), Color(0.18, 0.25, 0.20), true)
+	_add_hq_person(hq, "سرباز نگهبان", Vector3(-5.2, -3.72, 2.8), Color(0.24, 0.32, 0.25), false)
+	_add_hq_person(hq, "سرباز نگهبان", Vector3(5.2, -3.72, 2.8), Color(0.24, 0.32, 0.25), false)
+	_add_hq_person(hq, "افسر عملیات", Vector3(-4.6, -3.72, -2.6), Color(0.20, 0.29, 0.23), false)
+	_add_hq_person(hq, "مسئول مخابرات", Vector3(4.6, -3.72, -2.6), Color(0.20, 0.29, 0.23), false)
+
+func _add_hq_person(parent: Node3D, job_title: String, at: Vector3, uniform: Color, commander: bool) -> void:
+	var person := Node3D.new()
+	person.name = "HQ_" + job_title.replace(" ", "_")
+	person.position = at
+	person.add_to_group("hq_personnel")
+	person.set_meta("npc_role", job_title)
+	person.set_meta("interactive_npc", true)
+	parent.add_child(person)
+	var torso := MeshInstance3D.new()
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.34
+	torso_mesh.height = 1.15
+	torso.mesh = torso_mesh
+	var torso_mat := _material(uniform)
+	torso.material_override = torso_mat
+	torso.position.y = 0.78
+	person.add_child(torso)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.23
+	head_mesh.height = 0.46
+	head.mesh = head_mesh
+	head.material_override = _material(Color(0.76, 0.59, 0.45))
+	head.position.y = 1.55
+	person.add_child(head)
+	for side in [-1.0, 1.0]:
+		var arm := MeshInstance3D.new()
+		var arm_mesh := BoxMesh.new()
+		arm_mesh.size = Vector3(0.18, 0.72, 0.22)
+		arm.mesh = arm_mesh
+		arm.material_override = _material(uniform.darkened(0.08))
+		arm.position = Vector3(side * 0.43, 0.82, 0)
+		person.add_child(arm)
+		var leg := MeshInstance3D.new()
+		var leg_mesh := BoxMesh.new()
+		leg_mesh.size = Vector3(0.22, 0.62, 0.25)
+		leg.mesh = leg_mesh
+		leg.material_override = _material(Color(0.12, 0.15, 0.13))
+		leg.position = Vector3(side * 0.16, 0.18, 0)
+		person.add_child(leg)
+	var badge := MeshInstance3D.new()
+	var badge_mesh := BoxMesh.new()
+	badge_mesh.size = Vector3(0.13, 0.18, 0.035)
+	badge.mesh = badge_mesh
+	badge.material_override = _material(Color(0.82, 0.68, 0.25) if commander else Color(0.72, 0.75, 0.72))
+	badge.position = Vector3(0.0, 1.02, 0.345)
+	person.add_child(badge)
+	var label := Label3D.new()
+	label.text = job_title
+	label.position = Vector3(0, 2.0, 0)
+	label.font_size = 22
+	label.modulate = Color.WHITE
+	person.add_child(label)
 
 func _decorate_ceremony_building(building_name: String, pos: Vector3, accent: Color, is_wedding_hall: bool) -> void:
 	var decoration := Node3D.new()

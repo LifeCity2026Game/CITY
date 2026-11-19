@@ -504,24 +504,13 @@ func _seed_citizens() -> void:
 	if not _is_authority():
 		return
 	_ensure_citizen("11000001", "player", 1, "سازنده")
-	var primary_number := ""
-	# Account 1 belongs to the creator and has an unlimited balance.
-	if citizen_accounts["11000001"].is_empty():
-		primary_number = _new_account_number()
-		bank_accounts[primary_number] = {
-			"number": primary_number, "account_index": 1,
-			"citizen_id": "11000001", "owner_type": "player",
-			"owner_peer_id": 1, "balance": 2147483647,
-			"unlimited_balance": true, "pin_hash": _hash_pin("0000"),
-			"created_unix": int(Time.get_unix_time_from_system())
-		}
-		citizen_accounts["11000001"].append(primary_number)
-	else:
-		primary_number = str(citizen_accounts["11000001"][0])
-		if bank_accounts.has(primary_number):
-			bank_accounts[primary_number]["account_index"] = 1
-			bank_accounts[primary_number]["unlimited_balance"] = true
-			bank_accounts[primary_number]["balance"] = 2147483647
+	# The creator starts with no bank card. Migrate the old automatically-created
+	# default-PIN card once; the first card opened manually in-game becomes account 1.
+	for existing_number in citizen_accounts["11000001"].duplicate():
+		var existing_account: Dictionary = bank_accounts.get(str(existing_number), {})
+		if bool(existing_account.get("unlimited_balance", false)) and str(existing_account.get("pin_hash", "")) == _hash_pin("0000"):
+			bank_accounts.erase(str(existing_number))
+			citizen_accounts["11000001"].erase(existing_number)
 	# NPC citizen cards (account slots 2-6) receive 10,000 once.
 	for i in range(1, 7):
 		var npc_id := "NPC-%03d" % i
@@ -610,9 +599,14 @@ func _open_bank_account(peer_id: int, pin: String, sim_index: int) -> void:
 		_send_notice(peer_id, "هر سیم‌کارت حداکثر سه حساب بانکی دارد.")
 		return
 	var number := _new_account_number()
+	var account_index := citizen_accounts.get(citizen_id, []).size() + 1
+	var creator_primary := peer_id == 1 and account_index == 1
+	var opening_balance := 2147483647 if creator_primary else get_balance(peer_id)
 	bank_accounts[number] = {
-		"number": number, "citizen_id": citizen_id, "owner_type": "player",
-		"owner_peer_id": peer_id, "sim_index": sim_index, "balance": get_balance(peer_id),
+		"number": number, "account_index": account_index,
+		"citizen_id": citizen_id, "owner_type": "player",
+		"owner_peer_id": peer_id, "sim_index": sim_index, "balance": opening_balance,
+		"unlimited_balance": creator_primary,
 		"pin_hash": _hash_pin(pin), "created_unix": int(Time.get_unix_time_from_system())
 	}
 	citizen_accounts[citizen_id].append(number)
@@ -1297,6 +1291,18 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 		"total_purchases": total_purchases, "total_tax_paid": total_tax_paid,
 		"cheque_banned": bool(cheque_spending_ban.get(str(citizen.get("owner_peer_id", -999)), false))
 	}
+
+func get_all_citizen_records() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	if not _is_authority() or not _actor_has_permission(_local_peer_id(), "view_citizen_records"):
+		return result
+	var citizen_ids: Array = citizen_registry.keys()
+	citizen_ids.sort()
+	for citizen_id in citizen_ids:
+		var record := get_citizen_full_record(str(citizen_id))
+		if not record.is_empty():
+			result.append(record)
+	return result
 
 func can_access_permission(actor_peer: int, permission: String) -> bool:
 	return _actor_has_permission(actor_peer, permission)
