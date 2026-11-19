@@ -6,6 +6,9 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
+	var saved_ledger_path: String = ProjectSettings.globalize_path("user://ownership_ledger.json")
+	if FileAccess.file_exists("user://ownership_ledger.json"):
+		DirAccess.remove_absolute(saved_ledger_path)
 	var ledger := Node.new()
 	ledger.name = "FinanceTestLedger"
 	ledger.set_script(LEDGER_SCRIPT)
