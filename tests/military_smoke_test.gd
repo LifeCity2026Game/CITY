@@ -55,7 +55,7 @@ func _run_military_checks() -> void:
 	military._on_action("naval")
 	var sea_unit_found := false
 	for unit in military.units:
-		if is_instance_valid(unit) and str(unit.name).contains("ناو"):
+		if is_instance_valid(unit) and str(unit.name) == "ناو پشتیبانی":
 			sea_unit_found = true
 			if unit.global_position.z < 95.0:
 				_fail("Naval ship did not spawn in the ocean zone")
