@@ -179,6 +179,20 @@ func _run_vehicle_checks() -> void:
 	if car.clutch_pressed:
 		_fail("Manual clutch pedal did not release")
 		return
+	car._set_control("accelerate", true)
+	for manual_drive_frame in range(30):
+		await physics_frame
+	if car.current_speed <= 0.0:
+		_fail("Manual first gear did not drive after clutch release")
+		return
+	car._set_control("accelerate", false)
+	car._set_control("brake", true)
+	for manual_stop_frame in range(30):
+		await physics_frame
+	car._set_control("brake", false)
+	if absf(car.current_speed) > 1.0:
+		_fail("Manual transmission test vehicle did not stop")
+		return
 	car._toggle_transmission()
 	if car.transmission_mode != "automatic":
 		_fail("Automatic transmission mode did not restore")
