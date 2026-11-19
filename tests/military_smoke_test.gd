@@ -44,12 +44,20 @@ func _run_military_checks() -> void:
 		military.selected_department = str(department)
 		military._order_selected_units(Vector3(18.0, 0.0, -24.0), "move")
 		var found := false
+		var branch_unit: Node3D
 		for unit in military.units:
 			if is_instance_valid(unit) and str(unit.get_meta("department", "")) == str(department):
 				found = true
+				branch_unit = unit
 				break
 		if not found:
 			_fail("No actual 3D unit spawned for branch: " + str(department))
+			return
+		if not bool(branch_unit.get_meta("ai_enabled", false)):
+			_fail("Autonomous AI is not enabled for branch: " + str(department))
+			return
+		if str(branch_unit.get_meta("ai_profile", "")).is_empty():
+			_fail("Dedicated AI profile is missing for branch: " + str(department))
 			return
 	military.selected_department = "نیروی دریایی"
 	military._on_action("naval")
