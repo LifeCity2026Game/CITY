@@ -35,6 +35,8 @@ func _material(color: Color, roughness_value: float = 0.82) -> StandardMaterial3
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.roughness = roughness_value
+	if color.a < 0.99:
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return material
 
 func _add_box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color: Color, solid: bool = true) -> void:
@@ -200,6 +202,7 @@ func _add_city_building(grid_x: int, grid_z: int, pos: Vector3, width: float, he
 	body_mesh.mesh = body_shape
 	body_mesh.position.y = height * 0.5
 	body_mesh.material_override = _material(facade_color)
+	body_mesh.visible = false # Render the building as a readable cutaway; interior floors remain visible.
 	building.add_child(body_mesh)
 	var collision := CollisionShape3D.new()
 	var collision_shape := BoxShape3D.new()
@@ -212,7 +215,7 @@ func _add_city_building(grid_x: int, grid_z: int, pos: Vector3, width: float, he
 	var is_shop: bool = category_index == 1 or category_index == 6
 	var is_apartment: bool = category_index == 0 or category_index == 5 or category_index == 7
 	var trim := facade_color.darkened(0.28)
-	var glass := Color(0.12, 0.27, 0.36)
+	var glass := Color(0.12, 0.27, 0.36, 0.34)
 	var frame := Color(0.83, 0.82, 0.75)
 	# Ground-floor storefront and a clearly readable pedestrian entrance.
 	if is_shop:
@@ -226,6 +229,28 @@ func _add_city_building(grid_x: int, grid_z: int, pos: Vector3, width: float, he
 	else:
 		_add_box(building, "EntranceDoor", Vector3(0, 1.2, 5.56), Vector3(1.35, 2.4, 0.12), Color(0.20, 0.15, 0.11), false)
 		_add_box(building, "EntranceCanopy", Vector3(0, 2.55, 5.9), Vector3(2.5, 0.18, 1.0), trim, false)
+	building.set_meta("floor_count", floors)
+	for floor_index in range(floors):
+		var interior_floor_y := float(floor_index) * 3.05
+		_add_box(building, "VisibleFloor_%02d" % (floor_index + 1), Vector3(0, interior_floor_y, 0), Vector3(width, 0.18, 11.0), trim.lightened(0.18), false)
+		_add_box(building, "BackInteriorWall_%02d" % (floor_index + 1), Vector3(0, interior_floor_y + 1.45, -5.38), Vector3(width, 2.9, 0.18), facade_color.darkened(0.12), false)
+		_add_box(building, "LeftInteriorWall_%02d" % (floor_index + 1), Vector3(-width * 0.5 + 0.08, interior_floor_y + 1.45, 0), Vector3(0.16, 2.9, 10.8), facade_color.darkened(0.16), false)
+		_add_box(building, "RightInteriorWall_%02d" % (floor_index + 1), Vector3(width * 0.5 - 0.08, interior_floor_y + 1.45, 0), Vector3(0.16, 2.9, 10.8), facade_color.darkened(0.16), false)
+		var room_index := abs(grid_x * 7 + grid_z * 11) % 8
+		if room_index == 0 or room_index == 5 or room_index == 7:
+			_add_box(building, "InteriorSofa_%02d" % floor_index, Vector3(-width * 0.22, interior_floor_y + 0.48, 1.8), Vector3(2.3, 0.85, 0.9), Color(0.34, 0.20, 0.14), false)
+			_add_box(building, "InteriorBed_%02d" % floor_index, Vector3(width * 0.22, interior_floor_y + 0.35, -1.8), Vector3(2.0, 0.5, 2.2), Color(0.68, 0.68, 0.72), false)
+		elif room_index == 1 or room_index == 6:
+			for shelf in range(3):
+				_add_box(building, "InteriorShelf_%02d_%02d" % [floor_index, shelf], Vector3(-width * 0.3 + float(shelf) * width * 0.3, interior_floor_y + 0.95, -1.2), Vector3(1.0, 1.9, 2.6), Color(0.42, 0.30, 0.18), false)
+		else:
+			_add_box(building, "InteriorOfficeDesk_%02d" % floor_index, Vector3(0, interior_floor_y + 0.62, -1.8), Vector3(2.8, 1.2, 1.0), Color(0.34, 0.23, 0.15), false)
+			_add_box(building, "InteriorMonitor_%02d" % floor_index, Vector3(0, interior_floor_y + 1.35, -2.0), Vector3(0.9, 0.6, 0.12), Color(0.08, 0.14, 0.18), false)
+		var floor_marker := Label3D.new()
+		floor_marker.text = "FLOOR %02d" % (floor_index + 1)
+		floor_marker.position = Vector3(-width * 0.42, interior_floor_y + 2.45, 5.1)
+		floor_marker.font_size = 14
+		building.add_child(floor_marker)
 	for floor_index in range(floors):
 		var y := 3.6 + float(floor_index) * 3.05
 		if y > height - 0.7:
