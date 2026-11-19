@@ -170,6 +170,7 @@ func _build_world() -> void:
 	_add_service("VEHICLE REPAIR GARAGE", Vector3(-55, 4, 55), Color(0.34, 0.38, 0.42))
 	_add_service("REAL ESTATE OFFICE", Vector3(-29, 4, -28), Color(0.52, 0.42, 0.28))
 	_add_service("TELECOM CENTER", Vector3(29, 4, -28), Color(0.20, 0.46, 0.62))
+	_add_service("CENTRAL PRISON", Vector3(0, 4, 82), Color(0.34, 0.30, 0.29))
 	_build_city_details()
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
