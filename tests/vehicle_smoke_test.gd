@@ -151,8 +151,33 @@ func _run_vehicle_checks() -> void:
 	if car.current_speed <= 0.0:
 		_fail("Vehicle did not accelerate in Drive")
 		return
+	var forward_speed: float = car.current_speed
 	car._set_control("accelerate", false)
+	car._set_control("brake", true)
+	for brake_frame in range(20):
+		await physics_frame
+	if car.current_speed >= forward_speed:
+		_fail("Brake pedal did not reduce forward speed")
+		return
+	car._set_control("brake", false)
 	car.current_speed = 0.0
+	car.gear = "R"
+	car._set_control("accelerate", true)
+	for reverse_frame in range(30):
+		await physics_frame
+	if car.current_speed >= 0.0:
+		_fail("Vehicle did not move in reverse")
+		return
+	car._set_control("accelerate", false)
+	car._set_control("brake", true)
+	for reverse_brake_frame in range(30):
+		await physics_frame
+	if absf(car.current_speed) > 1.0:
+		_fail("Brake pedal did not stop the vehicle in reverse")
+		return
+	car._set_control("brake", false)
+	car.current_speed = 0.0
+	car.gear = "P"
 	car._toggle_vehicle()
 	if car.occupied:
 		_fail("Player could not exit the stopped vehicle")
