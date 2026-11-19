@@ -84,7 +84,7 @@ func _run() -> void:
 
 	var profile: Dictionary = ledger.get_citizen_full_record(str(account.citizen_id))
 	assert(not profile.is_empty(), "citizen full record lookup failed")
-	assert(profile.accounts.size() == 1, "citizen bank account missing from profile")
+	assert(profile.accounts.size() == 2, "creator primary and secondary bank accounts missing from profile")
 	assert(not profile.cheques.is_empty(), "citizen cheque history missing from profile")
 	var npc_account_count := 0
 	var npc_account_number := ""
