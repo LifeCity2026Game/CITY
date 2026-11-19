@@ -445,11 +445,27 @@ var marriage_proposals: Dictionary = {}
 var marriage_records: Dictionary = {}
 var next_social_number: int = 1
 
+const GAME_DAY_SECONDS := 1440.0
+
 func _process(delta: float) -> void:
 	if not _is_authority():
 		return
 	game_clock_seconds += delta
 	_settle_due_cheques()
+	var expired_records: Array[String] = []
+	for record_id in prison_records.keys():
+		var record: Dictionary = prison_records[record_id]
+		if str(record.get("status", "")) != "زندانی":
+			continue
+		if not record.has("release_due_game_time"):
+			record["release_due_game_time"] = float(record.get("entered_game_time", game_clock_seconds)) + GAME_DAY_SECONDS
+			prison_records[record_id] = record
+		elif game_clock_seconds >= float(record.get("release_due_game_time", 0.0)):
+			expired_records.append(str(record_id))
+	for record_id in expired_records:
+		release_prisoner(1, record_id, "پایان مدت حبس")
+	if not expired_records.is_empty():
+		_save_ledger()
 
 func _hash_pin(pin: String) -> String:
 	var context := HashingContext.new()
@@ -890,6 +906,7 @@ func _settle_due_cheques() -> void:
 					"cheque_id": cheque_id, "spend_id": str(spend.spend_id),
 					"amount": amount, "item_id": str(spend.item_id),
 					"entered_game_time": game_clock_seconds,
+					"release_due_game_time": game_clock_seconds + GAME_DAY_SECONDS,
 					"status": "زندانی", "released_by": 0,
 					"release_reason": ""
 				}
@@ -1026,6 +1043,7 @@ func extend_prison_sentence(actor_peer: int, record_id: String, extra_days: int,
 	if str(record.get("status", "")) != "زندانی":
 		return false
 	record["sentence_extension_days"] = int(record.get("sentence_extension_days", 0)) + extra_days
+	record["release_due_game_time"] = maxf(float(record.get("release_due_game_time", game_clock_seconds + GAME_DAY_SECONDS)), game_clock_seconds) + float(extra_days) * GAME_DAY_SECONDS
 	record["sentence_extension_reason"] = reason
 	record["sentence_extended_by"] = actor_peer
 	record["sentence_extended_unix"] = int(Time.get_unix_time_from_system())
