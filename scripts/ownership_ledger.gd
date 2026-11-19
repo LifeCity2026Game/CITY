@@ -129,7 +129,11 @@ func _commit_purchase(peer_id: int, item_id: String) -> void:
 		return
 	balances[peer_id] = balance - price
 	balance_changed.emit(peer_id, get_balance(peer_id))
+	var tax := int(ceil(float(price) * 0.10))
+	central_bank_treasury += tax
 	var doc := _new_document(item_id, peer_id, price, "purchase", "SHOP")
+	doc["tax_paid"] = tax
+	doc["seller_net"] = price - tax
 	documents[doc.document_id] = doc
 	_save_ledger()
 	_send_receipt(peer_id, doc)
@@ -184,7 +188,11 @@ func _commit_npc_purchase(peer_id: int, item_id: String, npc_id: String) -> void
 		_send_notice(peer_id, "موجودی کافی نیست.")
 		return
 	balances[peer_id] = balance - price
+	var tax := int(ceil(float(price) * 0.10))
+	central_bank_treasury += tax
 	var doc := _new_document(item_id, peer_id, price, "npc_purchase", npc_id)
+	doc["tax_paid"] = tax
+	doc["seller_net"] = price - tax
 	documents[doc.document_id] = doc
 	_save_ledger()
 	_send_receipt(peer_id, doc)
@@ -478,6 +486,7 @@ func _open_bank_account(peer_id: int, pin: String) -> void:
 	citizen_accounts[citizen_id].append(number)
 	balances[peer_id] = 0
 	account_created.emit(peer_id, number)
+	_send_own_accounts(peer_id)
 	_save_ledger()
 	_send_notice(peer_id, "حساب بانکی با شماره %s افتتاح شد." % number)
 	citizen_record_changed.emit(citizen_id)
@@ -759,6 +768,13 @@ signal citizen_record_received(data: Dictionary)
 
 
 signal own_accounts_received(accounts: Array)
+
+func _send_own_accounts(peer_id: int) -> void:
+	var accounts := get_accounts_for_peer(peer_id)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and peer_id > 1 and multiplayer.get_peers().has(peer_id):
+		rpc_id(peer_id, "rpc_receive_own_bank_accounts", accounts)
+	elif peer_id == _local_peer_id():
+		own_accounts_received.emit(accounts)
 
 func request_own_bank_accounts() -> void:
 	var peer_id := _local_peer_id()
