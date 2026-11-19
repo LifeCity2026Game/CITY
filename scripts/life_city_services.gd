@@ -388,7 +388,7 @@ func _owner_withdraw() -> void:
 func _assign_role(peer_id: int) -> void:
 	if not _is_creator():
 		return
-	var role := ROLES[mini(roles.size() % ROLES.size(), ROLES.size() - 1)]
+	var role: String = ROLES[mini(roles.size() % ROLES.size(), ROLES.size() - 1)]
 	roles[peer_id] = role
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc("sync_role", peer_id, role)
