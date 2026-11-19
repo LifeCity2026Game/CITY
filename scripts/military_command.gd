@@ -168,8 +168,7 @@ func _can_command() -> bool:
 	var peer_id: int = multiplayer.get_unique_id()
 	var services: Node = get_parent().get_node_or_null("LifeCityServices")
 	if services != null:
-		var role_name: String = str(services.roles.get(peer_id, ""))
-		if role_name == "فرمانده کل ارتش" or role_name == "فرمانده " + selected_department:
+		if services.has_method("_has_role") and (services._has_role(peer_id, "فرمانده کل ارتش") or services._has_role(peer_id, "فرمانده " + selected_department)):
 			return true
 	return ledger != null and ledger.can_access_permission(peer_id, "command_military")
 
