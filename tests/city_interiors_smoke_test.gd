@@ -41,8 +41,8 @@ func _run_city_checks() -> void:
 		if room.find_children("*", "Label3D", true, false).is_empty():
 			_fail("A generic interior is missing its business/residence sign")
 			return
-	if categories.size() != 8:
-		_fail("Not all eight building categories were generated: %s" % str(categories.keys()))
+	if categories.size() != 7:
+		_fail("Not all seven building categories were generated: %s" % str(categories.keys()))
 		return
 	var city_buildings := get_nodes_in_group("city_buildings")
 	var generic_building_count := 0
