@@ -235,12 +235,12 @@ func _render_page() -> void:
 			pin_input = _add_input("رمز چهار تا هشت رقمی حساب")
 			if sim_cards.size() < 2:
 				_add_button(layout, "خرید سیم‌کارت دوم", "buy_sim")
+			pin_input = _add_input("رمز ۴ تا ۸ رقمی برای افتتاح حساب")
 			for i in range(sim_cards.size()):
 				var sim: Dictionary = sim_cards[i]
-				layout.add_child(_label("%s | %s | اینترنت: %d MB" % [sim.number, sim.carrier, int(sim.data_mb)]))
+				layout.add_child(_label("%s | %s | اینترنت: %d MB | حساب‌ها: %d/3" % [sim.number, sim.carrier, int(sim.data_mb), sim.accounts.size()]))
 				_add_button(layout, "خرید بسته اینترنت برای سیم‌کارت %d" % (i + 1), "buy_data", str(i))
-			pin_input = _add_input("رمز ۴ تا ۸ رقمی برای افتتاح حساب")
-			_add_button(layout, "افتتاح حساب بانکی", "open_account")
+				_add_button(layout, "افتتاح حساب روی سیم‌کارت %d" % (i + 1), "create_account", str(i))
 			if ledger:
 				if not account_list_requested:
 					account_list_requested = true
@@ -555,10 +555,20 @@ func _place_item(item: String) -> void:
 	notice_changed.emit("وسیله داخل خانه چیده شد: " + item)
 
 func _create_account(sim_index: int) -> void:
-	if ledger and pin_input:
-		ledger.request_open_bank_account(pin_input.text)
-	else:
-		notice_changed.emit("سامانه بانک در دسترس نیست.")
+	if sim_index < 0 or sim_index >= sim_cards.size() or pin_input == null or ledger == null:
+		notice_changed.emit("اطلاعات حساب یا سیم‌کارت معتبر نیست.")
+		return
+	var accounts: Array = sim_cards[sim_index].accounts
+	if accounts.size() >= 3:
+		notice_changed.emit("برای این سیم‌کارت سه حساب ساخته شده است.")
+		return
+	if pin_input.text.length() < 4 or pin_input.text.length() > 8 or not pin_input.text.is_valid_int():
+		notice_changed.emit("رمز حساب باید بین ۴ تا ۸ رقم باشد.")
+		return
+	ledger.request_open_bank_account(pin_input.text, sim_index)
+	accounts.append({"number": "در انتظار ثبت", "balance": 0, "pin_protected": true})
+	sim_cards[sim_index].accounts = accounts
+	notice_changed.emit("درخواست افتتاح حساب ثبت شد؛ شماره حساب ۸ رقمی پس از تأیید بانک نمایش داده می‌شود.")
 
 
 func _buy_sim() -> void:
