@@ -1168,6 +1168,7 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 		var account: Dictionary = bank_accounts.get(str(number), {}).duplicate(true)
 		account.erase("pin_hash")
 		account["pin_security"] = "رمز ذخیره‌شده به‌صورت هش؛ قابل مشاهده نیست"
+		account["balance_display"] = "نامحدود" if bool(account.get("unlimited_balance", false)) else str(account.get("balance", 0))
 		accounts.append(account)
 	var citizen_cheques: Array = []
 	for cheque in cheque_book.values():
@@ -1221,6 +1222,7 @@ func get_central_bank_snapshot(actor_peer: int) -> Dictionary:
 			var safe_account: Dictionary = bank_accounts[number].duplicate(true)
 			safe_account.erase("pin_hash")
 			safe_account["pin_security"] = "رمز محرمانه و هش‌شده؛ قابل مشاهده نیست"
+			safe_account["balance_display"] = "نامحدود" if bool(safe_account.get("unlimited_balance", false)) else str(safe_account.get("balance", 0))
 			safe_accounts[number] = safe_account
 		snapshot["treasury"] = central_bank_treasury
 		snapshot["accounts"] = safe_accounts
