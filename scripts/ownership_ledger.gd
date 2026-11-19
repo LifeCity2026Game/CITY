@@ -787,7 +787,7 @@ func _cheque_purchase(peer_id: int, cheque_id: String, item_id: String) -> void:
 	cheque.spends.append({
 		"spend_id": spend_id, "document_id": doc.document_id,
 		"item_id": item_id, "amount": price,
-		"due_game_time": game_clock_seconds + 360.0,
+		"due_game_time": game_clock_seconds + 1440.0,
 		"status": "در انتظار تسویه"
 	})
 	cheque_book[cheque_id] = cheque
