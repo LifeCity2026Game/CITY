@@ -148,8 +148,8 @@ func _build_network_panel() -> void:
 	layout.add_child(title)
 	var address := LineEdit.new()
 	address.name = "HostAddress"
-	address.placeholder_text = "IP میزبان"
-	address.text = "127.0.0.1"
+	address.placeholder_text = "IP عمومی میزبان (مثلاً 203.0.113.10)"
+	address.text = ""
 	layout.add_child(address)
 	var host := Button.new()
 	host.text = "ساخت اتاق"
@@ -161,7 +161,7 @@ func _build_network_panel() -> void:
 	layout.add_child(join)
 	var status := Label.new()
 	status.name = "NetworkStatus"
-	status.text = "برای بازی از راه دور، میزبان باید UDP پورت 7777 را در مودم باز کند."
+	status.text = "برای اتصال از اینترنت دیگر، IP عمومی میزبان و دسترسی UDP پورت 7777 لازم است؛ 127.0.0.1 فقط روی همان دستگاه کار می‌کند."
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(status)
 	status_changed.connect(func(message: String): status.text = message)
