@@ -400,6 +400,9 @@ func _action(action: String, arg: String = "") -> void:
 		if ledger and target_input and reason_input: ledger.request_pardon_cheque_ban(int(target_input.text), reason_input.text)
 	elif action == "release_prisoner":
 		if ledger and target_input and reason_input: ledger.request_release_prisoner(target_input.text.strip_edges(), reason_input.text)
+	elif action == "extend_prison_sentence":
+		if ledger and target_input and amount_input and reason_input:
+			ledger.request_extend_prison_sentence(target_input.text.strip_edges(), int(amount_input.text), reason_input.text)
 	elif action == "withdraw_treasury":
 		if ledger and account_input and amount_input and reason_input: ledger.request_central_bank_withdraw(account_input.text.strip_edges(), int(amount_input.text), reason_input.text)
 	elif action == "save_permissions":
@@ -427,11 +430,24 @@ func _render_page() -> void:
 			_add_button(layout, "موقعیت بانک", "teleport", "بانک شهری")
 			_add_button(layout, "موقعیت نمایشگاه خودرو", "teleport", "نمایشگاه خودرو")
 			_add_button(layout, "موقعیت دفتر املاک", "teleport", "دفتر املاک")
+			_add_button(layout, "پارکینگ من | اسپاون خودروهای خریداری‌شده", "page", "public_garage")
 		"phone_home":
 			notice_changed.emit("موبایل | خدمات ارتباطی، بانکی و خرید اینترنتی")
 			_add_button(layout, "مخابرات و سیم‌کارت", "page", "phone")
 			_add_button(layout, "اینترنت‌بانک", "page", "bank")
 			_add_button(layout, "فروشگاه اینترنتی", "page", "online_shop")
+		"public_garage":
+			notice_changed.emit("پارکینگ شخصی | فقط خودروهایی که سند مالکیت معتبر به نام تو دارند.")
+			var local_owner := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+			var found_cars := 0
+			if ledger:
+				for document in ledger.get_documents_for(local_owner):
+					var owned_car := str(document.get("item_id", ""))
+					if CAR_PRICES.has(owned_car) and str(document.get("status", "valid")) == "valid":
+						found_cars += 1
+						_add_button(layout, "اسپاون %s | پلاک %s" % [owned_car, str(document.get("plate", "ثبت‌نشده"))], "spawn_car", owned_car)
+			if found_cars == 0:
+				layout.add_child(_label("هنوز خودروی خریداری‌شده و دارای سند نداری."))
 		"city_hall":
 			var local_peer_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 			var local_role: String = str(roles.get(local_peer_id, "شهروند"))
@@ -632,15 +648,31 @@ func _render_page() -> void:
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_prison_records"):
 				notice_changed.emit("دسترسی مشاهده پرونده‌های زندان برای این مقام فعال نشده است.")
 				return
-			notice_changed.emit("زندان مرکزی | پرونده زندانیان و آزادی با دستور مقام مجاز")
-			if ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "release_prisoner"):
-				target_input = _add_input("شناسه پرونده زندان")
-				reason_input = _add_input("دلیل آزادی")
-				_add_button(layout, "آزادی زندانی", "release_prisoner")
-			if ledger and ledger._is_authority():
-				_on_central_bank_snapshot_received(ledger.get_central_bank_snapshot(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1))
+			notice_changed.emit("زندان مرکزی | فهرست پرونده‌های NPC و بازیکنان، عفو و تمدید حبس")
+			if ledger._is_authority():
+				var active_count := 0
+				for record_id in ledger.prison_records.keys():
+					var record: Dictionary = ledger.prison_records[record_id]
+					var citizen_id := str(record.get("citizen_id", ""))
+					var citizen: Dictionary = ledger.citizen_registry.get(citizen_id, {})
+					var status_text := str(record.get("status", "نامشخص"))
+					var kind := "NPC" if int(record.get("peer_id", 0)) < 0 else "بازیکن"
+					layout.add_child(_label("%s | %s | کد شهروندی %s | %s | علت: %s | خرید: %s | مبلغ: %s" % [str(record_id), str(citizen.get("name", "شهروند ناشناس")), citizen_id, kind, str(record.get("reason", "")), str(record.get("item_id", "نامشخص")), str(record.get("amount", 0))]))
+					layout.add_child(_label("وضعیت: %s | تمدیدهای ثبت‌شده: %d روز" % [status_text, int(record.get("sentence_extension_days", 0))]))
+					if status_text == "زندانی":
+						active_count += 1
+				layout.add_child(_label("تعداد پرونده‌های فعال زندان: %d" % active_count))
 			else:
 				ledger.request_central_bank_snapshot()
+			if ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "release_prisoner"):
+				target_input = _add_input("کد پرونده برای عفو (JAIL-...)")
+				reason_input = _add_input("دلیل عفو")
+				_add_button(layout, "عفو و آزادی زندانی", "release_prisoner")
+				target_input = _add_input("کد پرونده برای تمدید حبس")
+				amount_input = _add_input("تعداد روزهای اضافه")
+				amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+				reason_input = _add_input("دلیل تمدید حبس")
+				_add_button(layout, "تمدید مدت حبس", "extend_prison_sentence")
 		"citizen_search":
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_citizen_records"):
 				notice_changed.emit("دسترسی مشاهده پرونده شهروندان فعال نیست.")
@@ -741,8 +773,13 @@ func _on_citizen_record_received(data: Dictionary) -> void:
 		notice_changed.emit("پرونده پیدا نشد یا دسترسی کافی نیست.")
 		return
 	var layout := _content()
-	layout.add_child(_label("مشخصات شهروند: " + str(data.get("citizen", {}))))
-	layout.add_child(_label("حساب‌ها: " + str(data.get("accounts", []))))
+	var citizen: Dictionary = data.get("citizen", {})
+	layout.add_child(_label("نام: %s | کد شهروندی: %s | وضعیت: %s" % [str(citizen.get("name", "نامشخص")), str(citizen.get("citizen_id", "")), str(data.get("marital_status", "مجرد"))]))
+	layout.add_child(_label("مشخصات شهروند: " + str(citizen)))
+	layout.add_child(_label("حساب‌ها و موجودی بانکی: " + str(data.get("accounts", []))))
+	layout.add_child(_label("وضعیت چک‌ها و خریدهای انجام‌شده با چک:"))
+	for cheque_use in data.get("cheque_history", []):
+		layout.add_child(_label("چک %s | خرید: %s | مبلغ: %d | وضعیت: %s" % [str(cheque_use.get("cheque_id", "")), str(cheque_use.get("item", "")), int(cheque_use.get("amount", 0)), str(cheque_use.get("status", ""))]))
 	layout.add_child(_label("چک‌ها: " + str(data.get("cheques", []))))
 	layout.add_child(_label("سوابق زندان: " + str(data.get("prison_records", []))))
 	layout.add_child(_label("دارایی‌ها و آدرس املاک/پلاک خودرو: " + str(data.get("assets", []))))
