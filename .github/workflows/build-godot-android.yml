@@ -69,6 +69,20 @@ jobs:
             exit 1
           fi
 
+      - name: Test banking, cheques, prison and Central Bank
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/finance_smoke_test.gd 2>&1 | tee finance-test.log
+          if ! grep -q "FINANCE_SMOKE_TEST_PASS" finance-test.log; then
+            echo "Finance and prison smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" finance-test.log; then
+            echo "Finance test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Export debug APK
         run: |
           mkdir -p build
