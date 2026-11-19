@@ -3,7 +3,6 @@ extends Node
 # LIFE CITY Stage 2: playable prototype systems.
 # All balances are fictional and local to this game build.
 var player_balance: int = 10000
-var player_black_money: int = 0
 var selected_account: String = "NPC1000"
 var notice: String = "مرحله دوم فعال شد"
 var npc_accounts: Dictionary = {}
@@ -130,11 +129,7 @@ func _clear_actions() -> void:
 
 func _refresh() -> void:
 	status_label.text = notice
-	var visible_balance := player_balance
-	if ownership_ledger:
-		var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-		visible_balance = ownership_ledger.get_balance(peer_id)
-	details_label.text = "موجودی: %d سکه | پول سیاه: %d" % [visible_balance, player_black_money]
+	details_label.text = "برای مشاهده موجودی، اینترنت‌بانک موبایل را باز کن."
 
 func _on_action(action: String, arg: String = "") -> void:
 	var private_areas := {
@@ -258,14 +253,11 @@ func _on_action(action: String, arg: String = "") -> void:
 			notice = "وزارت اطلاعات | پرونده‌های کاملاً خیالی"
 			_add_action_button("ثبت گزارش مالی مشکوک", "report")
 			_add_action_button("نمایش پرونده‌ها", "reports")
-			_add_action_button("نمایش پول سیاه آزمایشی", "black")
 		"report":
 			reports.append("گزارش مالی شماره " + str(reports.size() + 1) + " | نیازمند بررسی")
 			notice = "گزارش ثبت شد؛ هنوز حکم یا اتهامی صادر نشده است"
 		"reports":
 			notice = "پرونده‌ها: " + str(reports)
-		"black":
-			notice = "پول سیاه صرفاً امتیاز داستانی و جدا از موجودی بانکی است: %d" % player_black_money
 		"palace":
 			notice = "کاخ ریاست جمهوری | ساختمان تشریفاتی و مرکز جلسات"
 			_add_action_button("بازدید از لابی", "place", "لابی کاخ")
