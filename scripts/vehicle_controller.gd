@@ -606,7 +606,7 @@ func _cycle_indicators() -> void:
 		speed_label.text = "راهنما: " + suffix
 
 func _process(_delta: float) -> void:
-	var blink_on := (Time.get_ticks_msec() / 450) % 2 == 0
+	var blink_on := int(Engine.get_process_frames() / 30.0) % 2 == 0
 	for lamp in left_indicator_lamps:
 		lamp.visible = indicators == 1 and blink_on
 	for lamp in right_indicator_lamps:
