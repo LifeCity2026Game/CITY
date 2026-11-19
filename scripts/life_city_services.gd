@@ -167,49 +167,134 @@ func _on_prison_state_changed(peer_id: int, _record_id: String, imprisoned: bool
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "LifeCityServicesUI"
+	layer.layer = 20
 	add_child(layer)
-	var toggle := Button.new()
-	toggle.name = "ServicesToggle"
-	toggle.text = "موبایل و خدمات"
-	toggle.position = Vector2(18, 136)
-	toggle.custom_minimum_size = Vector2(170, 48)
-	layer.add_child(toggle)
-	toggle.pressed.connect(_toggle_panel)
+
+	# Three independent top-level entry points, spaced across the screen.
+	var top_bar := HBoxContainer.new()
+	top_bar.name = "MainMenuButtons"
+	top_bar.anchor_left = 0.025
+	top_bar.anchor_right = 0.975
+	top_bar.offset_top = 10
+	top_bar.offset_bottom = 66
+	top_bar.add_theme_constant_override("separation", 12)
+	layer.add_child(top_bar)
+
+	for entry in [
+		["خدمات عمومی", "public"],
+		["موبایل", "phone_home"],
+		["پنل سازنده", "creator"]
+	]:
+		var menu_button := Button.new()
+		menu_button.text = entry[0]
+		menu_button.custom_minimum_size = Vector2(0, 54)
+		menu_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_style_menu_button(menu_button)
+		top_bar.add_child(menu_button)
+		menu_button.pressed.connect(_open_main_menu.bind(entry[1]))
+
 	phone_panel = PanelContainer.new()
 	phone_panel.name = "ServicesPanel"
-	phone_panel.anchor_left = 0.0
-	phone_panel.anchor_right = 0.0
-	phone_panel.anchor_bottom = 1.0
-	phone_panel.offset_left = 12
-	phone_panel.offset_right = 360
-	phone_panel.offset_top = 190
-	phone_panel.offset_bottom = -12
+	phone_panel.anchor_left = 0.055
+	phone_panel.anchor_top = 0.12
+	phone_panel.anchor_right = 0.945
+	phone_panel.anchor_bottom = 0.91
+	phone_panel.offset_left = 0
+	phone_panel.offset_top = 0
+	phone_panel.offset_right = 0
+	phone_panel.offset_bottom = 0
+	phone_panel.add_theme_stylebox_override("panel", _menu_panel_style())
 	layer.add_child(phone_panel)
+
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	phone_panel.add_child(scroll)
 	var layout := VBoxContainer.new()
 	layout.name = "Content"
 	layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.add_theme_constant_override("separation", 12)
+	layout.add_theme_constant_override("margin_left", 18)
+	layout.add_theme_constant_override("margin_right", 18)
+	layout.add_theme_constant_override("margin_top", 16)
+	layout.add_theme_constant_override("margin_bottom", 16)
 	scroll.add_child(layout)
 	content_layout = layout
+
+	var heading_row := HBoxContainer.new()
+	heading_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	layout.add_child(heading_row)
 	var heading := Label.new()
-	heading.text = "LIFE CITY | موبایل و خدمات شهر"
-	layout.add_child(heading)
+	heading.text = "LIFE CITY"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.add_theme_font_size_override("font_size", 24)
+	heading_row.add_child(heading)
+	var close_button := Button.new()
+	close_button.text = "✕"
+	close_button.custom_minimum_size = Vector2(48, 44)
+	_style_menu_button(close_button)
+	heading_row.add_child(close_button)
+	close_button.pressed.connect(_close_panel)
+
 	notice_label = Label.new()
 	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(notice_label)
 	details_label = Label.new()
 	details_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(details_label)
-	for entry in [
-		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"], ["دسترسی کارت بانکی بین بازیکنان", "shared_card"], ["محضر، ضمانت زندان و انتقال سند", "social"],
-		["فروشگاه آنلاین", "online_shop"], ["املاک حضوری", "property"],
-		["نمایشگاه خودرو و پارکینگ", "garage"], ["شهرداری", "city_hall"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["بانک مرکزی (مقام مجاز)", "central_bank"], ["زندان (مقام مجاز)", "prison"], ["پنل سازنده", "creator"]
-	]:
-		_add_button(layout, entry[0], "page", entry[1])
 	phone_panel.visible = false
 	notice_changed.connect(func(message: String): notice_label.text = message)
+
+func _menu_panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("192943")
+	style.border_color = Color("526985")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(24)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	return style
+
+func _style_menu_button(button: Button) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color("2878d5")
+	normal.set_corner_radius_all(16)
+	normal.content_margin_left = 12
+	normal.content_margin_right = 12
+	normal.content_margin_top = 10
+	normal.content_margin_bottom = 10
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("398be8")
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color("1e5eaa")
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_font_size_override("font_size", 17)
+	button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 48)
+
+func _open_main_menu(page: String) -> void:
+	if page == "phone_home":
+		active_page = "phone_home"
+	elif page == "creator" and not _is_creator():
+		notice_changed.emit("پنل سازنده فقط برای سازنده بازی قابل مشاهده است.")
+		return
+	else:
+		active_page = page
+	phone_panel.visible = true
+	var joystick := get_parent().get_node_or_null("CharacterControls/CharacterJoystick")
+	if joystick:
+		joystick.visible = false
+	_render_page()
+
+func _close_panel() -> void:
+	phone_panel.visible = false
+	var joystick := get_parent().get_node_or_null("CharacterControls/CharacterJoystick")
+	if joystick:
+		joystick.visible = true
 
 func _content() -> VBoxContainer:
 	return content_layout
@@ -237,11 +322,10 @@ func _add_input(placeholder: String) -> LineEdit:
 	return field
 
 func _toggle_panel() -> void:
-	phone_panel.visible = not phone_panel.visible
-	# Avoid touch targets being stacked underneath the open services panel.
-	var joystick := get_parent().get_node_or_null("CharacterControls/CharacterJoystick")
-	if joystick:
-		joystick.visible = not phone_panel.visible
+	if phone_panel.visible:
+		_close_panel()
+	else:
+		_open_main_menu("phone_home")
 
 func _action(action: String, arg: String = "") -> void:
 	if action == "page":
@@ -333,7 +417,18 @@ func _render_page() -> void:
 	var layout := _content()
 	match active_page:
 		"home":
-			notice_changed.emit("خدمات بازی از این پنل جداگانه باز می‌شوند.")
+			notice_changed.emit("از سه منوی اصلی بالای صفحه یکی را انتخاب کن.")
+		"public":
+			notice_changed.emit("خدمات عمومی شهر")
+			_add_button(layout, "ازدواج و محضر", "page", "social")
+			_add_button(layout, "موقعیت بانک", "teleport", "بانک شهری")
+			_add_button(layout, "موقعیت نمایشگاه خودرو", "teleport", "نمایشگاه خودرو")
+			_add_button(layout, "موقعیت دفتر املاک", "teleport", "دفتر املاک")
+		"phone_home":
+			notice_changed.emit("موبایل | خدمات ارتباطی، بانکی و خرید اینترنتی")
+			_add_button(layout, "مخابرات و سیم‌کارت", "page", "phone")
+			_add_button(layout, "اینترنت‌بانک", "page", "bank")
+			_add_button(layout, "فروشگاه اینترنتی", "page", "online_shop")
 		"city_hall":
 			var local_peer_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 			var local_role: String = str(roles.get(local_peer_id, "شهروند"))
@@ -502,14 +597,15 @@ func _render_page() -> void:
 			if not _is_creator():
 				notice_changed.emit("پنل سازنده فقط برای سازنده بازی است.")
 				return
-			notice_changed.emit("پنل سازنده | مدیریت کل شهر")
-			_add_button(layout, "فرماندهی ارتش", "page", "military")
-			_add_button(layout, "وزارت اطلاعات", "page", "intel")
+			notice_changed.emit("پنل اختصاصی سازنده | دسترسی محرمانه مدیریت کل شهر")
 			_add_button(layout, "تلپورت", "page", "teleport_page")
-			_add_button(layout, "بانک مرکزی", "page", "central_bank")
-			_add_button(layout, "مدیریت زندان", "page", "prison")
-			_add_button(layout, "کاخ ریاست جمهوری و اختیارات", "page", "palace")
-			_add_button(layout, "سامانه جامع شهروندان", "page", "citizen_search")
+			_add_button(layout, "فرماندهی ارتش", "page", "military")
+			_add_button(layout, "پنل کاخ ریاست جمهوری", "page", "palace")
+			_add_button(layout, "پنل شهرداری", "page", "city_hall")
+			_add_button(layout, "پنل ستاد کل ارتش", "page", "military")
+			_add_button(layout, "پنل بانک مرکزی", "page", "central_bank")
+			_add_button(layout, "پنل وزارت اطلاعات", "page", "intel")
+			_add_button(layout, "پنل شهروندی", "page", "citizen_search")
 		"central_bank":
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_central_bank"):
 				notice_changed.emit("دسترسی بانک مرکزی برای این مقام فعال نشده است.")
