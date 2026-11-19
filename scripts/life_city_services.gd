@@ -629,6 +629,7 @@ func _render_page() -> void:
 			_add_button(layout, "پنل شهرداری", "page", "city_hall")
 			_add_button(layout, "پنل ستاد کل ارتش", "page", "military")
 			_add_button(layout, "پنل بانک مرکزی", "page", "central_bank")
+			_add_button(layout, "مدیریت زندان | عفو و تمدید حبس", "page", "prison")
 			_add_button(layout, "پنل وزارت اطلاعات", "page", "intel")
 			_add_button(layout, "پنل شهروندی", "page", "citizen_search")
 		"central_bank":
