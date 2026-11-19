@@ -152,14 +152,15 @@ func _run_vehicle_checks() -> void:
 	if not signal_seen:
 		_fail("Left indicator lamps did not illuminate")
 		return
+	var max_speed_before_damage: float = car.max_forward_speed
 	car.apply_impact(10.0)
-	if car.vehicle_health >= 100.0:
-		_fail("Collision did not reduce vehicle condition")
+	if car.vehicle_health >= 100.0 or car.max_forward_speed >= max_speed_before_damage:
+		_fail("Collision did not reduce vehicle condition and performance")
 		return
 	car.global_position = Vector3(-55.0, 0.2, 64.0)
 	car.repair_vehicle()
-	if car.vehicle_health != 100.0:
-		_fail("Vehicle repair did not restore full condition")
+	if car.vehicle_health != 100.0 or car.max_forward_speed != max_speed_before_damage:
+		_fail("Garage repair did not restore vehicle condition and performance")
 		return
 	car.global_position = Vector3(4.0, 0.2, 7.0)
 	car._toggle_transmission()
