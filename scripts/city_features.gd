@@ -667,7 +667,7 @@ func _enter_nearest_building() -> void:
 			"city_hall":
 				services.call("_open_main_menu", "city_hall")
 			"intelligence":
-				services.call("_open_main_menu", "intelligence")
+				services.call("_open_main_menu", "intel")
 			"dealership":
 				services.call("_open_main_menu", "public_garage")
 			"real_estate":
