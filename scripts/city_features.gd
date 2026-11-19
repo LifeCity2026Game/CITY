@@ -175,6 +175,81 @@ func _add_floor_collision(parent: Node3D, pos: Vector3, size: Vector3) -> void:
 	body.add_child(shape_node)
 	parent.add_child(body)
 
+func _add_interior_person(parent: Node3D, label_text: String, at: Vector3, uniform: Color) -> void:
+	var person := Node3D.new()
+	person.name = "InteriorNPC_" + label_text.replace(" ", "_")
+	person.position = at
+	person.set_meta("npc_role", label_text)
+	parent.add_child(person)
+	var torso := MeshInstance3D.new()
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.28
+	torso_mesh.height = 0.95
+	torso.mesh = torso_mesh
+	torso.material_override = _mat(uniform)
+	torso.position.y = 0.78
+	person.add_child(torso)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.19
+	head_mesh.height = 0.38
+	head.mesh = head_mesh
+	head.material_override = _mat(Color(0.72, 0.53, 0.40))
+	head.position.y = 1.48
+	person.add_child(head)
+	for side in [-1.0, 1.0]:
+		_box(person, "Arm", Vector3(side * 0.36, 0.82, 0.0), Vector3(0.16, 0.65, 0.18), uniform.darkened(0.08))
+		_box(person, "Leg", Vector3(side * 0.14, 0.20, 0.0), Vector3(0.18, 0.48, 0.20), Color(0.12, 0.14, 0.17))
+	var name_tag := Label3D.new()
+	name_tag.text = label_text
+	name_tag.font_size = 18
+	name_tag.position.y = 1.95
+	person.add_child(name_tag)
+
+func _add_showroom_car(parent: Node3D, label_text: String, at: Vector3, paint: Color) -> void:
+	var car := Node3D.new()
+	car.name = "DisplayCar_" + label_text.replace(" ", "_")
+	car.position = at
+	parent.add_child(car)
+	_box(car, "CarBody", Vector3(0, 0.62, 0), Vector3(2.0, 0.62, 3.8), paint)
+	_box(car, "Cabin", Vector3(0, 1.16, -0.18), Vector3(1.55, 0.72, 1.85), Color(0.10, 0.17, 0.22))
+	_box(car, "FrontGlass", Vector3(0, 1.30, 0.78), Vector3(1.35, 0.48, 0.06), Color(0.20, 0.38, 0.48))
+	_box(car, "RearGlass", Vector3(0, 1.30, -1.12), Vector3(1.35, 0.48, 0.06), Color(0.20, 0.38, 0.48))
+	for side in [-1.0, 1.0]:
+		for axle in [-1.0, 1.0]:
+			var wheel := MeshInstance3D.new()
+			var wheel_mesh := CylinderMesh.new()
+			wheel_mesh.top_radius = 0.34
+			wheel_mesh.bottom_radius = 0.34
+			wheel_mesh.height = 0.22
+			wheel.mesh = wheel_mesh
+			wheel.rotation.z = PI / 2.0
+			wheel.position = Vector3(side * 1.02, 0.38, axle * 1.20)
+			wheel.material_override = _mat(Color(0.035, 0.035, 0.04))
+			car.add_child(wheel)
+	var plate := Label3D.new()
+	plate.text = label_text
+	plate.font_size = 20
+	plate.position = Vector3(0, 1.75, 2.05)
+	car.add_child(plate)
+
+func _add_house_maquette(parent: Node3D, label_text: String, at: Vector3, wall_color: Color) -> void:
+	var model := Node3D.new()
+	model.name = "HouseMaquette_" + label_text.replace(" ", "_")
+	model.position = at
+	parent.add_child(model)
+	_box(model, "ModelBase", Vector3(0, 0.12, 0), Vector3(3.5, 0.24, 2.8), Color(0.22, 0.38, 0.22))
+	_box(model, "HouseWalls", Vector3(0, 1.0, 0), Vector3(2.35, 1.65, 1.8), wall_color)
+	_box(model, "Roof", Vector3(0, 1.95, 0), Vector3(2.65, 0.22, 2.1), Color(0.30, 0.16, 0.12))
+	_box(model, "FrontDoor", Vector3(0, 0.82, 0.92), Vector3(0.42, 1.15, 0.08), Color(0.24, 0.14, 0.08))
+	for side in [-1.0, 1.0]:
+		_box(model, "Window", Vector3(side * 0.72, 1.22, 0.93), Vector3(0.48, 0.48, 0.08), Color(0.18, 0.45, 0.62))
+	var caption := Label3D.new()
+	caption.text = label_text
+	caption.font_size = 18
+	caption.position.y = 2.45
+	model.add_child(caption)
+
 func _build_interiors() -> void:
 	for i in range(SERVICE_BUILDINGS.size()):
 		var entry: Dictionary = SERVICE_BUILDINGS[i]
@@ -246,6 +321,35 @@ func _build_interiors() -> void:
 				flower.material_override = _mat(Color(0.90, 0.70, 0.75))
 				flower.position = Vector3(-3.5 + float(flower_index) * 1.0, 1.8, -4.0)
 				room.add_child(flower)
+		elif str(entry.id) == "dealership":
+			_add_showroom_car(room, "خودروی اسپرت", Vector3(-3.6, 0.0, 0.8), Color(0.72, 0.10, 0.08))
+			_add_showroom_car(room, "خودروی خانوادگی", Vector3(3.5, 0.0, 0.8), Color(0.12, 0.28, 0.68))
+			_add_box(room, "ShowroomInfoDesk", Vector3(0, 0.65, -3.2), Vector3(4.2, 1.3, 0.9), Color(0.20, 0.25, 0.30))
+			_add_interior_person(room, "فروشنده خودرو", Vector3(0, 0.0, -4.2), Color(0.16, 0.30, 0.52))
+			_add_interior_person(room, "مشتری نمایشگاه", Vector3(-5.0, 0.0, -1.8), Color(0.42, 0.25, 0.18))
+		elif str(entry.id) == "real_estate":
+			_add_house_maquette(room, "ماکت ویلای ساحلی", Vector3(-3.6, 0.0, -1.0), Color(0.78, 0.68, 0.48))
+			_add_house_maquette(room, "ماکت آپارتمان", Vector3(3.4, 0.0, -1.0), Color(0.68, 0.72, 0.76))
+			_add_box(room, "PropertyBrochureStand", Vector3(0, 0.75, 2.0), Vector3(2.8, 1.5, 0.65), Color(0.32, 0.24, 0.16))
+			_add_interior_person(room, "مشاور املاک", Vector3(-1.6, 0.0, -3.6), Color(0.18, 0.34, 0.26))
+			_add_interior_person(room, "مشتری املاک", Vector3(2.0, 0.0, -3.6), Color(0.42, 0.25, 0.18))
+		elif str(entry.id) == "repair_garage":
+			_add_showroom_car(room, "خودروی در حال تعمیر", Vector3(0, 0.0, 0.4), Color(0.42, 0.44, 0.48))
+			_add_box(room, "MechanicWorkbench", Vector3(-4.6, 0.65, -3.4), Vector3(2.5, 1.3, 0.8), Color(0.22, 0.24, 0.26))
+			_add_interior_person(room, "مکانیک", Vector3(4.4, 0.0, -3.2), Color(0.24, 0.30, 0.36))
+		elif str(entry.id) == "city_bank" or str(entry.id) == "central_bank":
+			_add_box(room, "BankQueueCounter", Vector3(-3.8, 0.65, 0.0), Vector3(3.0, 1.3, 0.8), Color(0.35, 0.38, 0.42))
+			_add_box(room, "ATM", Vector3(5.2, 1.0, 2.6), Vector3(0.9, 2.0, 0.55), Color(0.12, 0.16, 0.20))
+			_add_interior_person(room, "کارمند بانک", Vector3(-3.8, 0.0, -1.8), Color(0.18, 0.28, 0.48))
+			_add_interior_person(room, "مشتری بانک", Vector3(2.4, 0.0, 2.0), Color(0.40, 0.26, 0.18))
+		elif str(entry.id) == "telecom":
+			for rack_index in range(3):
+				_box(room, "ServerRack_%d" % rack_index, Vector3(-4.5 + float(rack_index) * 4.5, 1.35, -3.8), Vector3(1.2, 2.7, 0.8), Color(0.12, 0.17, 0.22))
+			_add_interior_person(room, "تکنسین مخابرات", Vector3(0, 0.0, 1.6), Color(0.18, 0.34, 0.42))
+		elif str(entry.id) == "government" or str(entry.id) == "intelligence":
+			_add_box(room, "OfficeWorkTable", Vector3(-3.4, 0.65, 0.2), Vector3(2.8, 1.3, 1.0), Color(0.30, 0.22, 0.16))
+			_add_box(room, "OfficeFilingCabinet", Vector3(5.0, 1.0, -3.8), Vector3(1.0, 2.0, 0.8), Color(0.34, 0.37, 0.40))
+			_add_interior_person(room, "کارمند اداره", Vector3(-3.4, 0.0, -1.4), Color(0.20, 0.30, 0.48))
 		var door_marker := MeshInstance3D.new()
 		var door_mesh := BoxMesh.new()
 		door_mesh.size = Vector3(2.0, 2.8, 0.18)
