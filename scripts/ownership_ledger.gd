@@ -349,6 +349,15 @@ func get_documents_for(peer_id: int) -> Array[Dictionary]:
 			result.append(doc)
 	return result
 
+func send_permission_snapshot(peer_id: int) -> void:
+	if not _is_authority() or not multiplayer.has_multiplayer_peer() or not multiplayer.is_server():
+		return
+	rpc_id(peer_id, "rpc_receive_my_permissions", role_permissions.get(str(peer_id), {}))
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_my_permissions(permissions: Dictionary) -> void:
+	role_permissions[str(_local_peer_id())] = permissions.duplicate(true)
+
 func send_snapshot(peer_id: int) -> void:
 	if not _is_authority() or not multiplayer.has_multiplayer_peer() or not multiplayer.is_server():
 		return
