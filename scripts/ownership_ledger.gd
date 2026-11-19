@@ -3,6 +3,7 @@ class_name OwnershipLedger
 
 signal receipt_issued(document: Dictionary)
 signal ledger_notice(message: String)
+signal balance_changed(peer_id: int, balance: int)
 
 const CATALOG := {
 	"لباس رسمی": 600,
@@ -51,6 +52,36 @@ func _new_document(item_id: String, owner_peer: int, price: int, event_name: Str
 	next_document_number += 1
 	return doc
 
+func adjust_balance(peer_id: int, amount: int, reason: String = "adjustment") -> bool:
+	if not _is_authority():
+		return false
+	var current := get_balance(peer_id)
+	if current + amount < 0:
+		return false
+	balances[peer_id] = current + amount
+	var transaction_id := "LC-ADJ-%06d" % next_document_number
+	next_document_number += 1
+	cash_transactions[transaction_id] = {"transaction_id": transaction_id, "peer_id": peer_id, "amount": amount, "reason": reason, "time": int(Time.get_unix_time_from_system()), "status": "completed"}
+	_save_ledger()
+	balance_changed.emit(peer_id, get_balance(peer_id))
+	_send_balance(peer_id)
+	return true
+
+func owner_withdraw(target_peer_id: int, amount: int) -> bool:
+	if not _is_authority() or _local_peer_id() != 1 or target_peer_id <= 0 or amount <= 0:
+		return false
+	if get_balance(target_peer_id) < amount:
+		return false
+	return adjust_balance(target_peer_id, -amount, "creator_withdrawal_by_peer_1")
+
+func issue_custom_document(item_id: String, owner_peer_id: int, price: int) -> void:
+	if not _is_authority() or item_id.is_empty() or owner_peer_id <= 0:
+		return
+	var doc := _new_document(item_id, owner_peer_id, price, "purchase", "CITY_SERVICES")
+	documents[doc.document_id] = doc
+	_save_ledger()
+	receipt_issued.emit(doc)
+
 func request_purchase(item_id: String) -> void:
 	if _is_authority():
 		_commit_purchase(_local_peer_id(), item_id)
@@ -72,6 +103,7 @@ func _commit_purchase(peer_id: int, item_id: String) -> void:
 		_send_notice(peer_id, "موجودی کافی نیست.")
 		return
 	balances[peer_id] = balance - price
+	balance_changed.emit(peer_id, get_balance(peer_id))
 	var doc := _new_document(item_id, peer_id, price, "purchase", "SHOP")
 	documents[doc.document_id] = doc
 	_save_ledger()
@@ -220,6 +252,8 @@ func _commit_player_cash_transfer(from_peer: int, target_peer: int, amount: int)
 		return
 	balances[from_peer] = sender_balance - amount
 	balances[target_peer] = get_balance(target_peer) + amount
+	balance_changed.emit(from_peer, get_balance(from_peer))
+	balance_changed.emit(target_peer, get_balance(target_peer))
 	var transaction_id := "LC-CASH-%06d" % next_document_number
 	next_document_number += 1
 	var transaction := {
@@ -248,6 +282,7 @@ func _send_balance(peer_id: int) -> void:
 @rpc("authority", "call_remote", "reliable")
 func rpc_receive_balance(current_balance: int) -> void:
 	balances[_local_peer_id()] = current_balance
+	balance_changed.emit(_local_peer_id(), current_balance)
 
 func _send_receipt(peer_id: int, doc: Dictionary) -> void:
 	_send_balance(peer_id)
