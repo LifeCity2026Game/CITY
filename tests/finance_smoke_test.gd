@@ -52,7 +52,11 @@ func _run() -> void:
 	assert(not profile.is_empty(), "citizen full record lookup failed")
 	assert(profile.accounts.size() == 1, "citizen bank account missing from profile")
 	assert(not profile.cheques.is_empty(), "citizen cheque history missing from profile")
-	assert(ledger.get_accounts_for_peer(-1).size() == 1, "NPC bank account was not seeded")
+	var npc_account_count := 0
+	for npc_account in ledger.bank_accounts.values():
+		if str(npc_account.get("owner_type", "")) == "npc":
+			npc_account_count += 1
+	assert(npc_account_count >= 6, "NPC bank accounts were not seeded")
 
 	print("FINANCE_SMOKE_TEST_PASS")
 	quit(0)
