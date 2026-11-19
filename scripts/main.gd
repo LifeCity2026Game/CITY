@@ -208,9 +208,9 @@ func _add_city_building(grid_x: int, grid_z: int, pos: Vector3, width: float, he
 	collision.position.y = height * 0.5
 	building.add_child(collision)
 	var floors := maxi(2, int(floor(height / 3.2)))
-	var category_index := abs(grid_x * 7 + grid_z * 11) % 8
-	var is_shop := category_index == 1 or category_index == 6
-	var is_apartment := category_index == 0 or category_index == 5 or category_index == 7
+	var category_index: int = absi(grid_x * 7 + grid_z * 11) % 8
+	var is_shop: bool = category_index == 1 or category_index == 6
+	var is_apartment: bool = category_index == 0 or category_index == 5 or category_index == 7
 	var trim := facade_color.darkened(0.28)
 	var glass := Color(0.12, 0.27, 0.36)
 	var frame := Color(0.83, 0.82, 0.75)
