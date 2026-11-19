@@ -506,7 +506,7 @@ func _seed_citizens() -> void:
 			bank_accounts[primary_number]["account_index"] = 1
 			bank_accounts[primary_number]["unlimited_balance"] = true
 			bank_accounts[primary_number]["balance"] = 2147483647
-	# Accounts 2-6 are NPC citizen cards; they start empty.
+	# NPC citizen cards (account slots 2-6) receive 10,000 once.
 	for i in range(1, 7):
 		var npc_id := "NPC-%03d" % i
 		var citizen_id := "9900%04d" % i
@@ -521,7 +521,8 @@ func _seed_citizens() -> void:
 				bank_accounts[account_number] = {
 					"number": account_number, "account_index": i + 1,
 					"citizen_id": citizen_id, "owner_type": "npc",
-					"owner_peer_id": -i, "balance": 0,
+					"owner_peer_id": -i, "balance": 10000,
+					"starting_balance_granted": true,
 					"pin_hash": _hash_pin("0000"),
 					"created_unix": int(Time.get_unix_time_from_system())
 				}
@@ -530,7 +531,9 @@ func _seed_citizens() -> void:
 				var npc_account_number := str(citizen_accounts[citizen_id][0])
 				if bank_accounts.has(npc_account_number):
 					bank_accounts[npc_account_number]["account_index"] = i + 1
-					bank_accounts[npc_account_number]["balance"] = 0
+					if not bool(bank_accounts[npc_account_number].get("starting_balance_granted", false)):
+						bank_accounts[npc_account_number]["balance"] = 10000
+						bank_accounts[npc_account_number]["starting_balance_granted"] = true
 		if not citizen_registry[citizen_id].has("npc_id"):
 			citizen_registry[citizen_id]["npc_id"] = npc_id
 	_save_ledger()
@@ -538,10 +541,15 @@ func _seed_citizens() -> void:
 func register_online_player(peer_id: int) -> String:
 	if not _is_authority() or peer_id <= 0:
 		return ""
+	_ensure_player_starting_balance(peer_id)
 	var citizen_id := _citizen_id_for_peer(peer_id)
 	citizen_registry[citizen_id]["last_seen_unix"] = int(Time.get_unix_time_from_system())
 	_save_ledger()
 	return citizen_id
+
+func _ensure_player_starting_balance(peer_id: int) -> void:
+	if peer_id > 1 and not balances.has(peer_id):
+		balances[peer_id] = 10000
 
 func _citizen_id_for_peer(peer_id: int) -> String:
 	for citizen_id in citizen_registry:
@@ -570,6 +578,7 @@ func rpc_request_open_bank_account(pin: String, sim_index: int) -> void:
 		_open_bank_account(multiplayer.get_remote_sender_id(), pin, sim_index)
 
 func _open_bank_account(peer_id: int, pin: String, sim_index: int) -> void:
+	_ensure_player_starting_balance(peer_id)
 	if pin.length() < 4 or pin.length() > 8 or not pin.is_valid_int():
 		_send_notice(peer_id, "رمز حساب باید ۴ تا ۸ رقم باشد.")
 		return
