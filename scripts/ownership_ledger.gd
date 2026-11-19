@@ -1250,6 +1250,15 @@ func _accept_marriage(actor_peer: int, proposal_id: String) -> void:
 	_save_ledger()
 	_send_notice(partner_a, "عقد شما در محضر LIFE CITY ثبت شد. شماره ثبت: %s" % marriage_id)
 	_send_notice(actor_peer, "عقد شما در محضر LIFE CITY ثبت شد. شماره ثبت: %s" % marriage_id)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		if partner_a > 1 and multiplayer.get_peers().has(partner_a):
+			rpc_id(partner_a, "rpc_sync_marriage_record", marriage_id, marriage_records[marriage_id])
+		if actor_peer > 1 and multiplayer.get_peers().has(actor_peer):
+			rpc_id(actor_peer, "rpc_sync_marriage_record", marriage_id, marriage_records[marriage_id])
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_marriage_record(marriage_id: String, marriage: Dictionary) -> void:
+	marriage_records[marriage_id] = marriage.duplicate(true)
 
 func request_post_bail(record_id: String) -> void:
 	if _is_authority():
