@@ -389,13 +389,15 @@ func _physics_process(delta: float) -> void:
 	var speed_before_collision := absf(current_speed)
 	move_and_slide()
 	if get_slide_collision_count() > 0:
-		var impact := get_slide_collision(0)
-		if speed_before_collision > 3.0:
-			current_speed = move_toward(current_speed, 0.0, maxf(brake_strength, speed_before_collision * 2.0) * delta * 3.0)
-			if impact.get_collider() is CharacterBody3D:
-				var other := impact.get_collider() as CharacterBody3D
-				if other.has_method("apply_impact"):
-					other.apply_impact(speed_before_collision)
+		for collision_index in range(get_slide_collision_count()):
+			var impact := get_slide_collision(collision_index)
+			if absf(impact.get_normal().y) < 0.65 and speed_before_collision > 3.0:
+				current_speed = move_toward(current_speed, 0.0, maxf(brake_strength, speed_before_collision * 2.0) * delta * 3.0)
+				if impact.get_collider() is CharacterBody3D:
+					var other := impact.get_collider() as CharacterBody3D
+					if other.has_method("apply_impact"):
+						other.apply_impact(speed_before_collision)
+				break
 	for wheel in wheel_nodes:
 		wheel.rotate_x(current_speed * delta / 0.39)
 	if steering_wheel:
