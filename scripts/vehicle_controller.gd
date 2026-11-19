@@ -392,7 +392,6 @@ func _cycle_vehicle_model() -> void:
 		if roof_material:
 			roof_material.albedo_color = spec.color.darkened(0.18)
 	var body_scale: Vector3 = spec.scale
-	var body := get_node_or_null("BodyShell") as MeshInstance3D
 	if body:
 		body.scale = body_scale
 	var roof_node := get_node_or_null("Roof") as MeshInstance3D
