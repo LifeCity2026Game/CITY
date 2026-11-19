@@ -8,6 +8,7 @@ const GRAPHICS_SCRIPT = preload("res://scripts/graphics_settings.gd")
 const CITY_FEATURES_SCRIPT = preload("res://scripts/city_features.gd")
 const VEHICLE_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const JOYSTICK_SCRIPT = preload("res://scripts/virtual_joystick.gd")
+const SERVICES_SCRIPT = preload("res://scripts/life_city_services.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
@@ -25,6 +26,7 @@ func _ready() -> void:
 	_build_graphics_settings()
 	_build_stage_two()
 	_build_network()
+	_build_life_city_services()
 
 func _material(color: Color, roughness_value: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -227,6 +229,8 @@ func _build_stage_two() -> void:
 	systems.set_script(STAGE2_SCRIPT)
 	add_child(systems)
 	systems.set_ownership_ledger(ownership_ledger)
+	if systems.panel:
+		systems.panel.visible = false
 
 func _build_network() -> void:
 	network_manager = Node.new()
@@ -263,3 +267,10 @@ func _style_mobile_button(button: Button) -> void:
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
 	button.add_theme_color_override("font_color", Color.WHITE)
+
+func _build_life_city_services() -> void:
+	var services := Node.new()
+	services.name = "LifeCityServices"
+	services.set_script(SERVICES_SCRIPT)
+	add_child(services)
+	services.configure(ownership_ledger, player, vehicle_controller, network_manager)
