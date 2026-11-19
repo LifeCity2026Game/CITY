@@ -397,9 +397,18 @@ func _transfer() -> void:
 	if amount <= 0:
 		notice_changed.emit("مبلغ معتبر نیست.")
 		return
+	var target_text := target_input.text.strip_edges()
+	var target_peer := int(target_text)
+	if target_text.begins_with("LC-"):
+		var parts := target_text.split("-")
+		if parts.size() >= 4:
+			target_peer = int(parts[1])
+	if target_peer <= 0:
+		notice_changed.emit("شماره حساب مقصد معتبر نیست.")
+		return
 	if ledger:
-		ledger.request_player_cash_transfer(int(target_input.text), amount)
-		notice_changed.emit("درخواست انتقال ثبت شد؛ تأیید و موجودی توسط دفترکل سرور مدیریت می‌شود.")
+		ledger.request_player_cash_transfer(target_peer, amount)
+		notice_changed.emit("درخواست انتقال ثبت شد؛ موجودی و تراکنش در دفترکل ثبت می‌شود.")
 
 func _is_creator() -> bool:
 	return not multiplayer.has_multiplayer_peer() or multiplayer.is_server()
