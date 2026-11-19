@@ -746,6 +746,12 @@ func _settle_due_cheques() -> void:
 		cheque_book[cheque_id] = cheque
 	if changed:
 		_save_ledger()
+		var synced_cheque_owners: Dictionary = {}
+		for cheque in cheque_book.values():
+			var cheque_owner := int(cheque.get("issuer_peer_id", -999))
+			if cheque_owner > 0 and not synced_cheque_owners.has(cheque_owner):
+				synced_cheque_owners[cheque_owner] = true
+				_send_own_cheques(cheque_owner)
 		for citizen_id in citizen_registry.keys():
 			citizen_record_changed.emit(str(citizen_id))
 
