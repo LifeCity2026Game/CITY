@@ -173,13 +173,43 @@ func _build_world() -> void:
 	_build_city_details()
 
 func _add_service(label_text: String, pos: Vector3, color: Color) -> void:
-	_add_box(self, label_text, pos, Vector3(17, 8, 13), color)
+	var building := Node3D.new()
+	building.name = label_text.replace(" ", "_")
+	building.position = pos
+	add_child(building)
+	_add_box(building, "ServiceFloor", Vector3(0, -3.82, 0), Vector3(17, 0.36, 13), Color(0.24, 0.25, 0.27))
+	_add_box(building, "BackWall", Vector3(0, 0, -6.38), Vector3(17, 8, 0.24), color)
+	_add_box(building, "LeftWall", Vector3(-8.38, 0, 0), Vector3(0.24, 8, 13), color)
+	_add_box(building, "RightWall", Vector3(8.38, 0, 0), Vector3(0.24, 8, 13), color)
+	_add_box(building, "Roof", Vector3(0, 3.9, 0), Vector3(17, 0.24, 13), color.darkened(0.18))
+	# Front facade is split into pillars and lintels so the glass does not sit over an opaque wall.
+	for x in [-7.5, -3.75, 0.0, 3.75, 7.5]:
+		_add_box(building, "FacadePillar", Vector3(x, 0, 6.38), Vector3(0.30, 8, 0.28), color.darkened(0.22))
+	for y in [-3.55, 3.55]:
+		_add_box(building, "FacadeLintel", Vector3(0, y, 6.38), Vector3(17, 0.55, 0.28), color.darkened(0.12))
+	var glass_material := StandardMaterial3D.new()
+	glass_material.albedo_color = Color(0.24, 0.62, 0.82, 0.30)
+	glass_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass_material.roughness = 0.12
+	for row in range(2):
+		for column in range(4):
+			var glass := MeshInstance3D.new()
+			glass.name = "TransparentShopWindow"
+			var pane := BoxMesh.new()
+			pane.size = Vector3(3.25, 2.55, 0.07)
+			glass.mesh = pane
+			glass.material_override = glass_material
+			glass.position = Vector3(-5.625 + float(column) * 3.75, -1.65 + float(row) * 3.25, 6.38)
+			building.add_child(glass)
+	_add_box(building, "ReceptionCounter", Vector3(0, -1.7, 1.6), Vector3(4.8, 1.1, 1.0), color.lightened(0.15), false)
+	_add_box(building, "InteriorShelf", Vector3(-5.6, -1.6, -3.4), Vector3(1.1, 3.2, 0.5), Color(0.30, 0.22, 0.15), false)
+	_add_box(building, "InteriorSofa", Vector3(5.1, -2.7, -2.2), Vector3(2.5, 0.9, 1.1), Color(0.20, 0.25, 0.30), false)
 	var label := Label3D.new()
 	label.text = label_text
-	label.position = pos + Vector3(0, 5.2, 6.7)
+	label.position = Vector3(0, 4.9, 6.75)
 	label.font_size = 32
 	label.modulate = Color.WHITE
-	add_child(label)
+	building.add_child(label)
 
 func _build_player() -> void:
 	player = CharacterBody3D.new()
