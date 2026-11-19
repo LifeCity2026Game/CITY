@@ -63,6 +63,8 @@ var hood_open := false
 var trunk_open := false
 var climate_label: Label
 var transmission_label: Label
+var damage_label: Label
+var vehicle_health := 100.0
 var style_root: Node3D
 
 func _ready() -> void:
@@ -298,6 +300,10 @@ func _build_controls() -> void:
 	transmission_label = Label.new()
 	transmission_label.text = "گیربکس: اتومات"
 	col.add_child(transmission_label)
+	damage_label = Label.new()
+	damage_label.text = "سلامت خودرو: ۱۰۰٪"
+	col.add_child(damage_label)
+	_button(col, "تعمیر خودرو", repair_vehicle)
 	speed_label = Label.new()
 	speed_label.text = "سرعت: ۰ km/h"
 	col.add_child(speed_label)
@@ -519,6 +525,8 @@ func _toggle_vehicle() -> void:
 			player_camera.current = true
 		enter_button.text = "سوار خودرو"
 		controls_panel.visible = false
+		if driver and driver.has_method("set_body_temperature"):
+			driver.set_body_temperature(22.0)
 		throttle = 0.0
 		steering = 0.0
 		gear = "P"
@@ -581,8 +589,26 @@ func _process(_delta: float) -> void:
 
 func apply_impact(impact_speed: float) -> void:
 	current_speed = move_toward(current_speed, 0.0, impact_speed * 1.8)
+	vehicle_health = maxf(0.0, vehicle_health - impact_speed * 2.2)
+	if damage_label:
+		damage_label.text = "سلامت خودرو: %d%%" % int(vehicle_health)
 	if speed_label:
 		speed_label.text = "تصادف! سرعت کاهش یافت"
+	var body := get_node_or_null("BodyShell") as MeshInstance3D
+	if body and body.material_override is StandardMaterial3D:
+		var paint := body.material_override as StandardMaterial3D
+		paint.albedo_color = paint.albedo_color.lerp(Color(0.12, 0.10, 0.09), 0.12)
+
+func repair_vehicle() -> void:
+	if absf(current_speed) > 0.1:
+		if speed_label:
+			speed_label.text = "برای تعمیر خودرو توقف کن"
+		return
+	vehicle_health = 100.0
+	if damage_label:
+		damage_label.text = "سلامت خودرو: ۱۰۰٪"
+	if speed_label:
+		speed_label.text = "خودرو تعمیر شد"
 
 func _physics_process(delta: float) -> void:
 	if not occupied:
