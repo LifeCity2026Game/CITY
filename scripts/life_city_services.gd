@@ -16,6 +16,7 @@ var pin_input: LineEdit
 var account_input: LineEdit
 var reason_input: LineEdit
 var permissions_draft: Dictionary = {}
+var own_accounts_cache: Array = []
 var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
 var roles: Dictionary = {1: "سازنده"}
@@ -53,6 +54,8 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 		ledger.central_bank_snapshot_received.connect(_on_central_bank_snapshot_received)
 	if ledger and ledger.has_signal("citizen_record_received") and not ledger.citizen_record_received.is_connected(_on_citizen_record_received):
 		ledger.citizen_record_received.connect(_on_citizen_record_received)
+	if ledger and ledger.has_signal("own_accounts_received") and not ledger.own_accounts_received.is_connected(_on_own_accounts_received):
+		ledger.own_accounts_received.connect(_on_own_accounts_received)
 	if not multiplayer.peer_connected.is_connected(_on_peer_list_changed):
 		multiplayer.peer_connected.connect(_on_peer_list_changed)
 	if not multiplayer.peer_disconnected.is_connected(_on_peer_list_changed):
@@ -183,6 +186,9 @@ func _action(action: String, arg: String = "") -> void:
 		_buy_sim()
 	elif action == "transfer":
 		_transfer()
+	elif action == "account_transfer":
+		if ledger and account_input and pin_input and target_input and amount_input:
+			ledger.request_account_transfer(account_input.text.strip_edges(), pin_input.text, target_input.text.strip_edges(), int(amount_input.text))
 	elif action == "issue_cheque":
 		_issue_cheque()
 	elif action == "enter_home":
@@ -232,16 +238,18 @@ func _render_page() -> void:
 			pin_input = _add_input("رمز ۴ تا ۸ رقمی برای افتتاح حساب")
 			_add_button(layout, "افتتاح حساب بانکی", "open_account")
 			if ledger:
-				var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-				for account in ledger.get_accounts_for_peer(local_id):
-					layout.add_child(_label("حساب: %s | موجودی: %d | رمز: محرمانه" % [account.number, int(account.balance)]))
+				ledger.request_own_bank_accounts()
+				for account in own_accounts_cache:
+					layout.add_child(_label("حساب: %s | موجودی: %d | رمز: محرمانه" % [str(account.get("number", "")), int(account.get("balance", 0))]))
 		"bank":
-			notice_changed.emit("اینترنت‌بانک: انتقال بین شهروندان و حساب‌های NPC.")
-			target_input = _add_input("شماره حساب مقصد")
+			notice_changed.emit("اینترنت‌بانک: انتقال با شماره حساب ۸ رقمی و رمز حساب.")
+			account_input = _add_input("شماره حساب مبدأ ۸ رقمی")
+			pin_input = _add_input("رمز حساب")
+			target_input = _add_input("شماره حساب مقصد ۸ رقمی")
 			amount_input = _add_input("مبلغ انتقال")
 			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-			_add_button(layout, "انتقال وجه", "transfer")
-			_add_button(layout, "صدور چک آزمایشی", "page", "cheques")
+			_add_button(layout, "انتقال وجه", "account_transfer")
+			_add_button(layout, "مدیریت چک‌ها", "page", "cheques")
 			_add_button(layout, "نمایش تراکنش‌ها", "page", "transactions")
 		"cheques":
 			notice_changed.emit("صدور چک با شماره حساب هشت‌رقمی؛ اعتبار باقی‌مانده برای خریدهای بعدی می‌ماند.")
@@ -314,6 +322,9 @@ func _render_page() -> void:
 			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 			reason_input = _add_input("علت برداشت")
 			_add_button(layout, "برداشت از خزانه به حساب", "withdraw_treasury")
+			target_input = _add_input("شناسه پلیر برای بخشودگی محرومیت چک")
+			reason_input = _add_input("دلیل بخشودگی")
+			_add_button(layout, "رفع محرومیت چک و ثبت بخشودگی", "pardon_ban")
 			_add_button(layout, "مدیریت زندان", "page", "prison")
 			_add_button(layout, "جست‌وجوی شهروند", "page", "citizen_search")
 			if ledger and ledger._is_authority():
@@ -328,6 +339,9 @@ func _render_page() -> void:
 			target_input = _add_input("شناسه پرونده زندان")
 			reason_input = _add_input("دلیل آزادی")
 			_add_button(layout, "آزادی زندانی", "release_prisoner")
+			target_input = _add_input("شناسه پلیر برای رفع محرومیت چک")
+			reason_input = _add_input("دلیل بخشودگی محرومیت")
+			_add_button(layout, "بخشودگی محرومیت چک", "pardon_ban")
 			if ledger and ledger._is_authority():
 				_on_central_bank_snapshot_received(ledger.get_central_bank_snapshot(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1))
 			else:
@@ -388,6 +402,11 @@ func _render_page() -> void:
 			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
 			_add_button(layout, "برداشت سازنده از حساب شهروند", "owner_withdraw")
 
+
+func _on_own_accounts_received(accounts: Array) -> void:
+	own_accounts_cache = accounts.duplicate(true)
+	if active_page == "phone":
+		_render_page()
 
 func _on_central_bank_snapshot_received(data: Dictionary) -> void:
 	if data.is_empty():
