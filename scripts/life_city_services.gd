@@ -41,6 +41,8 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 	player = player_node
 	vehicle = vehicle_node
 	network = network_node
+	if ledger and ledger.has_signal("balance_changed") and not ledger.balance_changed.is_connected(_on_balance_changed):
+		ledger.balance_changed.connect(_on_balance_changed)
 
 func _ready() -> void:
 	_seed_phone()
