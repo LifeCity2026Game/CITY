@@ -632,7 +632,7 @@ func repair_vehicle() -> void:
 		if speed_label:
 			speed_label.text = "برای تعمیر خودرو توقف کن"
 		return
-	if global_position.distance_to(Vector3(-55.0, 0.2, 55.0)) > 18.0:
+	if global_position.distance_to(Vector3(-55.0, 0.2, 64.0)) > 18.0:
 		if speed_label:
 			speed_label.text = "برای تعمیر به تعمیرگاه خودرو برو"
 		return
