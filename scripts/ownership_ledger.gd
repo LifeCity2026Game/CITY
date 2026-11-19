@@ -23,7 +23,7 @@ const CATALOG := {
 	"تیبا": 8000, "تیبا ۲": 9000, "پراید": 6000
 }
 const NPC_IDS := ["NPC-001", "NPC-002", "NPC-003", "NPC-004", "NPC-005", "NPC-006"]
-var balances: Dictionary = {1: 0}
+var balances: Dictionary = {1: 10000}
 var documents: Dictionary = {}
 var next_document_number := 1
 var cash_transactions: Dictionary = {}
