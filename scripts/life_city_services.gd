@@ -745,16 +745,42 @@ func _render_page() -> void:
 					account_lines.append("%s: %s" % [str(account.get("number", "حساب")), str(account.get("balance_display", "0"))])
 				var asset_lines: Array[String] = []
 				for asset in record.get("assets", []):
-					asset_lines.append(str(asset.get("item_id", "دارایی")))
+					asset_lines.append("%s | نشانی: %s | پلاک: %s | قیمت: %s" % [
+						str(asset.get("item_id", "دارایی")), str(asset.get("address", "ندارد")),
+						str(asset.get("plate", "ندارد")), str(asset.get("purchase_price", 0))
+					])
+				var transaction_lines: Array[String] = []
+				for transaction in record.get("transactions", []):
+					transaction_lines.append("%s: %s | %s | %s" % [
+						str(transaction.get("type", transaction.get("transaction_id", "تراکنش"))),
+						str(transaction.get("amount", 0)), str(transaction.get("reason", "")),
+						str(transaction.get("status", "ثبت‌شده"))
+					])
+				var cheque_lines: Array[String] = []
+				for cheque in record.get("cheque_history", []):
+					cheque_lines.append("%s | %s | %s | %s" % [
+						str(cheque.get("cheque_id", "")), str(cheque.get("item", "")),
+						str(cheque.get("amount", 0)), str(cheque.get("status", ""))
+					])
+				var prison_lines: Array[String] = []
+				for prison in record.get("prison_records", []):
+					prison_lines.append("%s | %s | %s" % [
+						str(prison.get("record_id", "پرونده")), str(prison.get("status", "")),
+						str(prison.get("reason", ""))
+					])
 				var name := str(citizen.get("name", "شهروند"))
 				var peer_id := int(citizen.get("owner_peer_id", -999))
 				var kind := "بازیکن" if str(citizen.get("owner_type", "")) == "player" else "NPC"
-				var summary := "%s | %s | وضعیت تأهل: %s\nحساب‌ها: %s\nدارایی‌ها: %s\nچک پاس‌شده: %d | برگشتی: %d | تراکنش: %d | پرونده زندان: %d" % [
-					name, kind, str(record.get("marital_status", "نامشخص")),
+				var summary := "%s | %s | وضعیت تأهل: %s | شناسه شبکه: %s\nحساب‌ها و موجودی: %s\nدارایی‌ها، نشانی و پلاک: %s\nتراکنش‌ها: %s\nسوابق چک: %s\nپرونده‌های زندان: %s\nچک پاس‌شده: %d | برگشتی: %d | مجموع خرید: %d | مالیات: %d | محرومیت چک: %s" % [
+					name, kind, str(record.get("marital_status", "نامشخص")), str(peer_id),
 					str(account_lines) if not account_lines.is_empty() else "بدون حساب بانکی",
 					str(asset_lines) if not asset_lines.is_empty() else "بدون دارایی ثبت‌شده",
+					str(transaction_lines) if not transaction_lines.is_empty() else "بدون تراکنش",
+					str(cheque_lines) if not cheque_lines.is_empty() else "بدون سابقه چک",
+					str(prison_lines) if not prison_lines.is_empty() else "بدون پرونده زندان",
 					int(record.get("honoured_cheque_spends", 0)), int(record.get("dishonoured_cheque_spends", 0)),
-					record.get("transactions", []).size(), record.get("prison_records", []).size()
+					int(record.get("total_purchases", 0)), int(record.get("total_tax_paid", 0)),
+					"بله" if bool(record.get("cheque_banned", false)) else "خیر"
 				]
 				layout.add_child(_label(summary))
 				if _is_creator() and peer_id > 0:
