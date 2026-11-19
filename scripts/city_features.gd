@@ -40,11 +40,6 @@ func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_nod
 func _process(delta: float) -> void:
 	day_clock = fposmod(day_clock + delta / 360.0, 1.0)
 	_update_day_night()
-	for i in range(traffic_cars.size()):
-		var car := traffic_cars[i]
-		car.position.z += delta * (7.0 + float(i % 3) * 1.8)
-		if car.position.z > 112.0:
-			car.position.z = -112.0
 	for i in range(pedestrians.size()):
 		var walker := pedestrians[i]
 		walker.position.x += sin(Time.get_ticks_msec() * 0.0004 + float(i)) * delta * 0.7
@@ -96,9 +91,16 @@ func _build_facades() -> void:
 
 func _build_traffic() -> void:
 	for i in range(4):
-		var car := Node3D.new()
+		var car := CharacterBody3D.new()
 		car.name = "AmbientTraffic_%d" % i
 		car.position = Vector3(-5.5 if i % 2 == 0 else 5.5, 0.65, -90.0 + float(i) * 48.0)
+		var car_collision := CollisionShape3D.new()
+		var car_shape := BoxShape3D.new()
+		car_shape.size = Vector3(2.0, 1.25, 3.9)
+		car_collision.shape = car_shape
+		car.add_child(car_collision)
+		car.set_meta("traffic_speed", 7.0 + float(i % 3) * 1.8)
+		car.set_meta("traffic_blocked", false)
 		add_child(car)
 		var paints: Array[Color] = [Color(0.72, 0.12, 0.10), Color(0.12, 0.28, 0.66), Color(0.78, 0.78, 0.72), Color(0.12, 0.13, 0.14)]
 		var paint: Color = paints[i]
@@ -117,6 +119,17 @@ func _build_traffic() -> void:
 				wheel.material_override = _mat(Color(0.035, 0.035, 0.04))
 				car.add_child(wheel)
 		traffic_cars.append(car)
+
+func _physics_process(delta: float) -> void:
+	for car in traffic_cars:
+		if not is_instance_valid(car):
+			continue
+		var speed := float(car.get_meta("traffic_speed", 7.0))
+		car.velocity = Vector3(0.0, -2.0, speed)
+		var collision := car.move_and_collide(car.velocity * delta)
+		if collision:
+			car.velocity = Vector3.ZERO
+			car.set_meta("traffic_blocked", true)
 
 func _build_pedestrians() -> void:
 	for i in range(6):
