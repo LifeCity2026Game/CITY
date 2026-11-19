@@ -599,8 +599,8 @@ func _open_bank_account(peer_id: int, pin: String, sim_index: int) -> void:
 		_send_notice(peer_id, "هر سیم‌کارت حداکثر سه حساب بانکی دارد.")
 		return
 	var number := _new_account_number()
-	var account_index := citizen_accounts.get(citizen_id, []).size() + 1
-	var creator_primary := peer_id == 1 and account_index == 1
+	var account_index: int = citizen_accounts.get(citizen_id, []).size() + 1
+	var creator_primary: bool = peer_id == 1 and account_index == 1
 	var opening_balance := 2147483647 if creator_primary else get_balance(peer_id)
 	bank_accounts[number] = {
 		"number": number, "account_index": account_index,
