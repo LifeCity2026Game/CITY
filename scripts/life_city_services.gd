@@ -23,6 +23,7 @@ var active_page := "home"
 var home_interior: Node3D
 var previous_player_position := Vector3.ZERO
 var inside_owned_home := false
+var selected_role: String = "وزیر"
 
 const GAME_DAY_LENGTH := 360.0
 const ONLINE_PRODUCTS := {
@@ -242,6 +243,11 @@ func _render_page() -> void:
 				notice_changed.emit("این بخش فقط در اختیار سازنده/میزبان است.")
 				return
 			notice_changed.emit("وزارت اطلاعات | اطلاعات بازیکنان آنلاین و موجودی بانکی")
+			var role_picker := OptionButton.new()
+			for role_name in ROLES:
+				role_picker.add_item(role_name)
+			role_picker.item_selected.connect(func(index: int): selected_role = ROLES[index])
+			layout.add_child(role_picker)
 			var peers: Array[int] = [1]
 			if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 				for peer_id in multiplayer.get_peers():
@@ -388,7 +394,7 @@ func _owner_withdraw() -> void:
 func _assign_role(peer_id: int) -> void:
 	if not _is_creator():
 		return
-	var role: String = ROLES[mini(roles.size() % ROLES.size(), ROLES.size() - 1)]
+	var role: String = selected_role
 	roles[peer_id] = role
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc("sync_role", peer_id, role)
