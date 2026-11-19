@@ -22,7 +22,7 @@ const CATALOG := {
 	"لکسوس RX": 78000, "فراری": 240000, "لامبورگینی": 320000,
 	"تیبا": 8000, "تیبا ۲": 9000, "پراید": 6000
 }
-const NPC_IDS := ["NPC-001", "NPC-002"]
+const NPC_IDS := ["NPC-001", "NPC-002", "NPC-003", "NPC-004", "NPC-005", "NPC-006"]
 var balances: Dictionary = {1: 10000}
 var documents: Dictionary = {}
 var next_document_number := 1
@@ -738,6 +738,8 @@ func set_role_permissions(actor_peer: int, target_peer: int, permissions: Dictio
 		return false
 	role_permissions[str(target_peer)] = permissions.duplicate(true)
 	_save_ledger()
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server() and multiplayer.get_peers().has(target_peer):
+		send_permission_snapshot(target_peer)
 	return true
 
 func central_bank_withdraw(actor_peer: int, target_account: String, amount: int, reason: String) -> bool:
