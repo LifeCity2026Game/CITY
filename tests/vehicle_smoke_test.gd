@@ -97,13 +97,17 @@ func _run_vehicle_checks() -> void:
 		_fail("Headlights did not turn on")
 		return
 	car._toggle_lights()
-	car._set_control("right", true)
+	var steering_button := car.controls_layer.get_node_or_null("Hold_right") as Button
+	if steering_button == null:
+		_fail("Right steering touch button is missing")
+		return
+	steering_button.button_down.emit()
 	await physics_frame
 	await physics_frame
 	if absf(car.front_wheels[0].rotation.y) < 0.01 or absf(car.steering_wheel.rotation.z) < 0.01:
 		_fail("Steering failed: input=%s front=%s wheel=%s" % [str(car.steering), str(car.front_wheels[0].rotation.y), str(car.steering_wheel.rotation.z)])
 		return
-	car._set_control("right", false)
+	steering_button.button_up.emit()
 	car._toggle_hood()
 	if not car.hood_open:
 		_fail("Hood did not open")
@@ -167,7 +171,11 @@ func _run_vehicle_checks() -> void:
 	if car.transmission_mode != "manual":
 		_fail("Manual transmission mode did not activate")
 		return
-	car._set_control("clutch", true)
+	var clutch_button := car.controls_layer.get_node_or_null("Hold_clutch") as Button
+	if clutch_button == null:
+		_fail("Manual clutch touch button is missing")
+		return
+	clutch_button.button_down.emit()
 	if not car.clutch_pressed:
 		_fail("Manual clutch pedal did not engage")
 		return
@@ -175,28 +183,36 @@ func _run_vehicle_checks() -> void:
 	if car.gear != "1":
 		_fail("Manual gear selector did not engage first gear")
 		return
-	car._set_control("accelerate", true)
+	var accelerator_button := car.controls_layer.get_node_or_null("Hold_accelerate") as Button
+	if accelerator_button == null:
+		_fail("Accelerator touch button is missing")
+		return
+	accelerator_button.button_down.emit()
 	for clutch_hold_frame in range(15):
 		await physics_frame
 	if absf(car.current_speed) > 0.1:
 		_fail("Pressed clutch did not disengage engine drive")
 		return
-	car._set_control("accelerate", false)
-	car._set_control("clutch", false)
+	accelerator_button.button_up.emit()
+	clutch_button.button_up.emit()
 	if car.clutch_pressed:
 		_fail("Manual clutch pedal did not release")
 		return
-	car._set_control("accelerate", true)
+	accelerator_button.button_down.emit()
 	for manual_drive_frame in range(30):
 		await physics_frame
 	if car.current_speed <= 0.0:
 		_fail("Manual first gear did not drive after clutch release")
 		return
-	car._set_control("accelerate", false)
-	car._set_control("brake", true)
+	accelerator_button.button_up.emit()
+	var brake_button := car.controls_layer.get_node_or_null("Hold_brake") as Button
+	if brake_button == null:
+		_fail("Brake touch button is missing")
+		return
+	brake_button.button_down.emit()
 	for manual_stop_frame in range(30):
 		await physics_frame
-	car._set_control("brake", false)
+	brake_button.button_up.emit()
 	if absf(car.current_speed) > 1.0:
 		_fail("Manual transmission test vehicle did not stop")
 		return
@@ -208,24 +224,24 @@ func _run_vehicle_checks() -> void:
 	# The vehicle starts in Park; select Drive before testing acceleration.
 	car.gear = "D"
 	car._update_gear_label()
-	car._set_control("accelerate", true)
+	accelerator_button.button_down.emit()
 	for frame in range(30):
 		await physics_frame
 	if car.current_speed <= 0.0:
 		_fail("Vehicle did not accelerate in Drive")
 		return
 	var forward_speed: float = car.current_speed
-	car._set_control("accelerate", false)
-	car._set_control("brake", true)
+	accelerator_button.button_up.emit()
+	brake_button.button_down.emit()
 	for brake_frame in range(20):
 		await physics_frame
 	if car.current_speed >= forward_speed:
 		_fail("Brake pedal did not reduce forward speed")
 		return
-	car._set_control("brake", false)
+	brake_button.button_up.emit()
 	car.current_speed = 0.0
 	car.gear = "R"
-	car._set_control("accelerate", true)
+	accelerator_button.button_down.emit()
 	for reverse_frame in range(30):
 		await physics_frame
 	if car.current_speed >= 0.0:
@@ -238,7 +254,7 @@ func _run_vehicle_checks() -> void:
 	if absf(car.current_speed) > 1.0:
 		_fail("Brake pedal did not stop the vehicle in reverse")
 		return
-	car._set_control("brake", false)
+	brake_button.button_up.emit()
 	car.current_speed = 0.0
 	car.gear = "P"
 	car._toggle_vehicle()
