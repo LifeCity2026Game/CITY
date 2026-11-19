@@ -488,9 +488,10 @@ func _seed_citizens() -> void:
 	if not _is_authority():
 		return
 	_ensure_citizen("11000001", "player", 1, "سازنده")
+	var primary_number := ""
 	# Account 1 belongs to the creator and has an unlimited balance.
 	if citizen_accounts["11000001"].is_empty():
-		var primary_number := _new_account_number()
+		primary_number = _new_account_number()
 		bank_accounts[primary_number] = {
 			"number": primary_number, "account_index": 1,
 			"citizen_id": "11000001", "owner_type": "player",
@@ -500,7 +501,7 @@ func _seed_citizens() -> void:
 		}
 		citizen_accounts["11000001"].append(primary_number)
 	else:
-		var primary_number := str(citizen_accounts["11000001"][0])
+		primary_number = str(citizen_accounts["11000001"][0])
 		if bank_accounts.has(primary_number):
 			bank_accounts[primary_number]["account_index"] = 1
 			bank_accounts[primary_number]["unlimited_balance"] = true
