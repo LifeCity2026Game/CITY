@@ -175,6 +175,13 @@ func _run_vehicle_checks() -> void:
 	if car.gear != "1":
 		_fail("Manual gear selector did not engage first gear")
 		return
+	car._set_control("accelerate", true)
+	for clutch_hold_frame in range(15):
+		await physics_frame
+	if absf(car.current_speed) > 0.1:
+		_fail("Pressed clutch did not disengage engine drive")
+		return
+	car._set_control("accelerate", false)
 	car._set_control("clutch", false)
 	if car.clutch_pressed:
 		_fail("Manual clutch pedal did not release")
