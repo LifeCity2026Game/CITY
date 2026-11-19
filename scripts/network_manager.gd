@@ -50,6 +50,10 @@ func _on_peer_connected(peer_id: int) -> void:
 	var ledger := get_parent().get_node_or_null("OwnershipLedger")
 	if ledger:
 		ledger.send_snapshot(peer_id)
+	var services := get_parent().get_node_or_null("LifeCityServices")
+	if services:
+		for role_peer_id in services.roles.keys():
+			services.rpc_id(peer_id, "sync_role", int(role_peer_id), str(services.roles[role_peer_id]))
 	_spawn_remote(peer_id)
 	rpc("spawn_remote", peer_id)
 	rpc_id(peer_id, "spawn_remote", 1)
