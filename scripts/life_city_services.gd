@@ -17,6 +17,7 @@ var account_input: LineEdit
 var reason_input: LineEdit
 var permissions_draft: Dictionary = {}
 var own_accounts_cache: Array = []
+var account_list_requested := false
 var order_list: Array[Dictionary] = []
 var sim_cards: Array[Dictionary] = []
 var roles: Dictionary = {1: "سازنده"}
@@ -240,7 +241,9 @@ func _render_page() -> void:
 			pin_input = _add_input("رمز ۴ تا ۸ رقمی برای افتتاح حساب")
 			_add_button(layout, "افتتاح حساب بانکی", "open_account")
 			if ledger:
-				ledger.request_own_bank_accounts()
+				if not account_list_requested:
+					account_list_requested = true
+					ledger.request_own_bank_accounts()
 				for account in own_accounts_cache:
 					layout.add_child(_label("حساب: %s | موجودی: %d | رمز: محرمانه" % [str(account.get("number", "")), int(account.get("balance", 0))]))
 		"bank":
@@ -419,6 +422,8 @@ func _render_page() -> void:
 
 func _on_own_accounts_received(accounts: Array) -> void:
 	own_accounts_cache = accounts.duplicate(true)
+	if active_page == "phone":
+		_render_page()
 
 func _on_central_bank_snapshot_received(data: Dictionary) -> void:
 	if data.is_empty():
