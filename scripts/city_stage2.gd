@@ -55,7 +55,8 @@ func _is_owner() -> bool:
 
 func _ready() -> void:
 	_seed_npcs()
-	_build_interface()
+	# The old Stage 2 overlay is retired. The current LifeCityServices UI
+	# replaces it; keep the underlying systems and data without duplicate buttons.
 	_refresh()
 
 func _seed_npcs() -> void:
@@ -128,8 +129,11 @@ func _clear_actions() -> void:
 		child.queue_free()
 
 func _refresh() -> void:
-	status_label.text = notice
-	details_label.text = "برای مشاهده موجودی، اینترنت‌بانک موبایل را باز کن."
+	# The retired legacy overlay has no labels; its data systems remain available.
+	if is_instance_valid(status_label):
+		status_label.text = notice
+	if is_instance_valid(details_label):
+		details_label.text = "برای مشاهده موجودی، اینترنت‌بانک موبایل را باز کن."
 
 func _on_action(action: String, arg: String = "") -> void:
 	var private_areas := {
