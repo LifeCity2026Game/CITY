@@ -427,8 +427,6 @@ func _render_page() -> void:
 
 func _on_own_accounts_received(accounts: Array) -> void:
 	own_accounts_cache = accounts.duplicate(true)
-	if active_page == "phone" and not account_request_in_progress:
-		_render_page()
 
 func _on_central_bank_snapshot_received(data: Dictionary) -> void:
 	if data.is_empty():
