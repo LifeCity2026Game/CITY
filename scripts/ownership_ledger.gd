@@ -511,6 +511,10 @@ func _seed_citizens() -> void:
 		var npc_id := "NPC-%03d" % i
 		var citizen_id := "9900%04d" % i
 		_ensure_citizen(citizen_id, "npc", -i, "شهروند NPC %d" % i)
+		if i == 6:
+			for obsolete_number in citizen_accounts[citizen_id]:
+				bank_accounts.erase(str(obsolete_number))
+			citizen_accounts[citizen_id].clear()
 		if i <= 5:
 			if citizen_accounts[citizen_id].is_empty():
 				var account_number := _new_account_number()
