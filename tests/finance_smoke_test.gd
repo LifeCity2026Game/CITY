@@ -16,14 +16,29 @@ func _run() -> void:
 	await process_frame
 
 	print("FINANCE_CHECKPOINT_ACCOUNT")
+	var accounts: Array[Dictionary] = ledger.get_accounts_for_peer(1)
+	assert(accounts.size() == 1, "creator primary account was not seeded")
+	var primary_account: Dictionary = accounts[0]
+	var primary_number := str(primary_account.get("number", ""))
+	assert(int(primary_account.get("account_index", 0)) == 1, "creator account must be account 1")
+	assert(bool(primary_account.get("unlimited_balance", false)), "creator account 1 must have unlimited balance")
+	assert(str(primary_account.get("balance_display", "")) == "نامحدود", "creator account must display unlimited balance")
 	ledger.balances[1] = 20000
 	ledger.request_open_bank_account("1234")
-	var accounts: Array[Dictionary] = ledger.get_accounts_for_peer(1)
-	assert(accounts.size() == 1, "account creation failed")
-	var account: Dictionary = accounts[0]
+	accounts = ledger.get_accounts_for_peer(1)
+	assert(accounts.size() == 2, "secondary finite account creation failed")
+	var account: Dictionary = accounts[1]
 	var account_number := str(account.get("number", ""))
 	assert(account_number.length() == 8 and account_number.is_valid_int(), "account number must be 8 numeric digits")
 	assert(str(ledger.bank_accounts[account_number].pin_hash) != "1234", "PIN must not be stored in plaintext")
+	var npc_card_indexes: Dictionary = {}
+	for npc_number in ledger.bank_accounts.keys():
+		var seeded_card: Dictionary = ledger.bank_accounts[npc_number]
+		var card_index := int(seeded_card.get("account_index", 0))
+		if card_index >= 2 and card_index <= 6:
+			npc_card_indexes[card_index] = true
+			assert(int(seeded_card.get("balance", -1)) == 0, "NPC accounts 2-6 must start empty")
+	assert(npc_card_indexes.size() == 5, "NPC cards 2-6 were not seeded")
 
 	print("FINANCE_CHECKPOINT_CHEQUE")
 	ledger.request_issue_cheque(account_number, "1234", 6000)
@@ -56,8 +71,16 @@ func _run() -> void:
 	print("FINANCE_CHECKPOINT_PURCHASE")
 	ledger._account_purchase(1, account_number, "1234", "گوشی هوشمند")
 	assert(ledger.central_bank_treasury == 450, "10 percent tax was not booked")
-	assert(ledger.central_bank_withdraw(1, account_number, 100, "آزمون برداشت خزانه"), "Central Bank withdrawal failed")
-	assert(ledger.central_bank_treasury == 350, "Central Bank treasury withdrawal amount is incorrect")
+	assert(ledger.central_bank_withdraw(1, primary_number, 50, "برداشت به کارت اصلی"), "Central Bank could not credit creator primary card")
+	assert(ledger.central_bank_withdraw(1, account_number, 100, "آزمون برداشت به کارت دوم"), "Central Bank withdrawal to creator secondary card failed")
+	ledger.balances[2] = 0
+	ledger._open_bank_account(2, "2222", 0)
+	var player_two_accounts: Array[Dictionary] = ledger.get_accounts_for_peer(2)
+	assert(not player_two_accounts.is_empty(), "online player's bank card was not created")
+	var player_two_card := str(player_two_accounts[0].get("number", ""))
+	assert(ledger.central_bank_withdraw(1, player_two_card, 75, "برداشت به کارت بازیکن آنلاین"), "Central Bank could not credit another player's card")
+	assert(int(ledger.bank_accounts[player_two_card].balance) == 75, "other player's card did not receive Central Bank funds")
+	assert(ledger.central_bank_treasury == 225, "Central Bank treasury withdrawal amount is incorrect")
 
 	var profile: Dictionary = ledger.get_citizen_full_record(str(account.citizen_id))
 	assert(not profile.is_empty(), "citizen full record lookup failed")
@@ -65,12 +88,24 @@ func _run() -> void:
 	assert(not profile.cheques.is_empty(), "citizen cheque history missing from profile")
 	var npc_account_count := 0
 	var npc_account_number := ""
+	var npc_citizen_id := ""
 	for npc_number in ledger.bank_accounts.keys():
 		var npc_account: Dictionary = ledger.bank_accounts[npc_number]
 		if str(npc_account.get("owner_type", "")) == "npc":
 			npc_account_count += 1
-			npc_account_number = str(npc_number)
-	assert(npc_account_count >= 6, "NPC bank accounts were not seeded")
+			if int(npc_account.get("account_index", 0)) == 2:
+				npc_account_number = str(npc_number)
+				npc_citizen_id = str(npc_account.get("citizen_id", ""))
+	assert(npc_account_count == 5, "Exactly five NPC cards should occupy account slots 2-6")
+	print("FINANCE_CHECKPOINT_NPC_TRANSFER")
+	var npc_before := int(ledger.bank_accounts[npc_account_number].get("balance", -1))
+	ledger._account_transfer(1, account_number, "1234", npc_account_number, 200)
+	assert(int(ledger.bank_accounts[npc_account_number].balance) == npc_before + 200, "NPC card balance was not credited")
+	var npc_profile: Dictionary = ledger.get_citizen_full_record(npc_citizen_id)
+	assert(not npc_profile.is_empty(), "NPC citizen file could not be loaded")
+	assert(int(npc_profile.accounts[0].balance) == npc_before + 200, "NPC citizen file did not reflect the credited balance")
+	assert(not npc_profile.transactions.is_empty(), "NPC citizen file did not record incoming transfer")
+	assert(int(ledger.bank_accounts[primary_number].balance) == 2147483647, "unlimited creator account was reduced")
 	print("FINANCE_CHECKPOINT_SHARED_CARD")
 	ledger.balances[2] = 0
 	ledger.bank_accounts[account_number].balance = 10000
