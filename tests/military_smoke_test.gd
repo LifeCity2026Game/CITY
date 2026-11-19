@@ -103,5 +103,14 @@ func _run_military_checks() -> void:
 	if city_building_count < 10:
 		_fail("City building registry is unexpectedly small")
 		return
+	services.selected_role = "وزیر"
+	services._assign_role(2)
+	if not services._has_role(2, "شهردار") or not services._has_role(2, "وزیر"):
+		_fail("A citizen could not hold two simultaneous roles")
+		return
+	services._remove_role(2)
+	if services._has_role(2, "وزیر") or not services._has_role(2, "شهردار"):
+		_fail("Removing one role incorrectly removed another assigned role")
+		return
 	print("MILITARY_SMOKE_TEST_PASS")
 	quit(0)
