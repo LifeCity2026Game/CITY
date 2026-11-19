@@ -33,7 +33,6 @@ func configure(player_node: CharacterBody3D, env_node: WorldEnvironment, sun_nod
 	player = player_node
 	world_environment = env_node
 	sun = sun_node
-	_build_facades()
 	_build_traffic()
 	_build_pedestrians()
 	_build_interiors()
