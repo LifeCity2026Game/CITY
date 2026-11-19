@@ -216,7 +216,14 @@ func _render_page() -> void:
 			notice_changed.emit("پارکینگ خودروهای خریداری‌شده؛ انتخاب خودرو و اسپاون در شهر.")
 			for car in CAR_PRICES:
 				_add_button(layout, "خرید %s | %d سکه" % [car, CAR_PRICES[car]], "buy_car", car)
-			for car in owned_vehicles:
+			var garage_cars: Array[String] = owned_vehicles.duplicate()
+			if ledger:
+				var owner_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				for document in ledger.get_documents_for(owner_id):
+					var item_name := str(document.get("item_id", ""))
+					if CAR_PRICES.has(item_name) and not garage_cars.has(item_name):
+						garage_cars.append(item_name)
+			for car in garage_cars:
 				_add_button(layout, "اسپاون " + car, "spawn_car", car)
 		"intel":
 			if not _is_creator():
@@ -243,7 +250,8 @@ func _label(value: String) -> Label:
 	return label
 
 func _get_balance(peer_id: int = 1) -> int:
-	return int(ledger.get_balance(peer_id)) if ledger else 10000
+	var actual_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else peer_id
+	return int(ledger.get_balance(actual_peer)) if ledger else 10000
 
 func _buy_online(item: String) -> void:
 	var price := int(ONLINE_PRODUCTS.get(item, 0))
@@ -276,7 +284,13 @@ func _buy_car(car: String) -> void:
 	notice_changed.emit("خودرو خریداری شد و به پنل پارکینگ اضافه شد.")
 
 func _spawn_car(car: String) -> void:
-	if not vehicle or not owned_vehicles.has(car):
+	var has_car := owned_vehicles.has(car)
+	if ledger:
+		var owner_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+		for document in ledger.get_documents_for(owner_id):
+			if str(document.get("item_id", "")) == car:
+				has_car = true
+	if not vehicle or not has_car:
 		notice_changed.emit("این خودرو در مالکیت تو نیست.")
 		return
 	var selector := vehicle.controls_layer.get_node_or_null("ModelSelector") as Button
