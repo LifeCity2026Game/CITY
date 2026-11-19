@@ -63,6 +63,7 @@ var hood_open := false
 var trunk_open := false
 var climate_label: Label
 var transmission_label: Label
+var style_root: Node3D
 
 func _ready() -> void:
 	_build_vehicle()
@@ -416,11 +417,73 @@ func _cycle_vehicle_model() -> void:
 			var part_material := part.material_override as StandardMaterial3D
 			if part_material:
 				part_material.albedo_color = spec.color
+	_apply_vehicle_style(str(spec.style), spec.color)
+	_apply_interior_profile(spec.color, model_index)
 	var model_button := controls_layer.get_node_or_null("ModelSelector") as Button
 	if model_button:
 		model_button.text = "انتخاب خودرو: " + vehicle_name
 	if speed_label:
 		speed_label.text = "خودرو انتخاب شد: " + vehicle_name
+
+
+func _apply_vehicle_style(style: String, paint: Color) -> void:
+	if style_root:
+		style_root.queue_free()
+	style_root = Node3D.new()
+	style_root.name = "VehicleStyleParts"
+	add_child(style_root)
+	var dark_trim := Color(0.035, 0.04, 0.05)
+	var chrome := Color(0.62, 0.66, 0.70)
+	match style:
+		"suv":
+			for side in [-1.0, 1.0]:
+				_box(style_root, "RoofRail", Vector3(side * 0.62, 1.92, 0.12), Vector3(0.075, 0.07, 1.82), chrome, 0.8)
+				_box(style_root, "WheelArch", Vector3(side * 1.02, 0.72, -1.28), Vector3(0.10, 0.34, 0.95), dark_trim)
+				_box(style_root, "WheelArch", Vector3(side * 1.02, 0.72, 1.28), Vector3(0.10, 0.34, 0.95), dark_trim)
+			_box(style_root, "SUVFrontGuard", Vector3(0, 0.40, -2.18), Vector3(1.72, 0.16, 0.16), chrome, 0.75)
+		"sport", "supercar":
+			_box(style_root, "FrontSplitter", Vector3(0, 0.34, -2.20), Vector3(2.02, 0.10, 0.32), dark_trim, 0.4)
+			_box(style_root, "RearWing", Vector3(0, 1.60, 1.82), Vector3(1.72, 0.09, 0.28), paint, 0.45)
+			for side in [-1.0, 1.0]:
+				_box(style_root, "WingSupport", Vector3(side * 0.58, 1.48, 1.82), Vector3(0.07, 0.26, 0.08), chrome, 0.7)
+				_box(style_root, "SideIntake", Vector3(side * 0.94, 0.90, 0.48), Vector3(0.06, 0.22, 0.68), dark_trim)
+		"hatch":
+			_box(style_root, "HatchSpoiler", Vector3(0, 1.76, 1.16), Vector3(1.35, 0.10, 0.34), paint, 0.45)
+			_box(style_root, "RearDiffuser", Vector3(0, 0.36, 2.17), Vector3(1.35, 0.12, 0.16), dark_trim)
+		"luxury":
+			_box(style_root, "ChromeGrille", Vector3(0, 0.78, -2.065), Vector3(0.94, 0.18, 0.045), chrome, 0.9)
+			for side in [-1.0, 1.0]:
+				_box(style_root, "ChromeTrim", Vector3(side * 0.99, 0.76, 0.0), Vector3(0.035, 0.055, 2.8), chrome, 0.9)
+		"compact":
+			_box(style_root, "CompactFrontGrille", Vector3(0, 0.76, -2.06), Vector3(0.58, 0.16, 0.045), chrome, 0.65)
+			_box(style_root, "CompactRearTrim", Vector3(0, 0.68, 2.08), Vector3(0.92, 0.08, 0.04), dark_trim)
+		_:
+			_box(style_root, "SedanChromeGrille", Vector3(0, 0.78, -2.06), Vector3(0.82, 0.12, 0.04), chrome, 0.85)
+
+func _apply_interior_profile(paint: Color, profile_index: int) -> void:
+	var cabin := get_node_or_null("CabinInterior")
+	if cabin == null:
+		return
+	var seat_color := Color(0.12, 0.13, 0.15)
+	if profile_index in [2, 3]:
+		seat_color = Color(0.20, 0.13, 0.09)
+	elif profile_index in [4, 5]:
+		seat_color = Color(0.055, 0.055, 0.06)
+	elif profile_index in [6, 7, 8]:
+		seat_color = Color(0.17, 0.16, 0.14)
+	for seat_name in ["SeatBase", "SeatBack", "HeadRest"]:
+		for seat in cabin.find_children(seat_name, "MeshInstance3D", true, false):
+			seat.material_override = _mat(seat_color, 0.0, 0.62)
+	var dashboard := cabin.get_node_or_null("Dashboard") as MeshInstance3D
+	if dashboard:
+		dashboard.material_override = _mat(paint.darkened(0.72), 0.15, 0.48)
+	var display := cabin.get_node_or_null("CenterDisplay") as MeshInstance3D
+	if display:
+		var display_material := _mat(Color(0.015, 0.12, 0.17))
+		display_material.emission_enabled = true
+		display_material.emission = Color(0.02, 0.28, 0.42)
+		display_material.emission_energy_multiplier = 0.45
+		display.material_override = display_material
 
 func _toggle_vehicle() -> void:
 	if driver == null:
