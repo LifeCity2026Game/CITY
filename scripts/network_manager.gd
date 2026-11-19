@@ -49,6 +49,7 @@ func _on_peer_connected(peer_id: int) -> void:
 	status_changed.emit("بازیکن جدید متصل شد؛ شناسه بازیکن: %d" % peer_id)
 	var ledger := get_parent().get_node_or_null("OwnershipLedger")
 	if ledger:
+		ledger.register_online_player(peer_id)
 		ledger.send_snapshot(peer_id)
 		ledger.send_permission_snapshot(peer_id)
 	var services := get_parent().get_node_or_null("LifeCityServices")
