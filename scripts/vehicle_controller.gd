@@ -297,7 +297,7 @@ func _build_controls() -> void:
 	col.add_child(row3)
 	_hold_button(row3, "ترمز دستی", "handbrake")
 	_button(row3, "دنده", _cycle_gear)
-	_button(row3, "کلاچ", _toggle_clutch)
+	_hold_button(row3, "کلاچ", "clutch")
 	var row4 := HBoxContainer.new()
 	col.add_child(row4)
 	_button(row4, "دوربین", _toggle_camera)
@@ -363,6 +363,7 @@ func _set_control(action: String, pressed: bool) -> void:
 		"left": steering = -1.0 if pressed else 0.0
 		"right": steering = 1.0 if pressed else 0.0
 		"handbrake": handbrake = pressed
+		"clutch": clutch_pressed = pressed
 
 
 func _toggle_clutch() -> void:
