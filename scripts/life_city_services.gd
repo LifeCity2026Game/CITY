@@ -133,7 +133,7 @@ func _build_ui() -> void:
 	for entry in [
 		["خانه", "home"], ["موبایل و سیم‌کارت", "phone"], ["اینترنت‌بانک و چک", "bank"],
 		["فروشگاه آنلاین", "online_shop"], ["املاک حضوری", "property"],
-		["نمایشگاه خودرو و پارکینگ", "garage"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["پنل سازنده", "creator"]
+		["نمایشگاه خودرو و پارکینگ", "garage"], ["وزارت اطلاعات و مقام‌ها", "intel"], ["بانک مرکزی (مقام مجاز)", "central_bank"], ["زندان (مقام مجاز)", "prison"], ["پنل سازنده", "creator"]
 	]:
 		_add_button(layout, entry[0], "page", entry[1])
 	phone_panel.visible = false
@@ -352,16 +352,14 @@ func _render_page() -> void:
 			else:
 				ledger.request_central_bank_snapshot()
 		"prison":
-			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "release_prisoner"):
-				notice_changed.emit("دسترسی مدیریت زندان برای این مقام فعال نشده است.")
+			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_prison_records"):
+				notice_changed.emit("دسترسی مشاهده پرونده‌های زندان برای این مقام فعال نشده است.")
 				return
 			notice_changed.emit("زندان مرکزی | پرونده زندانیان و آزادی با دستور مقام مجاز")
-			target_input = _add_input("شناسه پرونده زندان")
-			reason_input = _add_input("دلیل آزادی")
-			_add_button(layout, "آزادی زندانی", "release_prisoner")
-			target_input = _add_input("شناسه پلیر برای رفع محرومیت چک")
-			reason_input = _add_input("دلیل بخشودگی محرومیت")
-			_add_button(layout, "بخشودگی محرومیت چک", "pardon_ban")
+			if ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "release_prisoner"):
+				target_input = _add_input("شناسه پرونده زندان")
+				reason_input = _add_input("دلیل آزادی")
+				_add_button(layout, "آزادی زندانی", "release_prisoner")
 			if ledger and ledger._is_authority():
 				_on_central_bank_snapshot_received(ledger.get_central_bank_snapshot(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1))
 			else:
@@ -379,10 +377,11 @@ func _render_page() -> void:
 				return
 			notice_changed.emit("کد پلیر آنلاین را وارد و اختیارات هر حوزه را جداگانه تعیین کن.")
 			target_input = _add_input("شناسه پلیر آنلاین (مثلاً ۲)")
-			permissions_draft = {"view_central_bank":false, "central_bank_withdraw":false, "view_citizen_records":false, "pardon_cheque_ban":false, "release_prisoner":false}
+			permissions_draft = {"view_central_bank":false, "central_bank_withdraw":false, "view_citizen_records":false, "view_prison_records":false, "release_prisoner":false, "pardon_cheque_ban":false, "view_intelligence":false, "command_military":false}
+			var permission_labels := {"view_central_bank":"مشاهده بانک مرکزی", "central_bank_withdraw":"برداشت از خزانه", "view_citizen_records":"مشاهده پرونده شهروندان", "view_prison_records":"مشاهده پرونده زندانیان", "release_prisoner":"آزادی زندانی", "pardon_cheque_ban":"بخشودگی محرومیت چک", "view_intelligence":"مشاهده اطلاعات وزارت اطلاعات", "command_military":"فرماندهی یگان نظامی"}
 			for permission in permissions_draft.keys():
 				var permission_check := CheckBox.new()
-				permission_check.text = permission
+				permission_check.text = str(permission_labels.get(permission, permission))
 				permission_check.toggled.connect(func(enabled: bool): permissions_draft[permission] = enabled)
 				layout.add_child(permission_check)
 			_add_button(layout, "ذخیره اختیارات مقام", "save_permissions")
@@ -393,22 +392,23 @@ func _render_page() -> void:
 			for place in ["بانک مرکزی", "بانک شهری", "کاخ ریاست جمهوری", "وزارت اطلاعات", "ستاد کل ارتش", "زندان مرکزی", "مرکز مخابرات"]:
 				_add_button(layout, "تلپورت به " + place, "teleport", place)
 		"military":
-			if not _is_creator():
-				notice_changed.emit("فرماندهی کل ارتش فقط برای سازنده است.")
+			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "command_military"):
+				notice_changed.emit("دسترسی فرماندهی ارتش برای این مقام فعال نشده است.")
 				return
 			notice_changed.emit("فرماندهی کل ارتش | هفت نیروی نظامی در ساختار فرماندهی")
 			for role_name in ROLES:
 				layout.add_child(_label(role_name))
 		"intel":
-			if not _is_creator():
-				notice_changed.emit("این بخش فقط در اختیار سازنده/میزبان است.")
+			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_intelligence"):
+				notice_changed.emit("دسترسی وزارت اطلاعات برای این مقام فعال نشده است.")
 				return
-			notice_changed.emit("وزارت اطلاعات | اطلاعات بازیکنان آنلاین و موجودی بانکی")
-			var role_picker := OptionButton.new()
-			for role_name in ROLES:
-				role_picker.add_item(role_name)
-			role_picker.item_selected.connect(func(index: int): selected_role = ROLES[index])
-			layout.add_child(role_picker)
+			notice_changed.emit("وزارت اطلاعات | اطلاعات شهروندان و مقام‌ها")
+			if _is_creator():
+				var role_picker := OptionButton.new()
+				for role_name in ROLES:
+					role_picker.add_item(role_name)
+				role_picker.item_selected.connect(func(index: int): selected_role = ROLES[index])
+				layout.add_child(role_picker)
 			var peers: Array[int] = [1]
 			if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 				for peer_id in multiplayer.get_peers():
@@ -416,11 +416,13 @@ func _render_page() -> void:
 			for peer_id in peers:
 				var balance := int(ledger.get_balance(peer_id)) if ledger else 0
 				layout.add_child(_label("شهروند %d | %s | موجودی %d" % [peer_id, str(roles.get(peer_id, "شهروند")), balance]))
-				_add_button(layout, "انتصاب مقام برای شهروند %d" % peer_id, "assign_role", str(peer_id))
-			target_input = _add_input("شناسه شهروند برای برداشت")
-			amount_input = _add_input("مبلغ برداشت")
-			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-			_add_button(layout, "برداشت سازنده از حساب شهروند", "owner_withdraw")
+				if _is_creator():
+					_add_button(layout, "انتصاب مقام برای شهروند %d" % peer_id, "assign_role", str(peer_id))
+			if _is_creator():
+				target_input = _add_input("شناسه شهروند برای برداشت")
+				amount_input = _add_input("مبلغ برداشت")
+				amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
+				_add_button(layout, "برداشت سازنده از حساب شهروند", "owner_withdraw")
 
 
 func _on_own_accounts_received(accounts: Array) -> void:
