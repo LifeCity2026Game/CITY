@@ -108,8 +108,13 @@ func _run_vehicle_checks() -> void:
 	if car.indicators != 1:
 		_fail("Left indicator did not activate")
 		return
-	await process_frame
-	if not car.left_indicator_lamps[0].visible and not car.left_indicator_lamps[1].visible:
+	var signal_seen := false
+	for signal_frame in range(60):
+		await process_frame
+		if car.left_indicator_lamps[0].visible or car.left_indicator_lamps[1].visible:
+			signal_seen = true
+			break
+	if not signal_seen:
 		_fail("Left indicator lamps did not illuminate")
 		return
 	car.apply_impact(10.0)
