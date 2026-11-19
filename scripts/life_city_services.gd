@@ -48,7 +48,9 @@ func configure(ledger_node: Node, player_node: CharacterBody3D, vehicle_node: Ch
 
 func _ready() -> void:
 	_seed_phone()
+	_load_services()
 	_build_home_interior()
+	_restore_furniture()
 	_build_ui()
 	_refresh()
 	if ledger and ledger.has_signal("balance_changed"):
@@ -175,6 +177,7 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "assign_role":
 		_assign_role(int(arg))
 	_refresh()
+	_save_services()
 
 func _render_page() -> void:
 	_clear_dynamic()
@@ -516,3 +519,59 @@ func _exit_home() -> void:
 	player.velocity = Vector3.ZERO
 	inside_owned_home = false
 	notice_changed.emit("از خانه خارج شدی.")
+
+func _save_services() -> void:
+	var payload := {
+		"sim_cards": sim_cards, "order_list": order_list, "roles": roles,
+		"placed_furniture": placed_furniture, "cheques": cheques,
+		"owned_homes": owned_homes, "owned_vehicles": owned_vehicles,
+		"game_day_seconds": game_day_seconds
+	}
+	var file := FileAccess.open("user://life_city_services.json", FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(payload))
+
+func _load_services() -> void:
+	if not FileAccess.file_exists("user://life_city_services.json"):
+		return
+	var file := FileAccess.open("user://life_city_services.json", FileAccess.READ)
+	if file == null:
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		return
+	var saved_sims: Array = parsed.get("sim_cards", [])
+	if not saved_sims.is_empty():
+		sim_cards.clear()
+		for sim in saved_sims:
+			if sim is Dictionary:
+				sim_cards.append(sim)
+	for order in parsed.get("order_list", []):
+		if order is Dictionary:
+			order_list.append(order)
+	for key in parsed.get("roles", {}).keys():
+		roles[int(key)] = str(parsed.roles[key])
+	for item in parsed.get("placed_furniture", []):
+		placed_furniture.append(str(item))
+	for cheque in parsed.get("cheques", []):
+		if cheque is Dictionary:
+			cheques.append(cheque)
+	for home in parsed.get("owned_homes", []):
+		owned_homes.append(str(home))
+	for car in parsed.get("owned_vehicles", []):
+		owned_vehicles.append(str(car))
+	game_day_seconds = float(parsed.get("game_day_seconds", 0.0))
+
+func _restore_furniture() -> void:
+	var furniture_positions := {
+		"مبل": Vector3(-2.8, 0.55, -2.0), "تخت خواب": Vector3(2.7, 0.35, -2.2),
+		"یخچال": Vector3(-5.2, 1.0, -5.2), "تلویزیون": Vector3(0, 1.1, -6.2),
+		"میز ناهارخوری": Vector3(3.8, 0.55, 2.4), "کمد": Vector3(5.3, 1.1, -1.8)
+	}
+	var dimensions := {
+		"مبل": Vector3(2.8, 1.1, 1.0), "تخت خواب": Vector3(2.4, 0.7, 2.0),
+		"یخچال": Vector3(1.0, 2.0, 1.0), "تلویزیون": Vector3(1.8, 1.1, 0.15),
+		"میز ناهارخوری": Vector3(2.0, 1.1, 1.3), "کمد": Vector3(1.2, 2.2, 0.7)
+	}
+	for item in placed_furniture:
+		_home_box("Furniture_" + item, furniture_positions.get(item, Vector3.ZERO), dimensions.get(item, Vector3.ONE), Color(0.28, 0.34, 0.42))
