@@ -36,6 +36,7 @@ var tail_material: StandardMaterial3D
 var brake_lights_active := false
 var dashboard_label: Label3D
 var controls_layer: CanvasLayer
+var controls_panel: PanelContainer
 
 const VEHICLE_CATALOG := [
 	{"name":"دنا","color":Color(0.12,0.30,0.66),"scale":Vector3(1.0,1.0,1.0),"speed":34.0,"accel":11.0,"style":"sedan"},
@@ -235,7 +236,8 @@ func _build_controls() -> void:
 	controls_layer = CanvasLayer.new()
 	controls_layer.name = "VehicleControls"
 	add_child(controls_layer)
-	var panel := PanelContainer.new()
+	controls_panel = PanelContainer.new()
+	var panel := controls_panel
 	panel.anchor_left = 1.0
 	panel.anchor_right = 1.0
 	panel.offset_left = -250
@@ -289,7 +291,14 @@ func _build_controls() -> void:
 	gear_label = Label.new()
 	gear_label.text = "دنده: P"
 	col.add_child(gear_label)
-	controls_layer.visible = false
+	controls_panel.visible = false
+	var model_button := Button.new()
+	model_button.text = "انتخاب خودرو: دنا"
+	model_button.name = "ModelSelector"
+	model_button.position = Vector2(18, 82)
+	model_button.custom_minimum_size = Vector2(190, 48)
+	controls_layer.add_child(model_button)
+	model_button.pressed.connect(_cycle_vehicle_model)
 
 func _button(parent: Node, caption: String, callback: Callable) -> Button:
 	var b := Button.new()
@@ -382,7 +391,23 @@ func _cycle_vehicle_model() -> void:
 		var roof_material := roof.material_override as StandardMaterial3D
 		if roof_material:
 			roof_material.albedo_color = spec.color.darkened(0.18)
-	scale = spec.scale
+	var body_scale: Vector3 = spec.scale
+	var body := get_node_or_null("BodyShell") as MeshInstance3D
+	if body:
+		body.scale = body_scale
+	var roof_node := get_node_or_null("Roof") as MeshInstance3D
+	if roof_node:
+		roof_node.scale = Vector3(body_scale.x, body_scale.y, body_scale.z)
+	for wheel in wheel_nodes:
+		wheel.scale = Vector3(body_scale.x, body_scale.y, body_scale.y)
+	for part_name in ["HoodPanel", "TrunkPanel", "DoorPanel"]:
+		for part in find_children(part_name, "MeshInstance3D", true, false):
+			var part_material := part.material_override as StandardMaterial3D
+			if part_material:
+				part_material.albedo_color = spec.color
+	var model_button := controls_layer.get_node_or_null("ModelSelector") as Button
+	if model_button:
+		model_button.text = "انتخاب خودرو: " + vehicle_name
 	if speed_label:
 		speed_label.text = "خودرو انتخاب شد: " + vehicle_name
 
@@ -403,7 +428,7 @@ func _toggle_vehicle() -> void:
 		occupied = true
 		vehicle_camera.current = true
 		enter_button.text = "پیاده شدن"
-		controls_layer.visible = true
+		controls_panel.visible = true
 	else:
 		if absf(current_speed) > 1.0:
 			speed_label.text = "برای پیاده شدن توقف کن"
@@ -419,7 +444,7 @@ func _toggle_vehicle() -> void:
 		if player_camera:
 			player_camera.current = true
 		enter_button.text = "سوار خودرو"
-		controls_layer.visible = false
+		controls_panel.visible = false
 		throttle = 0.0
 		steering = 0.0
 		gear = "P"
@@ -428,9 +453,18 @@ func _toggle_vehicle() -> void:
 func _cycle_gear() -> void:
 	if not occupied or absf(current_speed) > 1.0:
 		return
-	var gears := ["P", "R", "N", "D"]
-	var idx := gears.find(gear)
-	gear = gears[(idx + 1) % gears.size()]
+	if transmission_mode == "manual":
+		if not clutch_pressed:
+			if speed_label:
+				speed_label.text = "برای تعویض دنده کلاچ بگیر"
+			return
+		var manual_gears := ["N", "1", "2", "3", "4", "5", "R"]
+		var manual_idx := manual_gears.find(gear)
+		gear = manual_gears[(manual_idx + 1) % manual_gears.size()]
+	else:
+		var automatic_gears := ["P", "R", "N", "D"]
+		var automatic_idx := automatic_gears.find(gear)
+		gear = automatic_gears[(automatic_idx + 1) % automatic_gears.size()]
 	_update_gear_label()
 
 func _update_gear_label() -> void:
@@ -489,12 +523,16 @@ func _physics_process(delta: float) -> void:
 		active_throttle = 0.0
 	elif gear == "R":
 		active_throttle = -absf(active_throttle)
-	elif gear == "D":
+	elif gear == "D" or gear in ["1", "2", "3", "4", "5"]:
 		active_throttle = maxf(active_throttle, 0.0)
 	if transmission_mode == "manual" and not clutch_pressed:
 		active_throttle = 0.0
 	if active_throttle > 0.0:
-		current_speed = move_toward(current_speed, max_forward_speed, acceleration * delta)
+		var gear_limit := max_forward_speed
+		if transmission_mode == "manual":
+			var gear_number := int(gear)
+			gear_limit = max_forward_speed * (0.22 + float(gear_number) * 0.16)
+		current_speed = move_toward(current_speed, gear_limit, acceleration * delta)
 	elif active_throttle < 0.0:
 		if current_speed > 0.5:
 			current_speed = move_toward(current_speed, 0.0, brake_strength * delta)
