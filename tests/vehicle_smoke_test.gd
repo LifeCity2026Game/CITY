@@ -40,6 +40,24 @@ func _run_vehicle_checks() -> void:
 	if car.headlamps.size() != 2 or car.tail_lamps.size() != 2:
 		_fail("Vehicle lamps are missing")
 		return
+	if car.VEHICLE_CATALOG.size() != 9:
+		_fail("The requested nine vehicle presets are not registered")
+		return
+	if car.hood_hinge == null or car.trunk_hinge == null:
+		_fail("Interactive hood or trunk hinge is missing")
+		return
+	if car.climate_label == null or car.transmission_label == null:
+		_fail("Climate or transmission status display is missing")
+		return
+	car._cycle_vehicle_model()
+	if car.vehicle_name != "پژو ۲۰۷":
+		_fail("Vehicle model selector did not switch to Peugeot 207")
+		return
+	for model_step in range(8):
+		car._cycle_vehicle_model()
+	if car.vehicle_name != "دنا":
+		_fail("Vehicle model selector did not cycle back to Dena")
+		return
 
 	if car.global_position.distance_to(player.global_position) > 7.0:
 		_fail("Player starts too far from the test vehicle")
@@ -47,6 +65,43 @@ func _run_vehicle_checks() -> void:
 	car._toggle_vehicle()
 	if not car.occupied:
 		_fail("Player could not enter the vehicle")
+		return
+
+	car._toggle_hood()
+	if not car.hood_open:
+		_fail("Hood did not open")
+		return
+	car._toggle_hood()
+	car._toggle_trunk()
+	if not car.trunk_open:
+		_fail("Trunk did not open")
+		return
+	car._toggle_trunk()
+	car._cycle_climate()
+	if car.climate_mode != "cool":
+		_fail("Climate system did not switch to cooling")
+		return
+	var temperature_before := car.cabin_temperature
+	for climate_frame in range(90):
+		await physics_frame
+	if car.cabin_temperature >= temperature_before:
+		_fail("Cooling did not change cabin temperature")
+		return
+	car._toggle_transmission()
+	if car.transmission_mode != "manual":
+		_fail("Manual transmission mode did not activate")
+		return
+	car._toggle_clutch()
+	if not car.clutch_pressed:
+		_fail("Manual clutch did not engage")
+		return
+	car._cycle_gear()
+	if car.gear != "1":
+		_fail("Manual gear selector did not engage first gear")
+		return
+	car._toggle_transmission()
+	if car.transmission_mode != "automatic":
+		_fail("Automatic transmission mode did not restore")
 		return
 
 	# The vehicle starts in Park; select Drive before testing acceleration.
