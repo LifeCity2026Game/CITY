@@ -1,4 +1,4 @@
 The nine imported CC0 vehicle GLBs were dequantized for Godot compatibility. Run the vehicle asset integration workflow against this revision.
 Fontconfig fix: 2026-11-20
 Bounds correction: mesh-local AABB
-Vertical dimensions normalization pass\n
+Vertical dimensions normalization pass\nCollision node naming fix\n
