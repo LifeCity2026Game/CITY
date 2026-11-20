@@ -1,0 +1,53 @@
+name: LIFE CITY Vehicle Asset Integration Check
+
+on:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - "assets/vehicles/**"
+      - "scripts/vehicle_controller.gd"
+      - "tests/vehicle_asset_integration_test.gd"
+      - "tools/import_free_vehicles.py"
+      - "project.godot"
+      - ".github/workflows/vehicle-assets-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vehicle-assets:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ProtonScatter editor addon required by the project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none https://github.com/HungryProton/scatter.git /tmp/proton-scatter
+          git -C /tmp/proton-scatter checkout 7198cc00078ebde61307578137c3f35223c6e438
+          mkdir -p addons/proton_scatter
+          cp -a /tmp/proton-scatter/addons/proton_scatter/. addons/proton_scatter/
+          find addons/proton_scatter -type f -name '*.blend' -delete
+      - name: Import all GLB resources in Godot
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --import --quit 2>&1 | tee vehicle-godot-import.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-godot-import.log; then
+            echo "Godot resource import reported errors."
+            exit 1
+          fi
+      - name: Test all nine GLB rigs, dimensions, wheel pivots and controller loading
+        timeout-minutes: 4
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/vehicle_asset_integration_test.gd 2>&1 | tee vehicle-assets-test.log
+          grep -q "VEHICLE_ASSET_INTEGRATION_TEST_PASS" vehicle-assets-test.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-assets-test.log; then
+            echo "Vehicle integration test reported errors."
+            exit 1
+          fi
