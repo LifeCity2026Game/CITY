@@ -24,4 +24,4 @@ textures/vram_compression/import_etc2_astc=true
 LifeCityUI="*res://addons/lifecity_ui/ui_manager.gd"
 
 [editor_plugins]
-enabled=PackedStringArray("res://addons/lifecity_ui/plugin.cfg", "res://addons/proton_scatter/plugin.cfg", "res://addons/lc_vehicle_modeling/plugin.cfg", "res://addons/lc_vehicle_interior/plugin.cfg", "res://addons/lc_vehicle_rigging/plugin.cfg", "res://addons/lc_vehicle_physics/plugin.cfg", "res://addons/lc_vehicle_damage_audio/plugin.cfg")
+enabled=PackedStringArray("res://addons/lifecity_ui/plugin.cfg", "res://addons/proton_scatter/plugin.cfg", "res://addons/lc_vehicle_modeling/plugin.cfg", "res://addons/lc_vehicle_interior/plugin.cfg", "res://addons/lc_vehicle_rigging/plugin.cfg", "res://addons/lc_vehicle_physics/plugin.cfg", "res://addons/lc_vehicle_damage_audio/plugin.cfg", "res://addons/lc_online_store/plugin.cfg")
