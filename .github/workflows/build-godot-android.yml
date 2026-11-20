@@ -168,6 +168,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test all nine distinct vehicle catalog profiles
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/vehicle_catalog_profiles_test.gd 2>&1 | tee vehicle-catalog-test.log
+          if ! grep -q "VEHICLE_CATALOG_TEST_PASS" vehicle-catalog-test.log; then
+            echo "Nine-model vehicle catalog profile test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-catalog-test.log; then
+            echo "Vehicle catalog test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Test five vehicle editor add-ons
         timeout-minutes: 2
         shell: bash
