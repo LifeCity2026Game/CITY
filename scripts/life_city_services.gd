@@ -348,7 +348,7 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "firebase_signin":
 		var firebase_signin = get_parent().get_node_or_null("FirebaseClient")
 		if firebase_signin:
-			firebase_signin.sign_in(str(email_input_value), str(password_input_value))
+			firebase_signin.sign_in(firebase_email_field.text.strip_edges() if firebase_email_field else "", firebase_password_field.text if firebase_password_field else "")
 	elif action == "firebase_signout":
 		var firebase_signout = get_parent().get_node_or_null("FirebaseClient")
 		if firebase_signout:
