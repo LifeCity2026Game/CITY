@@ -75,6 +75,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test adaptive graphics profiles and FPS scaling
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/graphics_settings_smoke_test.gd 2>&1 | tee graphics-settings-test.log
+          if ! grep -q "GRAPHICS_SETTINGS_SMOKE_TEST_PASS" graphics-settings-test.log; then
+            echo "Adaptive graphics smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" graphics-settings-test.log; then
+            echo "Graphics settings test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Test city building exteriors, interiors and entry/exit
         timeout-minutes: 3
         shell: bash
