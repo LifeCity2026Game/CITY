@@ -168,6 +168,58 @@ func _choose_ai_patrol_destination(unit: Node3D) -> void:
 	unit.set_meta("destination", next_pos)
 
 
+func _peer_can_command(peer_id: int, department: String) -> bool:
+	if peer_id == 1:
+		return true
+	var services: Node = get_parent().get_node_or_null("LifeCityServices") if get_parent() else null
+	if services != null and services.has_method("_has_role"):
+		if services._has_role(peer_id, "فرمانده کل ارتش") or services._has_role(peer_id, "فرمانده " + department):
+			return true
+	return ledger != null and ledger.can_access_permission(peer_id, "command_military")
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_military_action(action: String, argument: String, department: String, target: Vector3) -> void:
+	if not multiplayer.is_server() or not DEPARTMENTS.has(department):
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	if not _peer_can_command(sender, department):
+		rpc_id(sender, "rpc_receive_military_report", "دستور رد شد: دسترسی این شاخه برای حساب شما فعال نیست.")
+		return
+	selected_department = department
+	has_remote_target_override = true
+	remote_target_override = Vector3(clampf(target.x, -105.0, 105.0), clampf(target.y, 0.0, 60.0), clampf(target.z, -105.0, 120.0))
+	_on_action(action, argument)
+	has_remote_target_override = false
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_receive_military_report(message: String) -> void:
+	if is_instance_valid(status_label):
+		status_label.text = message
+	report_changed.emit(message)
+
+func _load_operation_audit() -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		return
+	if not FileAccess.file_exists(AUDIT_PATH):
+		return
+	var file := FileAccess.open(AUDIT_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	if parsed is Array:
+		for entry in parsed:
+			if entry is Dictionary:
+				operation_audit.append(entry)
+	while operation_audit.size() > 500:
+		operation_audit.pop_front()
+
+func _save_operation_audit() -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		return
+	var file := FileAccess.open(AUDIT_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify(operation_audit))
+
 func _can_command() -> bool:
 	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 	return _peer_can_command(peer_id, selected_department)
