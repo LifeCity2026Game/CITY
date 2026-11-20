@@ -4,8 +4,6 @@ extends Node
 signal auth_result(success: bool, message: String, user_id: String)
 
 const AUTH_BASE := "https://identitytoolkit.googleapis.com/v1/accounts:"
-const SESSION_PATH := "user://firebase_session.cfg"
-
 var api_key := ""
 var project_id := ""
 var database_url := ""
@@ -21,7 +19,6 @@ func _ready() -> void:
 	add_child(_request)
 	_request.request_completed.connect(_on_request_completed)
 	_load_config()
-	_load_session()
 
 func is_configured() -> bool:
 	return not api_key.is_empty() and not project_id.is_empty()
@@ -40,8 +37,6 @@ func sign_out() -> void:
 	refresh_token = ""
 	user_id = ""
 	email = ""
-	var cfg := ConfigFile.new()
-	cfg.save(SESSION_PATH)
 	auth_result.emit(true, "از حساب خارج شدی.", "")
 
 func _authenticate(method: String, address: String, password: String) -> void:
@@ -82,7 +77,6 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 	refresh_token = str(data.get("refreshToken", ""))
 	user_id = str(data.get("localId", ""))
 	email = str(data.get("email", ""))
-	_save_session()
 	auth_result.emit(true, "ورود موفق بود: " + email, user_id)
 
 func _friendly_error(code: String) -> String:
@@ -101,20 +95,3 @@ func _load_config() -> void:
 	api_key = str(cfg.get_value("firebase", "api_key", ""))
 	project_id = str(cfg.get_value("firebase", "project_id", ""))
 	database_url = str(cfg.get_value("firebase", "database_url", ""))
-
-func _save_session() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("session", "id_token", id_token)
-	cfg.set_value("session", "refresh_token", refresh_token)
-	cfg.set_value("session", "user_id", user_id)
-	cfg.set_value("session", "email", email)
-	cfg.save(SESSION_PATH)
-
-func _load_session() -> void:
-	var cfg := ConfigFile.new()
-	if cfg.load(SESSION_PATH) != OK:
-		return
-	id_token = str(cfg.get_value("session", "id_token", ""))
-	refresh_token = str(cfg.get_value("session", "refresh_token", ""))
-	user_id = str(cfg.get_value("session", "user_id", ""))
-	email = str(cfg.get_value("session", "email", ""))
