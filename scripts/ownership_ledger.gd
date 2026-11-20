@@ -616,6 +616,7 @@ func _open_bank_account(peer_id: int, pin: String, sim_index: int) -> void:
 	}
 	citizen_accounts[citizen_id].append(number)
 	balances[peer_id] = 0
+	_record_bank_event(peer_id, "account_opened", number, opening_balance, "افتتاح‌شده", {"citizen_id": citizen_id, "account_index": account_index})
 	account_created.emit(peer_id, number)
 	_send_own_accounts(peer_id)
 	_save_ledger()
