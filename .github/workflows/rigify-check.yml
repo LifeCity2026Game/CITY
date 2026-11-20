@@ -33,14 +33,14 @@ jobs:
           tar -xJf "/tmp/$archive" -C "$HOME/blender" --strip-components=1
           echo "$HOME/blender" >> "$GITHUB_PATH"
 
-      - name: Install free Rigify extension
+      - name: Verify bundled Rigify add-on and human meta-rig creation
         shell: bash
         run: |
           set -euo pipefail
           blender --version
-          blender --online-mode --command extension install --sync --enable rigify
+          blender --background --python tools/blender/check_rigify.py
 
-      - name: Verify Rigify and human meta-rig creation
+      - name: (removed)
         shell: bash
         run: |
           set -euo pipefail
