@@ -42,6 +42,20 @@ jobs:
           grep -q 'version="4.2.0"' addons/proton_scatter/plugin.cfg
           echo "PROTON_SCATTER_SOURCE_VERIFIED"
 
+      - name: Dequantize vehicle GLBs for Godot compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y nodejs npm
+          npm install --global @gltf-transform/cli
+          find assets/vehicles -type f -name '*.glb' -print0 | while IFS= read -r -d '' file; do
+            tmp="${file%.glb}.godot-compatible.glb"
+            gltf-transform dequantize "$file" "$tmp"
+            mv "$tmp" "$file"
+          done
+          echo "VEHICLE_GLB_DEQUANTIZE_PASS"
+
       - name: Install Android export requirements
         run: |
           apt-get update
@@ -149,7 +163,7 @@ jobs:
             exit 1
           fi
           if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" military-addons-test.log; then
-            echo "Military add-on test reported errors."
+            echo "Military add-on test reported script or runtime errors."
             exit 1
           fi
 
@@ -209,7 +223,7 @@ jobs:
             exit 1
           fi
           if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-addons-test.log; then
-            echo "Vehicle add-on test reported errors."
+            echo "Vehicle add-on test reported script or runtime errors."
             exit 1
           fi
 
@@ -256,7 +270,7 @@ jobs:
           set -o pipefail
           godot --headless --path . --script res://tests/online_store_smoke_test.gd 2>&1 | tee online-store-test.log
           if ! grep -q "ONLINE_STORE_SMOKE_TEST_PASS" online-store-test.log; then
-            echo "Online store smoke test did not pass."
+            echo "Online store test did not pass."
             exit 1
           fi
           if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" online-store-test.log; then
