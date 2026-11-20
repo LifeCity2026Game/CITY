@@ -138,6 +138,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test five military editor add-ons and registries
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/military_addons_smoke_test.gd 2>&1 | tee military-addons-test.log
+          if ! grep -q "MILITARY_ADDONS_SMOKE_TEST_PASS" military-addons-test.log; then
+            echo "Military add-on smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" military-addons-test.log; then
+            echo "Military add-on test reported errors."
+            exit 1
+          fi
+
       - name: Test vehicle entry, acceleration and exit
         timeout-minutes: 3
         shell: bash
