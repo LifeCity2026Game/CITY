@@ -7,6 +7,7 @@ on:
       - "assets/vehicles/**"
       - "scripts/vehicle_controller.gd"
       - "tests/vehicle_asset_integration_test.gd"
+      - "tests/vehicle_asset_validation_stamp.txt"
       - "tools/import_free_vehicles.py"
       - "project.godot"
       - ".github/import-free-vehicles"
