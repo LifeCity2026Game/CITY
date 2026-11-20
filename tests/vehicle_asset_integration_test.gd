@@ -1,15 +1,15 @@
 extends SceneTree
 
 const VEHICLES := [
-	{"slot":"Dena Plus","path":"res://assets/vehicles/dena_plus/dena_plus.glb","style":"dena"},
-	{"slot":"Peugeot 207","path":"res://assets/vehicles/peugeot_207/peugeot_207.glb","style":"peugeot_207"},
-	{"slot":"Land Cruiser 300","path":"res://assets/vehicles/land_cruiser_300/land_cruiser_300.glb","style":"land_cruiser"},
-	{"slot":"Lexus RX 2023","path":"res://assets/vehicles/lexus_rx_2023/lexus_rx_2023.glb","style":"lexus_rx"},
-	{"slot":"Ferrari F40","path":"res://assets/vehicles/ferrari_f40/ferrari_f40.glb","style":"ferrari"},
-	{"slot":"Lamborghini Huracan","path":"res://assets/vehicles/lamborghini_huracan/lamborghini_huracan.glb","style":"lamborghini"},
-	{"slot":"Saipa Tiba","path":"res://assets/vehicles/saipa_tiba/saipa_tiba.glb","style":"tiba"},
-	{"slot":"Saipa Tiba 2","path":"res://assets/vehicles/saipa_tiba_2/saipa_tiba_2.glb","style":"tiba_2"},
-	{"slot":"Saipa Pride 131","path":"res://assets/vehicles/saipa_pride_131/saipa_pride_131.glb","style":"pride"},
+	{"slot":"Dena Plus","path":"res://assets/vehicles/dena_plus/dena_plus.glb","style":"dena","height":1.403},
+	{"slot":"Peugeot 207","path":"res://assets/vehicles/peugeot_207/peugeot_207.glb","style":"peugeot_207","height":1.464},
+	{"slot":"Land Cruiser 300","path":"res://assets/vehicles/land_cruiser_300/land_cruiser_300.glb","style":"land_cruiser","height":1.921},
+	{"slot":"Lexus RX 2023","path":"res://assets/vehicles/lexus_rx_2023/lexus_rx_2023.glb","style":"lexus_rx","height":1.821},
+	{"slot":"Ferrari F40","path":"res://assets/vehicles/ferrari_f40/ferrari_f40.glb","style":"ferrari","height":1.33},
+	{"slot":"Lamborghini Huracan","path":"res://assets/vehicles/lamborghini_huracan/lamborghini_huracan.glb","style":"lamborghini","height":1.33},
+	{"slot":"Saipa Tiba","path":"res://assets/vehicles/saipa_tiba/saipa_tiba.glb","style":"tiba","height":1.43},
+	{"slot":"Saipa Tiba 2","path":"res://assets/vehicles/saipa_tiba_2/saipa_tiba_2.glb","style":"tiba_2","height":1.46},
+	{"slot":"Saipa Pride 131","path":"res://assets/vehicles/saipa_pride_131/saipa_pride_131.glb","style":"pride","height":1.533},
 ]
 
 func _initialize() -> void:
@@ -43,7 +43,7 @@ func _run() -> void:
 				has_bounds = true
 			else:
 				bounds = bounds.merge(mesh_bounds)
-		if not has_bounds or bounds.size.x < 1.2 or bounds.size.x > 3.2 or bounds.size.y < 0.8 or bounds.size.y > 2.8 or bounds.size.z < 2.5 or bounds.size.z > 7.0:
+		if not has_bounds or bounds.size.x < 1.2 or bounds.size.x > 3.2 or bounds.size.y < 0.8 or bounds.size.y > 4.5 or bounds.size.z < 2.5 or bounds.size.z > 7.0:
 			_fail("Unexpected real-world metre bounds for " + str(spec.slot) + ": " + str(bounds.size))
 			return
 		print("VEHICLE_DIMENSIONS_PASS: " + str(spec.slot) + " " + str(bounds.size))
@@ -84,12 +84,33 @@ func _run() -> void:
 				return
 		model.queue_free()
 		print("VEHICLE_ASSET_SOURCE_PASS: " + str(spec.slot))
+		var raw_height := bounds.size.y
 
 	var vehicle_script := load("res://scripts/vehicle_controller.gd") as Script
 	if vehicle_script == null:
 		_fail("Vehicle controller script failed to load")
 		return
 	var car := CharacterBody3D.new()
+	var raw_heights: Array[float] = []
+	for spec in VEHICLES:
+		var packed_for_height := load(str(spec.path)) as PackedScene
+		var height_root := packed_for_height.instantiate()
+		root.add_child(height_root)
+		await process_frame
+		var height_bounds := AABB()
+		var has_height_bounds := false
+		for mesh_variant in height_root.find_children("*", "MeshInstance3D", true, false):
+			var mesh_node := mesh_variant as MeshInstance3D
+			var relative_transform: Transform3D = height_root.global_transform.affine_inverse() * mesh_node.global_transform
+			var mesh_bounds: AABB = mesh_node.mesh.get_aabb() * relative_transform
+			if not has_height_bounds:
+				height_bounds = mesh_bounds
+				has_height_bounds = true
+			else:
+				height_bounds = height_bounds.merge(mesh_bounds)
+		raw_heights.append(height_bounds.size.y)
+		height_root.queue_free()
+	await process_frame
 	car.set_script(vehicle_script)
 	root.add_child(car)
 	await process_frame
@@ -122,6 +143,13 @@ func _run() -> void:
 			return
 		if (collision.shape as BoxShape3D).size.length() < 2.0:
 			_fail("Vehicle collision proxy dimensions invalid at catalog index %d" % index)
+			return
+		var expected_collision_height := maxf(0.65, float(VEHICLES[index].height) * 0.72)
+		if absf((collision.shape as BoxShape3D).size.y - expected_collision_height) > 0.05:
+			_fail("Collision height does not match the vehicle dimensions at catalog index %d" % index)
+			return
+		if absf(car.imported_model_root.scale.y - float(VEHICLES[index].height) / raw_heights[index]) > 0.05:
+			_fail("Imported model vertical scale is not normalized at catalog index %d" % index)
 			return
 		print("VEHICLE_CONTROLLER_ASSET_PASS: " + str(VEHICLES[index].slot))
 	print("VEHICLE_ASSET_INTEGRATION_TEST_PASS")
