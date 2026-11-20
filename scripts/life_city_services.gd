@@ -807,12 +807,19 @@ func _render_page() -> void:
 			for place in ["بانک مرکزی", "بانک شهری", "کاخ ریاست جمهوری", "وزارت اطلاعات", "ستاد کل ارتش", "زندان مرکزی", "مرکز مخابرات"]:
 				_add_button(layout, "تلپورت به " + place, "teleport", place)
 		"military":
-			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "command_military"):
-				notice_changed.emit("دسترسی فرماندهی ارتش برای این مقام فعال نشده است.")
-				return
-			notice_changed.emit("ستاد کل ارتش | پنل واقعی یگان‌ها، انتخاب شاخه و صدور دستور")
-			_add_button(layout, "باز کردن پنل عملیات و کنترل یگان‌ها", "military_open")
+			var local_military_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+			var can_command_all := _is_creator() or _has_role(local_military_peer, "فرمانده کل ارتش") or (ledger != null and ledger.can_access_permission(local_military_peer, "command_military"))
+			var visible_departments: Array[String] = []
 			for department in ["نیروی زمینی", "نیروی هوایی", "نیروی دریایی", "گارد ساحلی", "تفنگداران دریایی", "نیروی فضایی", "گارد ملی"]:
+				if can_command_all or _has_role(local_military_peer, "فرمانده " + department):
+					visible_departments.append(department)
+			if not can_command_all and visible_departments.is_empty():
+				notice_changed.emit("برای ورود به ستاد، باید مقام فرماندهی یا مجوز مربوطه را داشته باشی.")
+				return
+			notice_changed.emit("ستاد کل ارتش | فقط شاخه‌های مجاز برای این حساب نمایش داده می‌شوند.")
+			if can_command_all:
+				_add_button(layout, "باز کردن پنل کل ستاد و همه یگان‌ها", "military_open")
+			for department in visible_departments:
 				_add_button(layout, "ورود به فرماندهی " + department, "military_branch", department)
 		"intel":
 			if not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "view_intelligence"):
@@ -934,9 +941,16 @@ func _on_citizen_record_received(data: Dictionary) -> void:
 	layout.add_child(_label("تراکنش‌های بانکی: " + str(data.get("transactions", []))))
 	layout.add_child(_label("محرومیت چک: " + str(data.get("cheque_banned", false))))
 
+func _can_access_military_department(peer_id: int, department: String) -> bool:
+	if peer_id == 1 or _has_role(peer_id, "فرمانده کل ارتش") or _has_role(peer_id, "فرمانده " + department):
+		return true
+	return ledger != null and ledger.can_access_permission(peer_id, "command_military")
+
 func _open_military_command(department: String = "") -> void:
-	if not _is_creator() and (not ledger or not ledger.can_access_permission(multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1, "command_military")):
-		notice_changed.emit("دسترسی ستاد کل ارتش برای این مقام فعال نیست.")
+	var local_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var allowed := _can_access_military_department(local_peer, department) if not department.is_empty() else (_is_creator() or _has_role(local_peer, "فرمانده کل ارتش") or (ledger != null and ledger.can_access_permission(local_peer, "command_military")))
+	if not allowed:
+		notice_changed.emit("دسترسی این شاخه از ستاد کل برای مقام تو فعال نیست.")
 		return
 	var command := get_parent().get_node_or_null("MilitaryCommand") if get_parent() else null
 	if command == null:
