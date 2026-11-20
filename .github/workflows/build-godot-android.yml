@@ -167,6 +167,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test responsive touch-friendly UI addon
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/ui_system_smoke_test.gd 2>&1 | tee ui-system-test.log
+          if ! grep -q "LIFE_CITY_UI_SMOKE_TEST_PASS" ui-system-test.log; then
+            echo "Responsive UI smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" ui-system-test.log; then
+            echo "UI system test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Export debug APK
         run: |
           mkdir -p build
