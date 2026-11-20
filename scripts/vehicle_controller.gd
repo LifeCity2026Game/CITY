@@ -72,6 +72,10 @@ var base_max_forward_speed := 34.0
 var vehicle_paint_color := Color(0.12, 0.30, 0.66)
 var style_root: Node3D
 var imported_model_root: Node3D
+var imported_animation_player: AnimationPlayer
+var imported_wheel_nodes: Array[Node3D] = []
+var imported_front_wheel_nodes: Array[Node3D] = []
+var imported_doors_open := false
 
 func _ready() -> void:
 	_build_vehicle()
@@ -412,13 +416,15 @@ func _toggle_hood() -> void:
 	if not occupied or absf(current_speed) > 0.5:
 		return
 	hood_open = not hood_open
-	hood_hinge.rotation.x = -0.82 if hood_open else 0.0
+	if not _play_imported_animation("bonnet-open" if hood_open else "bonnet-close"):
+		hood_hinge.rotation.x = -0.82 if hood_open else 0.0
 
 func _toggle_trunk() -> void:
 	if not occupied or absf(current_speed) > 0.5:
 		return
 	trunk_open = not trunk_open
-	trunk_hinge.rotation.x = 0.72 if trunk_open else 0.0
+	if not _play_imported_animation("boot-open" if trunk_open else "boot-close"):
+		trunk_hinge.rotation.x = 0.72 if trunk_open else 0.0
 
 func _cycle_vehicle_model() -> void:
 	if occupied or absf(current_speed) > 0.1:
@@ -466,45 +472,103 @@ func _cycle_vehicle_model() -> void:
 
 
 func _try_load_vehicle_asset(style: String) -> bool:
-	# Production GLB assets override the temporary procedural shell when present.
 	var asset_paths := {
-		"dena": "res://assets/vehicles/dena/dena.glb",
+		"dena": "res://assets/vehicles/dena_plus/dena_plus.glb",
 		"peugeot_207": "res://assets/vehicles/peugeot_207/peugeot_207.glb",
-		"land_cruiser": "res://assets/vehicles/land_cruiser/land_cruiser.glb",
-		"lexus_rx": "res://assets/vehicles/lexus_rx/lexus_rx.glb",
-		"ferrari": "res://assets/vehicles/ferrari/ferrari.glb",
-		"lamborghini": "res://assets/vehicles/lamborghini/lamborghini.glb",
-		"tiba": "res://assets/vehicles/tiba/tiba.glb",
-		"tiba_2": "res://assets/vehicles/tiba_2/tiba_2.glb",
-		"pride": "res://assets/vehicles/pride/pride.glb"
+		"land_cruiser": "res://assets/vehicles/land_cruiser_300/land_cruiser_300.glb",
+		"lexus_rx": "res://assets/vehicles/lexus_rx_2023/lexus_rx_2023.glb",
+		"ferrari": "res://assets/vehicles/ferrari_f40/ferrari_f40.glb",
+		"lamborghini": "res://assets/vehicles/lamborghini_huracan/lamborghini_huracan.glb",
+		"tiba": "res://assets/vehicles/saipa_tiba/saipa_tiba.glb",
+		"tiba_2": "res://assets/vehicles/saipa_tiba_2/saipa_tiba_2.glb",
+		"pride": "res://assets/vehicles/saipa_pride_131/saipa_pride_131.glb"
 	}
+	if imported_model_root and is_instance_valid(imported_model_root):
+		imported_model_root.queue_free()
+	imported_model_root = null
+	imported_animation_player = null
+	imported_wheel_nodes.clear()
+	imported_front_wheel_nodes.clear()
+	_set_procedural_vehicle_visible(true)
+	if style_root:
+		style_root.visible = true
 	if not asset_paths.has(style):
 		return false
 	var path := str(asset_paths[style])
 	if not ResourceLoader.exists(path):
+		push_warning("Vehicle GLB is missing: " + path)
 		return false
 	var packed := load(path) as PackedScene
 	if packed == null:
-		push_warning("Vehicle asset exists but could not be loaded: " + path)
+		push_warning("Vehicle GLB could not be imported: " + path)
 		return false
-	if imported_model_root and is_instance_valid(imported_model_root):
-		imported_model_root.queue_free()
 	imported_model_root = Node3D.new()
 	imported_model_root.name = "ImportedVehicleModel_" + style
 	add_child(imported_model_root)
-	var instance := packed.instantiate()
-	imported_model_root.add_child(instance)
-	# Keep the current controller/collision/UI intact; the imported scene supplies the visual mesh.
-	for node in get_children():
-		if node is MeshInstance3D and node.get_parent() == self:
-			node.visible = false
-		for child in node.get_children():
-			if child is MeshInstance3D and node.name != "ImportedVehicleModel_" + style:
-				child.visible = false
+	imported_model_root.add_child(packed.instantiate())
+	var mesh_nodes := imported_model_root.find_children("*", "MeshInstance3D", true, false)
+	if mesh_nodes.is_empty():
+		push_warning("Vehicle GLB has no mesh nodes: " + path)
+		return false
+	var bounds := AABB()
+	var has_bounds := false
+	for mesh_variant in mesh_nodes:
+		var mesh_node := mesh_variant as MeshInstance3D
+		if mesh_node == null or mesh_node.mesh == null:
+			continue
+		var relative_transform: Transform3D = imported_model_root.global_transform.affine_inverse() * mesh_node.global_transform
+		var mesh_bounds: AABB = mesh_node.get_aabb() * relative_transform
+		if not has_bounds:
+			bounds = mesh_bounds
+			has_bounds = true
+		else:
+			bounds = bounds.merge(mesh_bounds)
+	if not has_bounds or bounds.size.length() < 0.1:
+		push_warning("Invalid vehicle bounds: " + path)
+		return false
+	imported_model_root.position = Vector3(-bounds.get_center().x, -bounds.position.y, -bounds.get_center().z)
+	var collision := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if collision:
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(maxf(1.35, bounds.size.x * 0.88), maxf(0.65, bounds.size.y * 0.72), maxf(2.4, bounds.size.z * 0.88))
+		collision.shape = shape
+		collision.position = Vector3(0, bounds.size.y * 0.44, 0)
+	_set_procedural_vehicle_visible(false)
 	if style_root:
 		style_root.visible = false
+	var players := imported_model_root.find_children("*", "AnimationPlayer", true, false)
+	if not players.is_empty():
+		imported_animation_player = players[0] as AnimationPlayer
+	for node_variant in imported_model_root.find_children("*", "Node3D", true, false):
+		var rig_node := node_variant as Node3D
+		if rig_node == null:
+			continue
+		var node_name := rig_node.name.to_lower()
+		if node_name.contains("wheel-front-left") or node_name.contains("wheel-front-right") or node_name.contains("wheel-rear-left") or node_name.contains("wheel-rear-right"):
+			imported_wheel_nodes.append(rig_node)
+			if node_name.contains("wheel-front-"):
+				imported_front_wheel_nodes.append(rig_node)
+	if imported_wheel_nodes.size() < 4:
+		push_warning("Fewer than four named wheel pivots: " + path)
 	return true
 
+func _set_procedural_vehicle_visible(visible_value: bool) -> void:
+	for child in get_children():
+		if child == imported_model_root:
+			continue
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).visible = visible_value
+		for mesh_variant in child.find_children("*", "MeshInstance3D", true, false):
+			(mesh_variant as MeshInstance3D).visible = visible_value
+
+func _play_imported_animation(fragment: String) -> bool:
+	if imported_animation_player == null:
+		return false
+	for animation_name in imported_animation_player.get_animation_list():
+		if animation_name.to_lower().contains(fragment.to_lower()):
+			imported_animation_player.play(animation_name)
+			return true
+	return false
 
 func _apply_vehicle_style(style: String, paint: Color) -> void:
 	if style_root:
@@ -693,9 +757,11 @@ func _toggle_lights() -> void:
 func _toggle_doors() -> void:
 	if absf(current_speed) > 0.5:
 		return
-	var open_now := absf(left_door.rotation.y) < 0.1
-	left_door.rotation.y = -0.95 if open_now else 0.0
-	right_door.rotation.y = 0.95 if open_now else 0.0
+	imported_doors_open = not imported_doors_open
+	if not _play_imported_animation("door-open" if imported_doors_open else "door-close"):
+		var open_now := imported_doors_open
+		left_door.rotation.y = -0.95 if open_now else 0.0
+		right_door.rotation.y = 0.95 if open_now else 0.0
 
 func _cycle_indicators() -> void:
 	indicators = (indicators + 1) % 3
@@ -812,6 +878,10 @@ func _physics_process(delta: float) -> void:
 		wheel.rotate_x(current_speed * delta / 0.39)
 	for front_wheel in front_wheels:
 		front_wheel.rotation.y = active_steer * 0.42
+	for imported_wheel in imported_wheel_nodes:
+		imported_wheel.rotate_object_local(Vector3.RIGHT, current_speed * delta / 0.31)
+	for imported_front_wheel in imported_front_wheel_nodes:
+		imported_front_wheel.rotation.y = active_steer * 0.42
 	if steering_wheel:
 		steering_wheel.rotation.z = -active_steer * 0.65
 	if climate_mode != "off":
