@@ -32,6 +32,21 @@ func _run() -> void:
 		if meshes.is_empty():
 			_fail("No visible mesh nodes for " + str(spec.slot))
 			return
+		var bounds := AABB()
+		var has_bounds := false
+		for mesh_variant in meshes:
+			var mesh_node := mesh_variant as MeshInstance3D
+			var relative_transform: Transform3D = model.global_transform.affine_inverse() * mesh_node.global_transform
+			var mesh_bounds: AABB = mesh_node.get_aabb() * relative_transform
+			if not has_bounds:
+				bounds = mesh_bounds
+				has_bounds = true
+			else:
+				bounds = bounds.merge(mesh_bounds)
+		if not has_bounds or bounds.size.x < 1.2 or bounds.size.x > 3.2 or bounds.size.y < 0.8 or bounds.size.y > 2.8 or bounds.size.z < 2.5 or bounds.size.z > 7.0:
+			_fail("Unexpected real-world metre bounds for " + str(spec.slot) + ": " + str(bounds.size))
+			return
+		print("VEHICLE_DIMENSIONS_PASS: " + str(spec.slot) + " " + str(bounds.size))
 		var animation_players := model.find_children("*", "AnimationPlayer", true, false)
 		if animation_players.is_empty():
 			_fail("No AnimationPlayer for " + str(spec.slot))
