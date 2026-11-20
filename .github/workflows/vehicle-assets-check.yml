@@ -33,6 +33,8 @@ jobs:
           mkdir -p addons/proton_scatter
           cp -a /tmp/proton-scatter/addons/proton_scatter/. addons/proton_scatter/
           find addons/proton_scatter -type f -name '*.blend' -delete
+      - name: Install fontconfig required by headless Godot
+        run: apt-get update && apt-get install -y fontconfig libfontconfig1
       - name: Import all GLB resources in Godot
         shell: bash
         run: |
