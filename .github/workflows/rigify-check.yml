@@ -1,0 +1,47 @@
+name: Rigify Character Rigging Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - ".github/workflows/rigify-check.yml"
+      - "tools/blender/check_rigify.py"
+
+permissions:
+  contents: read
+
+jobs:
+  rigify:
+    name: Install and verify Rigify human rig tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+
+      - name: Download official Blender 4.5.16
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://download.blender.org/release/Blender4.5"
+          archive="blender-4.5.16-linux-x64.tar.xz"
+          curl -fL "$base/$archive" -o "/tmp/$archive"
+          curl -fL "$base/blender-4.5.16.sha256" -o /tmp/blender.sha256
+          expected="$(grep "$archive" /tmp/blender.sha256 | awk '{print $1}')"
+          echo "$expected  /tmp/$archive" | sha256sum --check -
+          mkdir -p "$HOME/blender"
+          tar -xJf "/tmp/$archive" -C "$HOME/blender" --strip-components=1
+          echo "$HOME/blender" >> "$GITHUB_PATH"
+
+      - name: Install free Rigify extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          blender --version
+          blender --online-mode --command extension install --sync --enable rigify
+
+      - name: Verify Rigify and human meta-rig creation
+        shell: bash
+        run: |
+          set -euo pipefail
+          blender --background --python tools/blender/check_rigify.py
