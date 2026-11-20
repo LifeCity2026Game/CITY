@@ -40,8 +40,3 @@ jobs:
           blender --version
           blender --background --python tools/blender/check_rigify.py
 
-      - name: (removed)
-        shell: bash
-        run: |
-          set -euo pipefail
-          blender --background --python tools/blender/check_rigify.py
