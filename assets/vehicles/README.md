@@ -10,6 +10,14 @@ https://creativecommons.org/publicdomain/zero/1.0/
 Source pack:
 https://3dassets.dev/packs/car-park-and-road-vehicle-fleet
 
+## Current active vehicle: Dena Plus
+
+The Dena Plus slot is the first vehicle in the one-at-a-time acceptance cycle. Its current imported GLB is still the generic CC0 four-door saloon from the source pack, not an exact Dena Plus replica. The Godot controller adds a Dena-specific trim overlay (grille, lower intake, emblem, hood creases, fog lamps, rear lamp accents, side chrome, door handles and trunk garnish) and uses the existing imported wheel/steering pivots.
+
+A dedicated `tests/dena_plus_vehicle_test.gd` acceptance test now checks the Dena model load, visible trim, wheel/steering rig, simultaneous mobile steering buttons, automatic forward/reverse driving, braking, and manual clutch/first-gear behavior. The GitHub vehicle-assets workflow runs this test after GLB import.
+
+**Not yet accepted as complete:** an exact Dena Plus body with a verified redistribution/game-use license is still required; hands-on Appetize device testing and a successful GitHub run are also still required. Do not label the generic saloon as a real Dena Plus model.
+
 ## Fleet mapping
 
 | LIFE CITY slot | Imported generic body class | File |
