@@ -1,5 +1,6 @@
 name: Build LIFE CITY Godot Android APK
 # CI build trigger refresh after vehicle smoke-test correction.
+# Vehicle add-ons are verified before Android export.
 
 on:
   push:
