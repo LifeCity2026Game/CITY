@@ -560,7 +560,7 @@ func _try_load_vehicle_asset(style: String) -> bool:
 	_set_procedural_vehicle_visible(false)
 	if style_root:
 		# The Dena-specific trim overlay remains visible over the imported saloon mesh.
-		style_root.visible = style == "dena"
+		style_root.visible = true
 	var players := imported_model_root.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		imported_animation_player = players[0] as AnimationPlayer
