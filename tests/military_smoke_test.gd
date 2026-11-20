@@ -31,7 +31,7 @@ func _run_military_checks() -> void:
 	if not military._peer_can_command(2, "نیروی هوایی") or military._peer_can_command(2, "نیروی زمینی"):
 		_fail("Branch commander access was not restricted to the assigned branch")
 		return
-	var spoofed_branch := military._required_department_for_action("ground_patrol", "نیروی هوایی")
+	var spoofed_branch: String = str(military._required_department_for_action("ground_patrol", "نیروی هوایی"))
 	if military._peer_can_command(2, spoofed_branch):
 		_fail("An air commander could spoof a ground-branch command")
 		return
