@@ -16,10 +16,12 @@ func _run() -> void:
 	assert(ledger.store_inventory.has("گوشی هوشمند"), "store inventory was not initialized")
 	assert(int(ledger.store_inventory["گوشی هوشمند"]) > 0, "initial store stock must be positive")
 	var accounts: Array[Dictionary] = ledger.get_accounts_for_peer(1)
+	ledger.request_open_bank_account("1111")
+	ledger.balances[1] = 20000
 	ledger.request_open_bank_account("4321")
 	accounts = ledger.get_accounts_for_peer(1)
-	assert(accounts.size() == 1, "test bank account was not created")
-	var account_number := str(accounts[0].get("number", ""))
+	assert(accounts.size() == 2, "test bank accounts were not created")
+	var account_number := str(accounts[1].get("number", ""))
 	ledger.bank_accounts[account_number].balance = 20000
 	var stock_before := int(ledger.store_inventory["گوشی هوشمند"])
 	ledger._store_checkout(1, account_number, "4321", "گوشی هوشمند", 2)
