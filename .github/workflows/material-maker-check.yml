@@ -1,0 +1,45 @@
+name: Material Maker PBR Material Tool Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - ".github/workflows/material-maker-check.yml"
+      - "tools/material-maker/**"
+      - "docs/material-maker/**"
+
+permissions:
+  contents: read
+
+jobs:
+  material-maker:
+    name: Fetch and verify official Material Maker 1.8
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+
+      - name: Verify Godot toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --version
+
+      - name: Fetch official Material Maker 1.8 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch 1.8 https://github.com/RodZill4/material-maker.git /tmp/material-maker
+          test -f /tmp/material-maker/project.godot
+          grep -q 'config/name=.*Material Maker' /tmp/material-maker/project.godot
+          echo "MATERIAL_MAKER_SOURCE_READY"
+
+      - name: Import and smoke-check Material Maker project
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --editor --path /tmp/material-maker --quit
+          echo "MATERIAL_MAKER_GODOT_IMPORT_PASS"
