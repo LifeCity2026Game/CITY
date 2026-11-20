@@ -11,6 +11,7 @@ var id_token := ""
 var refresh_token := ""
 var user_id := ""
 var email := ""
+var request_pending := false
 var _request: HTTPRequest
 
 func _ready() -> void:
@@ -40,6 +41,9 @@ func sign_out() -> void:
 	auth_result.emit(true, "از حساب خارج شدی.", "")
 
 func _authenticate(method: String, address: String, password: String) -> void:
+	if request_pending:
+		auth_result.emit(false, "درخواست قبلی هنوز در حال انجام است؛ کمی صبر کن.", "")
+		return
 	if not is_configured():
 		auth_result.emit(false, "تنظیمات Firebase در این نسخه APK موجود نیست.", "")
 		return
@@ -55,11 +59,14 @@ func _authenticate(method: String, address: String, password: String) -> void:
 		"returnSecureToken": true
 	})
 	var url := AUTH_BASE + method + "?key=" + api_key.uri_encode()
+	request_pending = true
 	var error := _request.request(url, ["Content-Type: application/json"], HTTPClient.METHOD_POST, body)
 	if error != OK:
+		request_pending = false
 		auth_result.emit(false, "ارتباط با Firebase شروع نشد. کد خطا: %d" % error, "")
 
 func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	request_pending = false
 	if result != HTTPRequest.RESULT_SUCCESS:
 		auth_result.emit(false, "ارتباط اینترنتی با Firebase ناموفق بود.", "")
 		return
