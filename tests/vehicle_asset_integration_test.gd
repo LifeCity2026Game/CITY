@@ -118,7 +118,11 @@ func _run() -> void:
 		if car.imported_steering_node == null:
 			_fail("Controller did not bind the steering wheel pivot at catalog index %d" % index)
 			return
-		var collision := car.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		var collision: CollisionShape3D
+		for child in car.get_children():
+			if child is CollisionShape3D:
+				collision = child as CollisionShape3D
+				break
 		if collision == null or not collision.shape is BoxShape3D:
 			_fail("Vehicle collision proxy missing at catalog index %d" % index)
 			return
