@@ -1,11 +1,35 @@
 {
   "vehicle_slot": "Peugeot 207",
-  "source_asset_name": "Five-door hatchback (Car Park and Road Vehicle Fleet)",
+  "source_asset_name": "five-door hatchback",
   "model_file": "peugeot_207.glb",
   "model_url": "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
   "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-five-door-hatchback-18f81884",
   "license": "CC0 1.0 Universal",
   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
   "source": "3DAssets.dev",
-  "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+  "animations": [
+    "door-open",
+    "door-close",
+    "bonnet-open",
+    "bonnet-close",
+    "boot-open",
+    "boot-close",
+    "steer",
+    "wheel-roll"
+  ],
+  "wheel_pivots": [
+    "wheel-front-right/trim",
+    "wheel-front-right",
+    "wheel-front-right/alloy",
+    "wheel-front-left/trim",
+    "wheel-front-left",
+    "wheel-front-left/alloy",
+    "wheel-rear-right/trim",
+    "wheel-rear-right",
+    "wheel-rear-right/alloy",
+    "wheel-rear-left/trim",
+    "wheel-rear-left",
+    "wheel-rear-left/alloy"
+  ],
+  "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
 }

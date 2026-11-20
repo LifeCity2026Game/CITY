@@ -3,106 +3,322 @@
   "source_manifest": "https://3dassets.dev/api/v1/packs/car-park-and-road-vehicle-fleet",
   "license": "CC0 1.0 Universal",
   "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-  "note": "These are generic vehicle body classes mapped to LIFE CITY vehicle slots; they are not exact manufacturer-specific replicas.",
+  "note": "Generic CC0 vehicle body classes mapped to LIFE CITY slots; not exact replicas of the named manufacturers/models.",
   "vehicles": [
     {
       "vehicle_slot": "Dena Plus",
-      "source_asset_name": "Four-door saloon (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "four-door saloon",
       "model_file": "dena_plus.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32490/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-saloon-ad831b1f",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Peugeot 207",
-      "source_asset_name": "Five-door hatchback (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "five-door hatchback",
       "model_file": "peugeot_207.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32486/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-five-door-hatchback-18f81884",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Toyota Land Cruiser 300",
-      "source_asset_name": "Large seven-seat SUV (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "large seven-seat suv",
       "model_file": "land_cruiser_300.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32503/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-large-suv-da72f8b4",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Lexus RX 2023",
-      "source_asset_name": "Mid-size SUV (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "mid-size suv",
       "model_file": "lexus_rx_2023.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-mid-size-suv-949ce491",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Ferrari F40",
-      "source_asset_name": "Grand touring coupe (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "grand touring coupe",
       "model_file": "ferrari_f40.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32488/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-coupe-ea7addee",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Lamborghini Huracan",
-      "source_asset_name": "Mid-engine sports car (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "mid-engine sports car",
       "model_file": "lamborghini_huracan.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32495/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-sports-car-900de487",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Saipa Tiba",
-      "source_asset_name": "Executive saloon (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "executive saloon",
       "model_file": "saipa_tiba.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32492/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-executive-saloon-4895d629",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Saipa Tiba 2",
-      "source_asset_name": "Hot hatch (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "hot hatch",
       "model_file": "saipa_tiba_2.glb",
       "model_url": "https://cdn.3dassets.dev/assets/32494/v1/model.glb",
       "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-hot-hatch-6b2d198f",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     },
     {
       "vehicle_slot": "Saipa Pride 131",
-      "source_asset_name": "Multi-storey car park deck (Car Park and Road Vehicle Fleet)",
+      "source_asset_name": "City car (Car Park and Road Vehicle Fleet)",
       "model_file": "saipa_pride_131.glb",
-      "model_url": "https://cdn.3dassets.dev/assets/32562/v1/model.glb",
-      "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-car-park-87480e33-starter-scene",
+      "model_url": "https://cdn.3dassets.dev/assets/32487/v1/model.glb",
+      "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-city-car-033e3215",
       "license": "CC0 1.0 Universal",
       "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
       "source": "3DAssets.dev",
-      "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+      "animations": [
+        "door-open",
+        "door-close",
+        "bonnet-open",
+        "bonnet-close",
+        "boot-open",
+        "boot-close",
+        "steer",
+        "wheel-roll"
+      ],
+      "wheel_pivots": [
+        "wheel-front-right/trim",
+        "wheel-front-right",
+        "wheel-front-right/alloy",
+        "wheel-front-left/trim",
+        "wheel-front-left",
+        "wheel-front-left/alloy",
+        "wheel-rear-right/trim",
+        "wheel-rear-right",
+        "wheel-rear-right/alloy",
+        "wheel-rear-left/trim",
+        "wheel-rear-left",
+        "wheel-rear-left/alloy"
+      ],
+      "note": "Generic CC0 vehicle body class, not an exact manufacturer-specific replica. Named wheel pivots and door/bonnet/boot/steering/wheel-roll clips are verified in the GLB. LIFE CITY supplies vehicle collision and physics."
     }
   ]
 }
