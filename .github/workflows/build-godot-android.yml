@@ -204,6 +204,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test online store catalog, checkout, inventory and delivery
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/online_store_smoke_test.gd 2>&1 | tee online-store-test.log
+          if ! grep -q "ONLINE_STORE_SMOKE_TEST_PASS" online-store-test.log; then
+            echo "Online store smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" online-store-test.log; then
+            echo "Online store test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Test responsive touch-friendly UI addon
         timeout-minutes: 2
         shell: bash
