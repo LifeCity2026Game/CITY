@@ -6,6 +6,7 @@ var player: CharacterBody3D
 var ledger: Node
 var panel: PanelContainer
 var status_label: Label
+var command_layout: VBoxContainer
 var target_picker: OptionButton
 var target_x_input: LineEdit
 var target_z_input: LineEdit
@@ -168,20 +169,15 @@ func _choose_ai_patrol_destination(unit: Node3D) -> void:
 
 
 func _can_command() -> bool:
-	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
-		return true
-	var peer_id: int = multiplayer.get_unique_id()
-	var services: Node = get_parent().get_node_or_null("LifeCityServices")
-	if services != null:
-		if services.has_method("_has_role") and (services._has_role(peer_id, "فرمانده کل ارتش") or services._has_role(peer_id, "فرمانده " + selected_department)):
-			return true
-	return ledger != null and ledger.can_access_permission(peer_id, "command_military")
+	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	return _peer_can_command(peer_id, selected_department)
 
 func _build_interface() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "MilitaryCommandUI"
 	add_child(layer)
 	var toggle := Button.new()
+	toggle.name = "CommandToggle"
 	toggle.text = "فرماندهی ارتش"
 	toggle.position = Vector2(12, 610)
 	toggle.custom_minimum_size = Vector2(190, 48)
@@ -196,6 +192,7 @@ func _build_interface() -> void:
 	scroll.custom_minimum_size = Vector2(330, 500)
 	panel.add_child(scroll)
 	var layout := VBoxContainer.new()
+	command_layout = layout
 	layout.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(layout)
 	var title := Label.new()
@@ -243,18 +240,58 @@ func _build_interface() -> void:
 	_add_button(layout, "حمله جنگنده با بمب هسته‌ای خیالی", "nuclear_attack")
 	_add_button(layout, "نمایش یگان‌ها و مأموریت‌ها", "status")
 	_add_button(layout, "بستن", "close")
+	_refresh_authorized_controls()
 
 func _add_button(parent: VBoxContainer, caption: String, action: String, arg: String = "") -> void:
 	var b := Button.new()
 	b.text = caption
 	b.custom_minimum_size = Vector2(300, 40)
+	b.set_meta("military_action", action)
+	b.set_meta("military_argument", arg)
 	b.pressed.connect(_on_action.bind(action, arg))
 	parent.add_child(b)
+
+func _refresh_authorized_controls() -> void:
+	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var any_access := false
+	for department in DEPARTMENTS:
+		if _peer_can_command(peer_id, department):
+			any_access = true
+			break
+	var toggle := get_node_or_null("MilitaryCommandUI/CommandToggle")
+	if toggle is Button:
+		toggle.visible = any_access
+	if command_layout == null:
+		return
+	for child in command_layout.get_children():
+		if not child is Button:
+			continue
+		var action := str(child.get_meta("military_action", ""))
+		var argument := str(child.get_meta("military_argument", ""))
+		var required_department := selected_department
+		if action == "department":
+			required_department = argument
+		elif action in ["air_patrol", "fighter_attack", "nuclear_attack"]:
+			required_department = "نیروی هوایی"
+		elif action == "ground_patrol" or action == "ground_logistics":
+			required_department = "نیروی زمینی"
+		elif action == "naval":
+			required_department = "نیروی دریایی"
+		elif action == "coast":
+			required_department = "گارد ساحلی"
+		elif action == "marines":
+			required_department = "تفنگداران دریایی"
+		elif action == "space":
+			required_department = "نیروی فضایی"
+		elif action == "national_guard":
+			required_department = "گارد ملی"
+		child.visible = action == "close" or _peer_can_command(peer_id, required_department)
 
 func _toggle_panel() -> void:
 	panel.visible = not panel.visible
 
 func open_panel() -> void:
+	_refresh_authorized_controls()
 	if is_instance_valid(panel):
 		panel.visible = true
 		if is_instance_valid(status_label):
@@ -277,6 +314,7 @@ func _on_action(action: String, arg: String = "") -> void:
 	if action == "department":
 		selected_department = arg
 		status_label.text = "شاخه انتخاب‌شده: " + arg
+		_refresh_authorized_controls()
 		return
 	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
 		if not _can_command():
