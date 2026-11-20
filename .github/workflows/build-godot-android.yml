@@ -148,6 +148,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test pedestrian NPC population, rigs and walking AI
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/pedestrian_npc_smoke_test.gd 2>&1 | tee pedestrian-npc-test.log
+          if ! grep -q "PEDESTRIAN_NPC_SMOKE_TEST_PASS" pedestrian-npc-test.log; then
+            echo "Pedestrian NPC smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" pedestrian-npc-test.log; then
+            echo "Pedestrian NPC test reported script or runtime errors."
+            exit 1
+          fi
+
       - name: Test military command, aircraft strikes and city hall
         timeout-minutes: 3
         shell: bash
