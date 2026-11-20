@@ -57,6 +57,10 @@ func _run_military_checks() -> void:
 		if not audit_entry.has(field):
 			_fail("Military audit entry is missing field: " + field)
 			return
+	for rank_name in ["سرباز", "گروهبان", "ستوان", "سرهنگ"]:
+		if not services.ROLES.has(rank_name):
+			_fail("Military rank is missing from creator role assignment: " + rank_name)
+			return
 	if not services.ROLES.has("شهردار"):
 		_fail("Mayor role is not available in the creator role list")
 		return
