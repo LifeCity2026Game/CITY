@@ -9,6 +9,7 @@ on:
       - "tests/vehicle_asset_integration_test.gd"
       - "tools/import_free_vehicles.py"
       - "project.godot"
+      - ".github/import-free-vehicles"
       - ".github/workflows/vehicle-assets-check.yml"
   workflow_dispatch:
 
