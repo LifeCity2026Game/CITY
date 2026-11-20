@@ -38,7 +38,7 @@ func _run() -> void:
 	if car.style_root == null or not car.style_root.visible:
 		_fail("Peugeot 207 trim overlay is not visible")
 		return
-	var profile := car.style_root.get_node_or_null("Profile_peugeot_207")
+	var profile: Node = car.style_root.get_node_or_null("Profile_peugeot_207")
 	if profile == null or profile.get_child_count() < 14:
 		_fail("Peugeot 207 front, side and hatchback trim is incomplete")
 		return
