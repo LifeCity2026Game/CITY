@@ -41,6 +41,8 @@ var home_interior: Node3D
 var previous_player_position := Vector3.ZERO
 var inside_owned_home := false
 var selected_role: String = "وزیر"
+var firebase_email_field: LineEdit
+var firebase_password_field: LineEdit
 
 const GAME_DAY_LENGTH := 1440.0
 const ONLINE_PRODUCTS := {
@@ -89,6 +91,9 @@ func _ready() -> void:
 	_refresh()
 	if ledger and ledger.has_signal("balance_changed"):
 		ledger.balance_changed.connect(_on_balance_changed)
+	var firebase := get_parent().get_node_or_null("FirebaseClient")
+	if firebase and not firebase.auth_result.is_connected(_on_firebase_auth_result):
+		firebase.auth_result.connect(_on_firebase_auth_result)
 
 func _seed_phone() -> void:
 	var peer_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
@@ -336,7 +341,19 @@ func _toggle_panel() -> void:
 		_open_main_menu("phone_home")
 
 func _action(action: String, arg: String = "") -> void:
-	if action == "page":
+	if action == "firebase_signup":
+		var firebase_signup = get_parent().get_node_or_null("FirebaseClient")
+		if firebase_signup:
+			firebase_signup.sign_up(firebase_email_field.text.strip_edges() if firebase_email_field else "", firebase_password_field.text if firebase_password_field else "")
+	elif action == "firebase_signin":
+		var firebase_signin = get_parent().get_node_or_null("FirebaseClient")
+		if firebase_signin:
+			firebase_signin.sign_in(str(email_input_value), str(password_input_value))
+	elif action == "firebase_signout":
+		var firebase_signout = get_parent().get_node_or_null("FirebaseClient")
+		if firebase_signout:
+			firebase_signout.sign_out()
+	elif action == "page":
 		active_page = arg
 		_render_page()
 	elif action == "buy_online":
@@ -432,6 +449,33 @@ func _action(action: String, arg: String = "") -> void:
 	_refresh()
 	_save_services()
 
+func _render_firebase_account(layout: VBoxContainer) -> void:
+	var firebase := get_parent().get_node_or_null("FirebaseClient")
+	if firebase == null:
+		layout.add_child(_label("سرویس ورود هنوز راه‌اندازی نشده است."))
+		return
+	if not firebase.is_configured():
+		layout.add_child(_label("پیکربندی Firebase در APK پیدا نشد؛ نسخه آزمایشی باید از طریق GitHub Actions دوباره ساخته شود."))
+		return
+	if firebase.is_signed_in():
+		layout.add_child(_label("واردشده با ایمیل: %s" % firebase.email))
+		layout.add_child(_label("شناسه کاربری: %s" % firebase.user_id))
+		_add_button(layout, "خروج از حساب", "firebase_signout")
+	else:
+		layout.add_child(_label("ساخت حساب یا ورود با ایمیل و رمز عبور"))
+		firebase_email_field = _add_input("ایمیل")
+		firebase_email_field.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+		firebase_password_field = _add_input("رمز عبور (حداقل ۶ نویسه)")
+		firebase_password_field.secret = true
+		_add_button(layout, "ایجاد حساب جدید", "firebase_signup")
+		_add_button(layout, "ورود به حساب", "firebase_signin")
+	layout.add_child(_label("فعلاً ورود و ثبت‌نام Firebase فعال است. ذخیره امن موجودی، املاک و خودروها به قوانین پایگاه داده و اعتبارسنجی سمت سرور نیاز دارد؛ اطلاعات مالی هنوز به Firebase ارسال نمی‌شود."))
+
+func _on_firebase_auth_result(success: bool, message: String, _user_id: String) -> void:
+	notice_changed.emit(message)
+	if success and active_page == "account":
+		_render_page()
+
 func _render_page() -> void:
 	_clear_dynamic()
 	var layout := _content()
@@ -450,6 +494,9 @@ func _render_page() -> void:
 			_add_button(layout, "مخابرات و سیم‌کارت", "page", "phone")
 			_add_button(layout, "اینترنت‌بانک", "page", "bank")
 			_add_button(layout, "فروشگاه اینترنتی", "page", "online_shop")
+			_add_button(layout, "حساب کاربری آنلاین | Firebase", "page", "account")
+		"account":
+			_render_firebase_account(layout)
 		"public_garage":
 			notice_changed.emit("پارکینگ شخصی | فقط خودروهایی که سند مالکیت معتبر به نام تو دارند.")
 			var local_owner := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
