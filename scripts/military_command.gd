@@ -177,15 +177,36 @@ func _peer_can_command(peer_id: int, department: String) -> bool:
 			return true
 	return ledger != null and ledger.can_access_permission(peer_id, "command_military")
 
+func _required_department_for_action(action: String, requested_department: String) -> String:
+	match action:
+		"ground_patrol", "ground_logistics":
+			return "نیروی زمینی"
+		"air_patrol", "fighter_attack", "nuclear_attack":
+			return "نیروی هوایی"
+		"naval":
+			return "نیروی دریایی"
+		"coast":
+			return "گارد ساحلی"
+		"marines":
+			return "تفنگداران دریایی"
+		"space":
+			return "نیروی فضایی"
+		"national_guard":
+			return "گارد ملی"
+	return requested_department
+
 @rpc("any_peer", "call_remote", "reliable")
 func rpc_request_military_action(action: String, argument: String, department: String, target: Vector3) -> void:
-	if not multiplayer.is_server() or not DEPARTMENTS.has(department):
+	if not multiplayer.is_server():
+		return
+	var required_department := _required_department_for_action(action, department)
+	if not DEPARTMENTS.has(required_department):
 		return
 	var sender := multiplayer.get_remote_sender_id()
-	if not _peer_can_command(sender, department):
+	if not _peer_can_command(sender, required_department):
 		rpc_id(sender, "rpc_receive_military_report", "دستور رد شد: دسترسی این شاخه برای حساب شما فعال نیست.")
 		return
-	selected_department = department
+	selected_department = required_department
 	has_remote_target_override = true
 	remote_target_override = Vector3(clampf(target.x, -105.0, 105.0), clampf(target.y, 0.0, 60.0), clampf(target.z, -105.0, 120.0))
 	_on_action(action, argument)
