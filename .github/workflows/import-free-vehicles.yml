@@ -40,5 +40,7 @@ jobs:
             echo "No vehicle asset changes to commit."
           else
             git commit -m "Import free CC0 vehicle models for LIFE CITY"
+            git fetch origin godot-migration
+            git rebase origin/godot-migration
             git push origin HEAD:godot-migration
           fi
