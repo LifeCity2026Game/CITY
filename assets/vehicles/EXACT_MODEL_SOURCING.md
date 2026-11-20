@@ -25,6 +25,17 @@ This file is the acceptance gate for replacing the generic vehicle placeholders.
 | Saipa Tiba 2 | [Saipa Tiba 2 — KUBSTER (Sketchfab)](https://sketchfab.com/3d-models/saipa-tiba-2-no-textures-and-wheels-d1b67cb314d84cce85418ca1990dec48) | Downloadable; CC Attribution; 281.6k triangles; explicitly has no textures and no wheels. | **CANDIDATE** — add wheels/materials and inspect cabin; attribution required. |
 | Saipa Pride 131 | [Low Poly Car (Saipa 131) — Dara_mehr](https://sketchfab.com/3d-models/low-poly-coupe-car-saipa-131-a55dcf2069c947179bf2cf27be2f32d7) | Downloadable; CC Attribution; 3.7k triangles. | **HOLD** — exact inspiration is stated, but low-poly coupe and likely missing detailed cabin make it unsuitable for final high-detail fleet. |
 
+## Dena follow-up search (20 Nov 2026)
+
+Additional exact Dena leads were checked after the initial audit:
+
+- [IKCO Dena — 3D CAD Browser](https://www.3dcadbrowser.com/3d-model/ikco-dena) advertises an exact Dena with 804,250 polygons and a royalty-free license, but download requires an account and its terms prohibit redistribution of the source model. It is not accepted for this freely distributable source-asset pipeline without a license review of packaged-game distribution.
+- [IKCO Dena — GTAinside](https://www.gtainside.com/gta5/cars/149442-ikco-dena/) describes a detailed GTA V mod and credits the model to Second Gear, with conversion/edit credits to other creators. The page does not grant a game-asset redistribution license; rejected for integration.
+- [IKCO Dena Plus — GTAinside](https://www.gtainside.com/gta4/cars/185320-ikco-dena-plus/) advertises a detailed interior/exterior mod, but likewise supplies no permission to reuse or redistribute the model in LIFE CITY; rejected.
+- [IKCO DENA — DownloadFree3D](https://downloadfree3d.com/3d-models/vehicles/car/ikco-dena/) lists a free 34 MB Blender ZIP credited to Qamk3Models, but the listing does not establish a redistribution/game license; remains on HOLD pending creator permission.
+
+No exact Dena/Dena Plus file from these sources has been imported. The current CC0 generic saloon remains the only legally documented file in the repository for automated controller testing.
+
 ## Current repository assets
 
 The nine files currently under `assets/vehicles/` are generic CC0 body classes, not the exact cars in the table. They are technical placeholders only and must not be described as completed Dena, Peugeot, Toyota, Lexus, Ferrari, Lamborghini, Tiba, Tiba 2, or Pride models.
