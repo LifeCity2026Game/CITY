@@ -499,7 +499,7 @@ func _try_load_vehicle_asset(style: String) -> bool:
 		if node is MeshInstance3D and node.get_parent() == self:
 			node.visible = false
 		for child in node.get_children():
-			if child is MeshInstance3D and node.name != "CabinInterior" and node.name != "VehicleStyleParts":
+			if child is MeshInstance3D and node.name != "ImportedVehicleModel_" + style:
 				child.visible = false
 	if style_root:
 		style_root.visible = false
