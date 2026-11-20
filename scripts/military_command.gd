@@ -23,6 +23,10 @@ var missile_progress := 0.0
 var explosion_nodes: Array[Node3D] = []
 var destroyed_buildings: Dictionary = {}
 var selected_department := "نیروی زمینی"
+var has_remote_target_override := false
+var remote_target_override := Vector3.ZERO
+var operation_audit: Array[Dictionary] = []
+const AUDIT_PATH := "user://military_operations_audit.json"
 
 const DEPARTMENTS := ["نیروی زمینی", "نیروی هوایی", "نیروی دریایی", "گارد ساحلی", "تفنگداران دریایی", "نیروی فضایی", "گارد ملی"]
 const COLORS := [Color(0.28,0.36,0.29), Color(0.34,0.42,0.52), Color(0.25,0.34,0.43), Color(0.20,0.43,0.54), Color(0.31,0.38,0.32), Color(0.20,0.28,0.42), Color(0.42,0.36,0.27)]
@@ -32,6 +36,7 @@ func configure(player_node: CharacterBody3D, ledger_node: Node) -> void:
 	ledger = ledger_node
 
 func _ready() -> void:
+	_load_operation_audit()
 	_build_targets()
 	_build_interface()
 
@@ -256,6 +261,8 @@ func open_panel() -> void:
 			status_label.text = "ستاد کل آماده است | شاخه فعال: " + selected_department
 
 func _target_position() -> Vector3:
+	if has_remote_target_override:
+		return remote_target_override
 	var choices := [Vector3(-29,0,28), Vector3(55,0,-55), Vector3(55,0,55), Vector3(-55,0,-55), Vector3(0,0,-50), Vector3(72,0,24)]
 	var x_text := target_x_input.text.strip_edges() if is_instance_valid(target_x_input) else ""
 	var z_text := target_z_input.text.strip_edges() if is_instance_valid(target_z_input) else ""
@@ -270,6 +277,13 @@ func _on_action(action: String, arg: String = "") -> void:
 	if action == "department":
 		selected_department = arg
 		status_label.text = "شاخه انتخاب‌شده: " + arg
+		return
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		if not _can_command():
+			status_label.text = "این فرمان فقط برای سازنده یا فرمانده دارای مجوز است."
+			return
+		rpc_id(1, "rpc_request_military_action", action, arg, selected_department, _target_position())
+		status_label.text = "فرمان برای بررسی مجوز و اجرا به ستاد سرور ارسال شد."
 		return
 	if not _can_command():
 		status_label.text = "این فرمان فقط برای سازنده یا فرمانده دارای مجوز است."
@@ -609,8 +623,17 @@ func _cylinder(parent: Node3D, at: Vector3, radius: float, height: float, color:
 
 func _log(message: String) -> void:
 	status_label.text = message
+	var actor_peer := multiplayer.get_remote_sender_id() if multiplayer.has_multiplayer_peer() and multiplayer.is_server() else (multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1)
+	var entry := {"event_id": "MIL-%06d" % (operation_audit.size() + 1), "timestamp_unix": int(Time.get_unix_time_from_system()), "actor_peer_id": actor_peer, "department": selected_department, "action": message, "target": _target_position(), "result": "completed"}
 	active_missions.append({"time": Time.get_ticks_msec(), "department": selected_department, "report": message})
+	operation_audit.append(entry)
+	while operation_audit.size() > 500:
+		operation_audit.pop_front()
+	_save_operation_audit()
 	report_changed.emit(message)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		for peer_id in multiplayer.get_peers():
+			rpc_id(peer_id, "rpc_receive_military_report", message)
 
 func _remove_explosion(fx: Node3D) -> void:
 	if is_instance_valid(fx):
