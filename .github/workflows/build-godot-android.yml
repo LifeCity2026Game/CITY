@@ -152,6 +152,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test five vehicle editor add-ons
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/vehicle_addons_smoke_test.gd 2>&1 | tee vehicle-addons-test.log
+          if ! grep -q "VEHICLE_ADDONS_SMOKE_TEST_PASS" vehicle-addons-test.log; then
+            echo "Vehicle add-on smoke test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-addons-test.log; then
+            echo "Vehicle add-on test reported errors."
+            exit 1
+          fi
+
       - name: Test two-player ENet connection and movement sync
         timeout-minutes: 2
         shell: bash
