@@ -183,6 +183,21 @@ jobs:
             exit 1
           fi
 
+      - name: Test all imported GLB vehicle assets, rigs, collision and controller integration
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/vehicle_asset_integration_test.gd 2>&1 | tee vehicle-assets-test.log
+          if ! grep -q "VEHICLE_ASSET_INTEGRATION_TEST_PASS" vehicle-assets-test.log; then
+            echo "Imported vehicle asset integration test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-assets-test.log; then
+            echo "Vehicle asset integration test reported errors."
+            exit 1
+          fi
+
       - name: Test five vehicle editor add-ons
         timeout-minutes: 2
         shell: bash
