@@ -1,0 +1,65 @@
+{
+  "dena": {
+    "display_name": "IKCO Dena Plus",
+    "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/IKCO_Dena_Plus_2019_(1398)_Tehran_front.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:IKCO_Dena_Plus_2019_(1398)_Tehran_front.jpg",
+    "image_license": "CC BY-SA 4.0",
+    "attribution": "Jeeputer / Wikimedia Commons"
+  },
+  "peugeot_207": {
+    "display_name": "Peugeot 207 hatchback",
+    "image_url": "https://cdn-img.automoto.it/images/693224/1200x/peugeot-207.jpeg",
+    "source_page": "https://www.automoto.it/news/peugeot-alcune-novita-per-207-boxer-commerciale.html",
+    "image_license": "Not verified; reference only",
+    "attribution": "Automoto.it"
+  },
+  "land_cruiser": {
+    "display_name": "Toyota Land Cruiser 300",
+    "image_url": "https://www.toyota.com.bn/media/xrzocyrt/lc-white-pearl-070-thumbnail-low-res.webp",
+    "source_page": "https://www.toyota.com.bn/car/land-cruiser/land-cruiser-300",
+    "image_license": "Manufacturer image; reuse rights not verified",
+    "attribution": "Toyota Brunei"
+  },
+  "lexus_rx": {
+    "display_name": "Lexus RX 2023",
+    "image_url": "https://cdn.jdpower.com/ChromeImageGallery/Expanded/Transparent/640/2023LES12_640/2023LES122012432_640_01.png",
+    "source_page": "https://www.jdpower.com/cars/2023/lexus/rx",
+    "image_license": "Not verified; reference only",
+    "attribution": "J.D. Power"
+  },
+  "ferrari": {
+    "display_name": "Ferrari F40",
+    "image_url": "https://www.motorlegend.com/modules/breve/photos/src/ferrari-f40-16345-1.jpg",
+    "source_page": "https://www.motorlegend.com/actualite-automobile/silverstone-auctions-ferrari-f40/16345.html",
+    "image_license": "Not verified; reference only",
+    "attribution": "Motorlegend"
+  },
+  "lamborghini": {
+    "display_name": "Lamborghini Huracan LP 610-4",
+    "image_url": "https://hips.hearstapps.com/amv-prod-cad-assets.s3.amazonaws.com/media/assets/submodel/7478.jpg?fill=18%3A11&resize=640%3A%2A",
+    "source_page": "https://www.caranddriver.com/lamborghini/huracan/specs/2016/lamborghini_huracan_lamborghini-huracan_2016",
+    "image_license": "Not verified; reference only",
+    "attribution": "Car and Driver"
+  },
+  "tiba": {
+    "display_name": "Saipa Tiba sedan",
+    "image_url": "https://avatars.mds.yandex.net/get-verba/216201/2a00000163fe478a58f8ed6b98ede52907d6/cattouchret",
+    "source_page": "https://auto.ru/catalog/cars/saipa/tiba/",
+    "image_license": "Not verified; reference only",
+    "attribution": "Auto.ru / Yandex image CDN"
+  },
+  "tiba_2": {
+    "display_name": "Saipa Tiba 2 hatchback",
+    "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Saipa_Tiba_2.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Saipa_Tiba_2.jpg",
+    "image_license": "CC0 1.0",
+    "attribution": "Telluride749 / Wikimedia Commons"
+  },
+  "pride": {
+    "display_name": "Saipa Pride 131",
+    "image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Saipa_Pride_131_SE_2013_1392_Tehran_front.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Saipa_Pride_131_SE_2013_1392_Tehran_front.jpg",
+    "image_license": "CC BY-SA 4.0",
+    "attribution": "Jeeputer / Wikimedia Commons"
+  }
+}
