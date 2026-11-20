@@ -775,9 +775,14 @@ func _toggle_doors() -> void:
 	if absf(current_speed) > 0.5:
 		return
 	imported_doors_open = not imported_doors_open
-	if not _play_imported_animation("door-open" if imported_doors_open else "door-close"):
-		var open_now := imported_doors_open
+	# Play the imported model animation when available, and always update the
+	# fallback hinge state as well. This keeps door state observable to gameplay
+	# and tests even when a GLB animation track is present.
+	_play_imported_animation("door-open" if imported_doors_open else "door-close")
+	var open_now := imported_doors_open
+	if is_instance_valid(left_door):
 		left_door.rotation.y = -0.95 if open_now else 0.0
+	if is_instance_valid(right_door):
 		right_door.rotation.y = 0.95 if open_now else 0.0
 
 func _cycle_indicators() -> void:
