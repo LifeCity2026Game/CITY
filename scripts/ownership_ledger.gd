@@ -765,6 +765,7 @@ func _account_purchase(peer_id: int, account_number: String, pin: String, item_i
 	doc["payment_account"] = account_number
 	doc["tax_paid"] = tax
 	documents[doc.document_id] = doc
+	_record_bank_event(peer_id, "account_purchase", account_number, price, "پرداخت‌شده", {"item_id": item_id, "document_id": str(doc.document_id), "paid_by_peer_id": owner_peer})
 	_save_ledger()
 	_send_own_accounts(owner_peer)
 	_send_receipt(peer_id, doc)
@@ -850,7 +851,7 @@ func _store_checkout(peer_id: int, account_number: String, pin: String, item_id:
 		"status": "در حال ارسال", "created_game_time": game_clock_seconds,
 		"deliver_at": game_clock_seconds + 45.0, "created_unix": int(Time.get_unix_time_from_system())
 	}
-	cash_transactions[order_id] = {"transaction_id": order_id, "type": "online_store_purchase", "peer_id": peer_id, "account_number": account_number, "item_id": item_id, "quantity": quantity, "amount": total_price, "tax_paid": tax, "status": "completed", "time": int(Time.get_unix_time_from_system())}
+	cash_transactions[order_id] = {"transaction_id": order_id, "type": "online_store_purchase", "peer_id": peer_id, "account_number": account_number, "item_id": item_id, "quantity": quantity, "amount": total_price, "tax_paid": tax, "status": "completed", "time": int(Time.get_unix_time_from_system()), "game_time": game_clock_seconds}
 	_save_ledger()
 	_send_own_accounts(peer_id)
 	_send_receipt(peer_id, doc)
@@ -879,24 +880,24 @@ func _store_restock(actor_peer: int, item_id: String, quantity: int) -> bool:
 	_save_ledger()
 	return true
 
-func request_issue_cheque(account_number: String, pin: String, face_value: int) -> void:
+func request_issue_cheque(account_number: String, pin: String, face_value: int, maturity_days: int = 1) -> void:
 	var peer_id := _local_peer_id()
 	if _is_authority():
-		_issue_cheque_for_peer(peer_id, account_number, pin, face_value)
+		_issue_cheque_for_peer(peer_id, account_number, pin, face_value, maturity_days)
 	else:
-		rpc_id(1, "rpc_request_issue_cheque", account_number, pin, face_value)
+		rpc_id(1, "rpc_request_issue_cheque", account_number, pin, face_value, maturity_days)
 
 @rpc("any_peer", "call_remote", "reliable")
-func rpc_request_issue_cheque(account_number: String, pin: String, face_value: int) -> void:
+func rpc_request_issue_cheque(account_number: String, pin: String, face_value: int, maturity_days: int = 1) -> void:
 	if multiplayer.is_server():
-		_issue_cheque_for_peer(multiplayer.get_remote_sender_id(), account_number, pin, face_value)
+		_issue_cheque_for_peer(multiplayer.get_remote_sender_id(), account_number, pin, face_value, maturity_days)
 
-func _issue_cheque_for_peer(peer_id: int, account_number: String, pin: String, face_value: int) -> void:
+func _issue_cheque_for_peer(peer_id: int, account_number: String, pin: String, face_value: int, maturity_days: int = 1) -> void:
 	if cheque_spending_ban.get(str(peer_id), false):
 		_send_notice(peer_id, "به علت سابقه چک برگشتی، فعلاً اجازه دریافت چک نداری.")
 		return
-	if face_value <= 0 or not _account_pin_matches(account_number, pin):
-		_send_notice(peer_id, "مبلغ، شماره حساب یا رمز معتبر نیست.")
+	if face_value <= 0 or maturity_days < 1 or maturity_days > 10 or not _account_pin_matches(account_number, pin):
+		_send_notice(peer_id, "مبلغ، زمان وصول (۱ تا ۱۰ روز)، شماره حساب یا رمز معتبر نیست.")
 		return
 	var account: Dictionary = bank_accounts[account_number]
 	if int(account.get("owner_peer_id", -1)) != peer_id:
@@ -909,12 +910,16 @@ func _issue_cheque_for_peer(peer_id: int, account_number: String, pin: String, f
 		"issuer_citizen_id": str(account.citizen_id),
 		"account_number": account_number, "face_value": face_value,
 		"remaining_value": face_value, "status": "صادرشده",
+		"maturity_days": maturity_days,
+		"issued_game_time": game_clock_seconds,
+		"maturity_due_game_time": game_clock_seconds + float(maturity_days) * GAME_DAY_SECONDS,
 		"issued_unix": int(Time.get_unix_time_from_system()),
 		"spends": [], "dishonoured_count": 0
 	}
+	_record_bank_event(peer_id, "cheque_issued", account_number, face_value, "صادرشده", {"cheque_id": cheque_id, "maturity_days": maturity_days, "maturity_due_game_time": game_clock_seconds + float(maturity_days) * GAME_DAY_SECONDS})
 	_save_ledger()
 	_send_own_cheques(peer_id)
-	_send_notice(peer_id, "چک %s صادر شد؛ اعتبار اولیه %d سکه." % [cheque_id, face_value])
+	_send_notice(peer_id, "چک %s صادر شد؛ اعتبار %d سکه؛ سررسید %d روز بازی." % [cheque_id, face_value, maturity_days])
 	citizen_record_changed.emit(str(account.citizen_id))
 
 func request_cheque_purchase(cheque_id: String, item_id: String) -> void:
@@ -944,6 +949,10 @@ func _cheque_purchase(peer_id: int, cheque_id: String, item_id: String) -> void:
 	if int(cheque.remaining_value) < price:
 		_send_notice(peer_id, "اعتبار باقی‌مانده چک از قیمت کالا کمتر است.")
 		return
+	var cheque_due_time := float(cheque.get("maturity_due_game_time", float(cheque.get("issued_game_time", game_clock_seconds)) + float(cheque.get("maturity_days", 1)) * GAME_DAY_SECONDS))
+	if game_clock_seconds >= cheque_due_time:
+		_send_notice(peer_id, "مهلت استفاده از این چک به پایان رسیده است.")
+		return
 	cheque.remaining_value = int(cheque.remaining_value) - price
 	var spend_id := "CS-%06d" % next_document_number
 	next_document_number += 1
@@ -955,15 +964,35 @@ func _cheque_purchase(peer_id: int, cheque_id: String, item_id: String) -> void:
 	cheque.spends.append({
 		"spend_id": spend_id, "document_id": doc.document_id,
 		"item_id": item_id, "amount": price,
-		"due_game_time": game_clock_seconds + 1440.0,
+		"due_game_time": cheque_due_time,
+		"maturity_days": int(cheque.get("maturity_days", 1)),
 		"status": "در انتظار تسویه"
 	})
 	cheque_book[cheque_id] = cheque
+	_record_bank_event(peer_id, "cheque_purchase", str(cheque.get("account_number", "")), price, "در انتظار تسویه", {"cheque_id": cheque_id, "spend_id": spend_id, "item_id": item_id, "document_id": str(doc.document_id), "maturity_days": int(cheque.get("maturity_days", 1)), "due_game_time": cheque_due_time})
 	_save_ledger()
 	_send_own_cheques(peer_id)
 	_send_receipt(peer_id, doc)
 	_send_notice(peer_id, "خرید با چک ثبت شد؛ تسویه پس از یک روز بازی انجام می‌شود.")
 	citizen_record_changed.emit(str(cheque.issuer_citizen_id))
+
+func _record_bank_event(peer_id: int, event_type: String, account_number: String, amount: int, status: String, details: Dictionary = {}) -> String:
+	var event_id := "BANK-%06d" % next_document_number
+	next_document_number += 1
+	var event: Dictionary = {
+		"transaction_id": event_id,
+		"type": event_type,
+		"peer_id": peer_id,
+		"account_number": account_number,
+		"amount": amount,
+		"status": status,
+		"game_time": game_clock_seconds,
+		"time": int(Time.get_unix_time_from_system())
+	}
+	for key in details.keys():
+		event[key] = details[key]
+	cash_transactions[event_id] = event
+	return event_id
 
 func _settle_due_cheques() -> void:
 	var changed := false
@@ -985,7 +1014,10 @@ func _settle_due_cheques() -> void:
 				var tax := int(ceil(float(amount) * 0.10))
 				central_bank_treasury += tax
 				spend.status = "پاس‌شده"
+				spend["settled_game_time"] = game_clock_seconds
+				spend["settled_unix"] = int(Time.get_unix_time_from_system())
 				spend["tax_paid"] = tax
+				_record_bank_event(int(cheque.issuer_peer_id), "cheque_settlement", account_number, amount, "پاس‌شده", {"cheque_id": cheque_id, "spend_id": str(spend.get("spend_id", "")), "document_id": doc_id})
 				if documents.has(doc_id):
 					documents[doc_id]["status"] = "valid"
 					documents[doc_id]["tax_paid"] = tax
@@ -993,6 +1025,9 @@ func _settle_due_cheques() -> void:
 				_send_notice(int(cheque.issuer_peer_id), "چک %s با موفقیت پاس شد." % cheque_id)
 			else:
 				spend.status = "برگشت‌خورده"
+				spend["settled_game_time"] = game_clock_seconds
+				spend["settled_unix"] = int(Time.get_unix_time_from_system())
+				_record_bank_event(int(cheque.issuer_peer_id), "cheque_bounced", account_number, amount, "برگشت‌خورده", {"cheque_id": cheque_id, "spend_id": str(spend.get("spend_id", "")), "document_id": doc_id, "item_id": str(spend.get("item_id", ""))})
 				cheque_spending_ban[str(cheque.issuer_peer_id)] = true
 				cheque.dishonoured_count = int(cheque.get("dishonoured_count", 0)) + 1
 				if documents.has(doc_id):
@@ -1384,13 +1419,24 @@ func get_citizen_full_record(citizen_id: String) -> Dictionary:
 			break
 	var cheque_history: Array = []
 	for cheque in citizen_cheques:
+		cheque_history.append({
+			"cheque_id": str(cheque.get("id", "")),
+			"event": "صدور چک",
+			"amount": int(cheque.get("face_value", 0)),
+			"status": str(cheque.get("status", "")),
+			"maturity_days": int(cheque.get("maturity_days", 1)),
+			"due_game_time": float(cheque.get("maturity_due_game_time", 0.0))
+		})
 		for spend in cheque.get("spends", []):
 			cheque_history.append({
-				"cheque_id": str(cheque.get("cheque_id", cheque.get("id", ""))),
+				"cheque_id": str(cheque.get("id", "")),
 				"item": str(spend.get("item_id", "")),
 				"amount": int(spend.get("amount", 0)),
 				"status": str(spend.get("status", "")),
-				"spend_id": str(spend.get("spend_id", ""))
+				"spend_id": str(spend.get("spend_id", "")),
+				"maturity_days": int(spend.get("maturity_days", cheque.get("maturity_days", 1))),
+				"due_game_time": float(spend.get("due_game_time", 0.0)),
+				"settled_game_time": float(spend.get("settled_game_time", -1.0))
 			})
 	return {
 		"citizen": citizen.duplicate(true), "marital_status": marital_status,
