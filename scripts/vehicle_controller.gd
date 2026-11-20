@@ -127,6 +127,7 @@ func _cylinder(parent: Node3D, title: String, pos: Vector3, radius: float, heigh
 
 func _build_vehicle() -> void:
 	var collision := CollisionShape3D.new()
+	collision.name = "CollisionShape3D"
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.05, 1.05, 4.35)
 	collision.shape = shape
