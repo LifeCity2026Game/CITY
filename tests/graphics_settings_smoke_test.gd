@@ -21,6 +21,19 @@ func _run_graphics_checks() -> void:
 	if graphics == null or sun == null:
 		_fail("Graphics controller or sun light is missing")
 		return
+	var environment := game.get("world_environment") as WorldEnvironment
+	if environment == null or environment.environment == null:
+		_fail("World environment is missing")
+		return
+	if environment.environment.tonemap_mode != Environment.TONE_MAPPER_FILMIC:
+		_fail("Filmic tone mapping is not enabled")
+		return
+	if not environment.environment.fog_enabled or not environment.environment.glow_enabled:
+		_fail("Atmospheric fog or glow is not enabled in the baseline profile")
+		return
+	if environment.environment.sky == null or not (environment.environment.sky.sky_material is ProceduralSkyMaterial):
+		_fail("Procedural sky material is missing")
+		return
 
 	graphics.apply_quality("low")
 	if graphics.current_quality != "low" or sun.shadow_enabled:
