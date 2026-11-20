@@ -31,6 +31,19 @@ jobs:
         run: python -m pip install requests
       - name: Download and validate CC0 GLB models
         run: python tools/import_free_vehicles.py
+      - name: Install glTF Transform CLI
+        run: npm install --global @gltf-transform/cli
+      - name: Dequantize GLB geometry for Godot compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          for model in assets/vehicles/*/*.glb; do
+            converted="${model%.glb}.godot.glb"
+            gltf-transform dequantize "$model" "$converted"
+            mv "$converted" "$model"
+          done
+      - name: Verify Godot-compatible GLBs, rigs and animations
+        run: python tools/verify_vehicle_glbs_godot.py
       - name: Commit vehicle models into LIFE CITY
         run: |
           git config user.name "github-actions[bot]"
