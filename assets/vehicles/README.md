@@ -61,3 +61,5 @@ tools/import_free_vehicles.py fetches the CC0 models and validates GLB JSON, ani
 - The existing vehicle controller is a simplified arcade-style CharacterBody3D implementation, not a full tyre/suspension simulation.
 - GLB clips and wheel pivots are used for visible interaction; collision proxies remain simplified boxes.
 - Final visual fit, mobile frame rate, Android APK runtime and actual in-game handling still require automated build and hands-on device testing.
+
+Peugeot 207 acceptance test: node type inference fixed; awaiting rerun.
