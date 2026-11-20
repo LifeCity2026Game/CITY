@@ -1,0 +1,44 @@
+name: Import free CC0 vehicle models
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - godot-migration
+    paths:
+      - ".github/import-free-vehicles"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: free-vehicle-import
+  cancel-in-progress: false
+
+jobs:
+  import-vehicles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+        with:
+          ref: godot-migration
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install downloader dependency
+        run: python -m pip install requests
+      - name: Download and validate CC0 GLB models
+        run: python tools/import_free_vehicles.py
+      - name: Commit vehicle models into LIFE CITY
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/vehicles
+          if git diff --cached --quiet; then
+            echo "No vehicle asset changes to commit."
+          else
+            git commit -m "Import free CC0 vehicle models for LIFE CITY"
+            git push origin HEAD:godot-migration
+          fi
