@@ -1,0 +1,54 @@
+name: Blender 3D Asset Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - "assets/blender/**"
+      - "tools/blender/**"
+      - ".github/workflows/blender-assets.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  export-glb:
+    name: Prepare Blender assets for Godot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+
+      - name: Show Blender version
+        run: blender --version
+
+      - name: Export .blend source files to GLB
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/blender_exports
+          mapfile -d '' blend_files < <(find assets/blender/source -type f -name '*.blend' -print0 2>/dev/null || true)
+          if [ "${#blend_files[@]}" -eq 0 ]; then
+            echo "No .blend files found yet in assets/blender/source."
+            echo "Add a Blender project there, then run this workflow again."
+            exit 0
+          fi
+          for file in "${blend_files[@]}"; do
+            name="$(basename "${file%.blend}")"
+            echo "Exporting ${file} -> build/blender_exports/${name}.glb"
+            blender --background "${file}" --python tools/blender/export_glb.py -- --output "build/blender_exports/${name}.glb"
+          done
+
+      - name: Upload GLB exports
+        uses: actions/upload-artifact@v4
+        with:
+          name: LIFE-CITY-Blender-GLB-Assets
+          path: build/blender_exports/
+          if-no-files-found: warn
+          retention-days: 14
