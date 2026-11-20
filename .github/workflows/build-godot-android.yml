@@ -25,6 +25,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install ProtonScatter editor addon
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none https://github.com/HungryProton/scatter.git /tmp/proton-scatter
+          git -C /tmp/proton-scatter checkout 7198cc00078ebde61307578137c3f35223c6e438
+          mkdir -p addons/proton_scatter
+          cp -a /tmp/proton-scatter/addons/proton_scatter/. addons/proton_scatter/
+          test -f addons/proton_scatter/plugin.cfg
+          test -f addons/proton_scatter/plugin.gd
+          test -f addons/proton_scatter/LICENSE
+          grep -q 'version="4.2.0"' addons/proton_scatter/plugin.cfg
+          echo "PROTON_SCATTER_SOURCE_VERIFIED"
+
       - name: Install Android export requirements
         run: |
           apt-get update
