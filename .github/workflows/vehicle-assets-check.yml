@@ -7,7 +7,8 @@ on:
       - "assets/vehicles/**"
       - "scripts/vehicle_controller.gd"
       - "tests/vehicle_asset_integration_test.gd"
-      - "tests/dena_plus_vehicle_test.gd"\n      - "tests/peugeot_207_vehicle_test.gd"
+      - "tests/dena_plus_vehicle_test.gd"
+      - "tests/peugeot_207_vehicle_test.gd"
       - "tests/vehicle_asset_validation_stamp.txt"
       - "tools/import_free_vehicles.py"
       - "project.godot"
@@ -46,7 +47,8 @@ jobs:
           tar -xJf /tmp/node.tar.xz -C /opt/node --strip-components=1
           export PATH="/opt/node/bin:${PATH}"
           node --version
-          npm --version fontconfig libfontconfig1
+          apt-get install -y fontconfig libfontconfig1
+          npm --version
           npm install --global @gltf-transform/cli
           find assets/vehicles -type f -name '*.glb' -print0 | while IFS= read -r -d '' file; do
             tmp="${file%.glb}.godot-compatible.glb"
@@ -77,7 +79,21 @@ jobs:
             echo "Dena Plus test reported script or runtime errors."
             exit 1
           fi
-      - name: Test Peugeot 207 model, hatchback trim, touch steering, gearbox and driving\n        timeout-minutes: 3\n        shell: bash\n        run: |\n          set -o pipefail\n          godot --headless --path . --script res://tests/peugeot_207_vehicle_test.gd 2>&1 | tee peugeot-207-test.log\n          if ! grep -q "PEUGEOT_207_VEHICLE_TEST_PASS" peugeot-207-test.log; then\n            echo "Peugeot 207 acceptance test did not pass."\n            exit 1\n          fi\n          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" peugeot-207-test.log; then\n            echo "Peugeot 207 test reported script or runtime errors."\n            exit 1\n          fi\n      - name: Test all nine GLB rigs, dimensions, wheel pivots and controller loading
+      - name: Test Peugeot 207 model, hatchback trim, touch steering, gearbox and driving
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/peugeot_207_vehicle_test.gd 2>&1 | tee peugeot-207-test.log
+          if ! grep -q "PEUGEOT_207_VEHICLE_TEST_PASS" peugeot-207-test.log; then
+            echo "Peugeot 207 acceptance test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" peugeot-207-test.log; then
+            echo "Peugeot 207 test reported script or runtime errors."
+            exit 1
+          fi
+      - name: Test all nine GLB rigs, dimensions, wheel pivots and controller loading
         timeout-minutes: 4
         shell: bash
         run: |
