@@ -51,7 +51,14 @@ func _add_box(parent: Node3D, title: String, pos: Vector3, size: Vector3, color:
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	mesh_instance.mesh = mesh
-	mesh_instance.material_override = _material(color)
+	var surface_material := _material(color)
+	if title.contains("Glass") or title.contains("Window"):
+		surface_material.roughness = 0.16
+		surface_material.metallic = 0.18
+		surface_material.metallic_specular = 0.8
+	elif title.contains("Road") or title.contains("Ground"):
+		surface_material.roughness = 0.96
+	mesh_instance.material_override = surface_material
 	body.add_child(mesh_instance)
 	if solid:
 		var collision := CollisionShape3D.new()
@@ -140,16 +147,41 @@ func _build_world() -> void:
 	world_environment = WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
-	env.sky = Sky.new()
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.62, 0.69, 0.8)
-	env.ambient_light_energy = 0.7
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color(0.12, 0.25, 0.43)
+	sky_material.sky_horizon_color = Color(0.66, 0.78, 0.88)
+	sky_material.ground_bottom_color = Color(0.10, 0.12, 0.14)
+	sky_material.ground_horizon_color = Color(0.40, 0.44, 0.42)
+	sky_material.sun_angle_max = 18.0
+	sky_material.use_debanding = true
+	var sky := Sky.new()
+	sky.sky_material = sky_material
+	env.sky = sky
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_energy = 0.72
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.0
+	env.tonemap_white = 6.0
+	env.fog_enabled = true
+	env.fog_light_color = Color(0.63, 0.73, 0.82)
+	env.fog_density = 0.0012
+	env.fog_sky_affect = 0.12
+	env.glow_enabled = true
+	env.glow_intensity = 0.22
+	env.glow_bloom = 0.04
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.06
+	env.adjustment_saturation = 1.08
 	world_environment.environment = env
 	add_child(world_environment)
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-48, -32, 0)
+	sun.light_color = Color(1.0, 0.94, 0.84)
 	sun.light_energy = 1.15
 	sun.shadow_enabled = true
+	sun.shadow_bias = 0.045
+	sun.shadow_normal_bias = 1.2
+	sun.directional_shadow_max_distance = 110.0
 	add_child(sun)
 	_add_box(self, "City Ground", Vector3(0, -0.3, 0), Vector3(230, 0.5, 230), Color(0.22, 0.34, 0.25))
 	_add_box(self, "Ocean", Vector3(0, -0.02, 105), Vector3(230, 0.08, 20), Color(0.035, 0.22, 0.38), false)
