@@ -47,14 +47,22 @@ func _run() -> void:
 	assert(npc_card_indexes.size() == 5, "NPC cards 2-6 were not seeded")
 
 	print("FINANCE_CHECKPOINT_CHEQUE")
-	ledger.request_issue_cheque(account_number, "1234", 6000)
+	ledger.request_issue_cheque(account_number, "1234", 6000, 3)
 	assert(not ledger.cheque_book.is_empty(), "cheque issuance failed")
+	var issued_cheque: Dictionary = ledger.cheque_book.values()[0]
+	assert(int(issued_cheque.get("maturity_days", 0)) == 3, "cheque issuer maturity selection was not saved")
+	assert(is_equal_approx(float(issued_cheque.get("maturity_due_game_time", 0.0)), 4320.0), "three-day cheque maturity must be 3 x 1440 seconds")
+	var issue_audit_found := false
+	for audit in ledger.cash_transactions.values():
+		if str(audit.get("type", "")) == "cheque_issued" and str(audit.get("cheque_id", "")) == str(issued_cheque.get("id", "")):
+			issue_audit_found = true
+	assert(issue_audit_found, "cheque issuance was not written to bank audit history")
 	var cheque_id := str(ledger.cheque_book.keys()[0])
 	ledger._cheque_purchase(1, cheque_id, "گوشی هوشمند")
 	assert(ledger.cheque_book[cheque_id].spends.size() == 1, "cheque purchase was not recorded")
 
 	ledger.bank_accounts[account_number].balance = 0
-	ledger.game_clock_seconds = 1440.0
+	ledger.game_clock_seconds = 4320.0
 	print("FINANCE_CHECKPOINT_SETTLEMENT")
 	ledger._settle_due_cheques()
 	assert(bool(ledger.cheque_spending_ban.get("1", false)), "dishonoured cheque did not restrict cheque issuance")
@@ -64,6 +72,11 @@ func _run() -> void:
 	assert(not ledger.prison_records.is_empty(), "dishonoured cheque did not create prison record")
 	var spend: Dictionary = ledger.cheque_book[cheque_id].spends[0]
 	assert(str(spend.status) == "برگشت‌خورده", "cheque did not bounce")
+	var bounced_audit_found := false
+	for audit in ledger.cash_transactions.values():
+		if str(audit.get("type", "")) == "cheque_bounced" and str(audit.get("cheque_id", "")) == cheque_id:
+			bounced_audit_found = true
+	assert(bounced_audit_found, "dishonoured cheque event was not added to bank statement")
 	var doc_id := str(spend.document_id)
 	assert(str(ledger.documents[doc_id].status) == "repossessed", "purchased item was not repossessed")
 
