@@ -808,7 +808,7 @@ func _render_page() -> void:
 				_add_button(layout, "تلپورت به " + place, "teleport", place)
 		"military":
 			var local_military_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-			var can_command_all := _is_creator() or _has_role(local_military_peer, "فرمانده کل ارتش") or (ledger != null and ledger.can_access_permission(local_military_peer, "command_military"))
+			var can_command_all: bool = _is_creator() or _has_role(local_military_peer, "فرمانده کل ارتش") or (ledger != null and ledger.can_access_permission(local_military_peer, "command_military"))
 			var visible_departments: Array[String] = []
 			for department in ["نیروی زمینی", "نیروی هوایی", "نیروی دریایی", "گارد ساحلی", "تفنگداران دریایی", "نیروی فضایی", "گارد ملی"]:
 				if can_command_all or _has_role(local_military_peer, "فرمانده " + department):
@@ -948,7 +948,7 @@ func _can_access_military_department(peer_id: int, department: String) -> bool:
 
 func _open_military_command(department: String = "") -> void:
 	var local_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-	var allowed := _can_access_military_department(local_peer, department) if not department.is_empty() else (_is_creator() or _has_role(local_peer, "فرمانده کل ارتش") or (ledger != null and ledger.can_access_permission(local_peer, "command_military")))
+	var allowed: bool = _can_access_military_department(local_peer, department) if not department.is_empty() else (_is_creator() or _has_role(local_peer, "فرمانده کل ارتش") or (ledger != null and ledger.can_access_permission(local_peer, "command_military")))
 	if not allowed:
 		notice_changed.emit("دسترسی این شاخه از ستاد کل برای مقام تو فعال نیست.")
 		return
