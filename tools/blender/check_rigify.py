@@ -1,14 +1,14 @@
-import importlib
 import bpy
+import importlib.util
 
-MODULE = "bl_ext.blender_org.rigify"
+# Rigify is distributed with Blender; it is not an extension-store package.
+# Enable the bundled add-on by its built-in module name.
+if importlib.util.find_spec("rigify") is None:
+    raise RuntimeError("Rigify module is missing from this Blender distribution")
 
-# Explicitly enable the installed Blender extension in this clean CI profile.
-bpy.ops.preferences.addon_enable(module=MODULE)
-rigify = importlib.import_module(MODULE)
+bpy.ops.preferences.addon_enable(module="rigify")
+import rigify
 
-# The human meta-rig operator is the key starting point for LIFE CITY
-# character skeletons. Verify it creates a real armature with a useful bone set.
 if not hasattr(bpy.ops.object, "armature_human_metarig_add"):
     raise RuntimeError("Rigify human meta-rig operator is unavailable")
 
@@ -17,7 +17,6 @@ if bpy.context.object and bpy.context.object.mode != "OBJECT":
 
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
-
 bpy.ops.object.armature_human_metarig_add()
 metarig = bpy.context.object
 if metarig is None or metarig.type != "ARMATURE":
