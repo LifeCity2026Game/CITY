@@ -20,6 +20,17 @@ func _run_military_checks() -> void:
 	if military == null or services == null:
 		_fail("Military command or services node is missing")
 		return
+	if not military._peer_can_command(1, "نیروی زمینی"):
+		_fail("Creator account must retain full military command access")
+		return
+	if military._peer_can_command(2, "نیروی هوایی"):
+		_fail("Unassigned citizen must not command a military branch")
+		return
+	services.selected_role = "فرمانده نیروی هوایی"
+	services._assign_role(2)
+	if not military._peer_can_command(2, "نیروی هوایی") or military._peer_can_command(2, "نیروی زمینی"):
+		_fail("Branch commander access was not restricted to the assigned branch")
+		return
 	if not game.get_node_or_null("CITY_HALL") is Node3D:
 		_fail("City Hall building is missing")
 		return
@@ -37,6 +48,15 @@ func _run_military_checks() -> void:
 	if not military.panel.visible:
 		_fail("The real military command panel could not be opened")
 		return
+	military._log("تست ثبت رویداد ستاد کل")
+	if military.operation_audit.is_empty():
+		_fail("Military command audit log did not record the operation")
+		return
+	var audit_entry: Dictionary = military.operation_audit.back()
+	for field in ["event_id", "timestamp_unix", "actor_peer_id", "department", "action", "target", "result"]:
+		if not audit_entry.has(field):
+			_fail("Military audit entry is missing field: " + field)
+			return
 	if not services.ROLES.has("شهردار"):
 		_fail("Mayor role is not available in the creator role list")
 		return
