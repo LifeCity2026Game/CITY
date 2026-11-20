@@ -30,6 +30,13 @@ jobs:
           git -C /tmp/proton-scatter checkout 7198cc00078ebde61307578137c3f35223c6e438
           mkdir -p addons/proton_scatter
           cp -a /tmp/proton-scatter/addons/proton_scatter/. addons/proton_scatter/
+      - name: Install Python verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq python3
+          python3 --version
       - name: Verify addon package and license
         run: python3 tools/proton_scatter/verify_release.py addons/proton_scatter
       - name: Import project and load editor plugin
