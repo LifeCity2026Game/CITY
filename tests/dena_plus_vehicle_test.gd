@@ -33,7 +33,7 @@ func _run() -> void:
 	if car.style_root == null or not car.style_root.visible:
 		_fail("Dena-specific exterior trim overlay is not visible")
 		return
-	var dena_profile := car.style_root.get_node_or_null("Profile_dena")
+	var dena_profile: Node = car.style_root.get_node_or_null("Profile_dena")
 	if dena_profile == null or dena_profile.get_child_count() < 8:
 		_fail("Dena-specific grille, lamps, trim and badges are incomplete")
 		return
