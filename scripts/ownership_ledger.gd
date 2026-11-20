@@ -801,7 +801,12 @@ func rpc_request_store_checkout(account_number: String, pin: String, item_id: St
 		_store_checkout(multiplayer.get_remote_sender_id(), account_number, pin, item_id, quantity)
 
 func _store_checkout(peer_id: int, account_number: String, pin: String, item_id: String, quantity: int) -> void:
-	if quantity < 1 or quantity > 10 or not STORE_CATEGORIES.values().any(func(items): return items.has(item_id)):
+	var catalog_item_found := false
+	for category_items in STORE_CATEGORIES.values():
+		if category_items.has(item_id):
+			catalog_item_found = true
+			break
+	if quantity < 1 or quantity > 10 or not catalog_item_found:
 		_send_notice(peer_id, "کالا یا تعداد سفارش معتبر نیست.")
 		return
 	if not bank_accounts.has(account_number):
