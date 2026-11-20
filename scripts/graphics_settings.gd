@@ -256,7 +256,7 @@ func _update_profile_label() -> void:
 	if not is_instance_valid(profile_label):
 		return
 	var mode_text := "خودکار" if quality_mode == "auto" else "دستی"
-	var quality_text := {"low": "اقتصادی", "medium": "متعادل", "high": "بالا"}.get(current_quality, current_quality)
+	var quality_text: String = str({"low": "اقتصادی", "medium": "متعادل", "high": "بالا"}.get(current_quality, current_quality))
 	var fps_text := "در حال سنجش" if _last_fps <= 0.0 else "%.0f FPS" % _last_fps
 	profile_label.text = "%s | %s\n%s" % [mode_text, quality_text, fps_text]
 
