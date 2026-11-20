@@ -67,7 +67,7 @@ jobs:
 
   firebase-test-lab:
     needs: prepare
-    if: needs.prepare.outputs.firebase_ready == 'true'
+    if: false # Temporarily disabled: run Appetize only; avoids Firebase Test Lab billing.
     runs-on: ubuntu-latest
     steps:
       - name: Download APK artifact
