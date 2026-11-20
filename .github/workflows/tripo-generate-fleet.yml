@@ -1,6 +1,10 @@
 name: Generate LIFE CITY Vehicle Fleet with Tripo
 
 on:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - ".github/tripo-generate-vehicles"
   workflow_dispatch:
     inputs:
       vehicle:
@@ -37,7 +41,7 @@ concurrency:
 
 jobs:
   generate:
-    if: ${{ inputs.confirm_paid_generation == 'yes' }}
+    if: ${{ inputs.confirm_paid_generation == 'yes' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -57,7 +61,7 @@ jobs:
       - name: Generate selected vehicle models
         env:
           TRIPO_API_KEY: ${{ secrets.TRIPO_API_KEY }}
-        run: python tools/tripo_generate_fleet.py --vehicle "${{ inputs.vehicle }}"
+        run: python tools/tripo_generate_fleet.py --vehicle "${{ inputs.vehicle || 'all' }}"
 
       - name: Commit generated GLB files
         run: |
