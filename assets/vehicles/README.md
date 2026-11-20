@@ -18,7 +18,7 @@ A dedicated `tests/dena_plus_vehicle_test.gd` acceptance test now checks the Den
 
 **Not yet accepted as complete:** an exact Dena Plus body with a verified redistribution/game-use license is still required; hands-on Appetize device testing and a successful GitHub run are also still required. Do not label the generic saloon as a real Dena Plus model.
 
-## Fleet mapping
+## Next vehicle: Peugeot 207\n\nThe Peugeot 207 is the second vehicle in the one-at-a-time acceptance cycle. Its mapped GLB is currently the generic CC0 five-door hatchback from the shared source pack, not a verified Peugeot 207 replica. The controller now adds a 207-inspired front fascia, swept headlamp accents, fog-lamp surrounds, bonnet creases, side mouldings, door handles, rear lamps, hatch garnish and spoiler. A dedicated `tests/peugeot_207_vehicle_test.gd` checks model loading, hatchback trim, wheel/steering rig, touch steering, forward/reverse drive, braking and manual clutch operation. The CI workflow runs the Dena and Peugeot acceptance tests before the nine-asset integration suite.\n\n**Not yet accepted as complete:** the exact downloadable Peugeot 207 candidate is CC BY and requires attribution; its source file has not yet been obtained and inspected for cabin, materials, and game-ready rig. The generic CC0 hatchback remains a technical placeholder.\n\n## Fleet mapping
 
 | LIFE CITY slot | Imported generic body class | File |
 |---|---|---|
