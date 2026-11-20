@@ -1,6 +1,7 @@
 extends Node3D
 
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
+const PEDESTRIAN_SCRIPT = preload("res://scripts/pedestrian_npc.gd")
 const STAGE2_SCRIPT = preload("res://scripts/city_stage2.gd")
 const NETWORK_SCRIPT = preload("res://scripts/network_manager.gd")
 const LEDGER_SCRIPT = preload("res://scripts/ownership_ledger.gd")
@@ -142,6 +143,34 @@ func _build_city_details() -> void:
 		var bench_pos := Vector3(side * 20.0, 0.0, 0.0)
 		_add_box(self, "ParkBenchSeat", bench_pos + Vector3(0, 0.55, 0), Vector3(1.8, 0.16, 0.55), Color(0.34, 0.20, 0.10), false)
 		_add_box(self, "ParkBenchBack", bench_pos + Vector3(0, 0.95, -0.22), Vector3(1.8, 0.65, 0.12), Color(0.34, 0.20, 0.10), false)
+
+	_build_pedestrians()
+
+func _build_pedestrians() -> void:
+	# Four pedestrian corridors follow the existing sidewalks, keeping NPCs out of traffic.
+	var outfits := [
+		Color(0.12, 0.34, 0.68), Color(0.62, 0.22, 0.18),
+		Color(0.18, 0.43, 0.30), Color(0.48, 0.34, 0.18),
+		Color(0.36, 0.27, 0.55), Color(0.20, 0.42, 0.48)
+	]
+	var names := ["شهروند", "رهگذر", "فروشنده", "کارمند", "دانشجو", "مهمان"]
+	for corridor in range(4):
+		for index in range(4):
+			var pedestrian := CharacterBody3D.new()
+			pedestrian.name = "Pedestrian_%02d" % (corridor * 4 + index + 1)
+			pedestrian.set_script(PEDESTRIAN_SCRIPT)
+			var lane := 11.2 if corridor % 2 == 0 else -11.2
+			if corridor < 2:
+				pedestrian.position = Vector3(lane, 0.0, -78.0 + float(index) * 50.0)
+				pedestrian.set("waypoint_a", Vector3(lane, 0.0, -98.0))
+				pedestrian.set("waypoint_b", Vector3(lane, 0.0, 98.0))
+			else:
+				pedestrian.position = Vector3(-78.0 + float(index) * 50.0, 0.0, lane)
+				pedestrian.set("waypoint_a", Vector3(-98.0, 0.0, lane))
+				pedestrian.set("waypoint_b", Vector3(98.0, 0.0, lane))
+			pedestrian.set("pedestrian_name", names[(corridor * 4 + index) % names.size()])
+			pedestrian.set("outfit_color", outfits[(corridor * 4 + index) % outfits.size()])
+			add_child(pedestrian)
 
 func _build_world() -> void:
 	world_environment = WorldEnvironment.new()
