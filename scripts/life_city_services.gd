@@ -45,6 +45,7 @@ var firebase_email_field: LineEdit
 var firebase_password_field: LineEdit
 var store_quantity_input: LineEdit
 var store_cart: Dictionary = {}
+var cheque_maturity_days := 1
 
 const GAME_DAY_LENGTH := 1440.0
 const ONLINE_PRODUCTS := {
@@ -418,7 +419,8 @@ func _action(action: String, arg: String = "") -> void:
 	elif action == "open_account":
 		if ledger and pin_input: ledger.request_open_bank_account(pin_input.text)
 	elif action == "issue_real_cheque":
-		if ledger and account_input and pin_input and amount_input: ledger.request_issue_cheque(account_input.text.strip_edges(), pin_input.text, int(amount_input.text))
+		if ledger and account_input and pin_input and amount_input:
+			ledger.request_issue_cheque(account_input.text.strip_edges(), pin_input.text, int(amount_input.text), cheque_maturity_days)
 	elif action == "cheque_purchase":
 		if ledger and target_input: ledger.request_cheque_purchase(target_input.text.strip_edges(), arg)
 	elif action == "cash_item_purchase":
@@ -615,7 +617,14 @@ func _render_page() -> void:
 			pin_input = _add_input("رمز حساب")
 			amount_input = _add_input("مبلغ چک")
 			amount_input.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_NUMBER
-			_add_button(layout, "صدور چک", "issue_real_cheque")
+			layout.add_child(_label("مدت تا سررسید چک (انتخاب صادرکننده):"))
+			var maturity_picker := OptionButton.new()
+			for day_count in range(1, 11):
+				maturity_picker.add_item("%d روز بازی" % day_count)
+			maturity_picker.select(clampi(cheque_maturity_days - 1, 0, 9))
+			maturity_picker.item_selected.connect(func(index: int): cheque_maturity_days = index + 1)
+			layout.add_child(maturity_picker)
+			_add_button(layout, "صدور چک با سررسید انتخاب‌شده", "issue_real_cheque")
 			target_input = _add_input("کد چک برای خرید")
 			for item in ONLINE_PRODUCTS:
 				_add_button(layout, "خرید %s با چک" % item, "cheque_purchase", item)
@@ -854,9 +863,10 @@ func _render_page() -> void:
 					])
 				var cheque_lines: Array[String] = []
 				for cheque in record.get("cheque_history", []):
-					cheque_lines.append("%s | %s | %s | %s" % [
-						str(cheque.get("cheque_id", "")), str(cheque.get("item", "")),
-						str(cheque.get("amount", 0)), str(cheque.get("status", ""))
+					cheque_lines.append("%s | %s | %s | %s | سررسید: %s روز" % [
+						str(cheque.get("cheque_id", "")), str(cheque.get("item", cheque.get("event", ""))),
+						str(cheque.get("amount", 0)), str(cheque.get("status", "")),
+						str(cheque.get("maturity_days", 1))
 					])
 				var prison_lines: Array[String] = []
 				for prison in record.get("prison_records", []):
