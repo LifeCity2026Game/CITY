@@ -1,0 +1,72 @@
+name: Generate LIFE CITY Vehicle Fleet with Tripo
+
+on:
+  workflow_dispatch:
+    inputs:
+      vehicle:
+        description: "Vehicle to generate"
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - dena
+          - peugeot_207
+          - land_cruiser
+          - lexus_rx
+          - ferrari
+          - lamborghini
+          - tiba
+          - tiba_2
+          - pride
+      confirm_paid_generation:
+        description: "Confirm that Tripo API credits may be consumed (estimated 40 credits per vehicle)"
+        required: true
+        type: choice
+        default: "no"
+        options:
+          - "no"
+          - "yes"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tripo-vehicle-generation
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: ${{ inputs.confirm_paid_generation == 'yes' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+        with:
+          ref: godot-migration
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade requests
+
+      - name: Generate selected vehicle models
+        env:
+          TRIPO_API_KEY: ${{ secrets.TRIPO_API_KEY }}
+        run: python tools/tripo_generate_fleet.py --vehicle "${{ inputs.vehicle }}"
+
+      - name: Commit generated GLB files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/vehicles
+          if git diff --cached --quiet; then
+            echo "No generated assets to commit."
+            exit 1
+          fi
+          git commit -m "Generate Tripo 3D vehicle fleet assets"
+          git push origin HEAD:godot-migration
