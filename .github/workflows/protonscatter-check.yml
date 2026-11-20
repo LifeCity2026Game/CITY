@@ -35,8 +35,9 @@ jobs:
         run: |
           set -euo pipefail
           apt-get update -qq
-          apt-get install -y -qq python3
+          apt-get install -y -qq python3 fontconfig libfontconfig1
           python3 --version
+          fc-cache -f
       - name: Verify addon package and license
         run: python3 tools/proton_scatter/verify_release.py addons/proton_scatter
       - name: Import addon resources before loading plugin
