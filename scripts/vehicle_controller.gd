@@ -71,6 +71,7 @@ var base_acceleration := 11.0
 var base_max_forward_speed := 34.0
 var vehicle_paint_color := Color(0.12, 0.30, 0.66)
 var style_root: Node3D
+var imported_model_root: Node3D
 
 func _ready() -> void:
 	_build_vehicle()
@@ -79,6 +80,7 @@ func _ready() -> void:
 	vehicle_name = "دنا"
 	_apply_vehicle_style("sedan", Color(0.12, 0.30, 0.66))
 	_apply_interior_profile(Color(0.12, 0.30, 0.66), 0)
+	_try_load_vehicle_asset("dena")
 	var selector := controls_layer.get_node_or_null("ModelSelector") as Button
 	if selector:
 		selector.text = "انتخاب خودرو: " + vehicle_name
@@ -454,11 +456,54 @@ func _cycle_vehicle_model() -> void:
 				part_material.albedo_color = spec.color
 	_apply_vehicle_style(str(spec.style), spec.color)
 	_apply_interior_profile(spec.color, model_index)
+	_try_load_vehicle_asset(str(spec.style))
 	var model_button := controls_layer.get_node_or_null("ModelSelector") as Button
 	if model_button:
 		model_button.text = "انتخاب خودرو: " + vehicle_name
 	if speed_label:
 		speed_label.text = "خودرو انتخاب شد: " + vehicle_name
+
+
+
+func _try_load_vehicle_asset(style: String) -> bool:
+	# Production GLB assets override the temporary procedural shell when present.
+	var asset_paths := {
+		"dena": "res://assets/vehicles/dena/dena.glb",
+		"peugeot_207": "res://assets/vehicles/peugeot_207/peugeot_207.glb",
+		"land_cruiser": "res://assets/vehicles/land_cruiser/land_cruiser.glb",
+		"lexus_rx": "res://assets/vehicles/lexus_rx/lexus_rx.glb",
+		"ferrari": "res://assets/vehicles/ferrari/ferrari.glb",
+		"lamborghini": "res://assets/vehicles/lamborghini/lamborghini.glb",
+		"tiba": "res://assets/vehicles/tiba/tiba.glb",
+		"tiba_2": "res://assets/vehicles/tiba_2/tiba_2.glb",
+		"pride": "res://assets/vehicles/pride/pride.glb"
+	}
+	if not asset_paths.has(style):
+		return false
+	var path := str(asset_paths[style])
+	if not ResourceLoader.exists(path):
+		return false
+	var packed := load(path) as PackedScene
+	if packed == null:
+		push_warning("Vehicle asset exists but could not be loaded: " + path)
+		return false
+	if imported_model_root and is_instance_valid(imported_model_root):
+		imported_model_root.queue_free()
+	imported_model_root = Node3D.new()
+	imported_model_root.name = "ImportedVehicleModel_" + style
+	add_child(imported_model_root)
+	var instance := packed.instantiate()
+	imported_model_root.add_child(instance)
+	# Keep the current controller/collision/UI intact; the imported scene supplies the visual mesh.
+	for node in get_children():
+		if node is MeshInstance3D and node.get_parent() == self:
+			node.visible = false
+		for child in node.get_children():
+			if child is MeshInstance3D and node.name != "CabinInterior" and node.name != "VehicleStyleParts":
+				child.visible = false
+	if style_root:
+		style_root.visible = false
+	return true
 
 
 func _apply_vehicle_style(style: String, paint: Color) -> void:
