@@ -75,6 +75,7 @@ var imported_model_root: Node3D
 var imported_animation_player: AnimationPlayer
 var imported_wheel_nodes: Array[Node3D] = []
 var imported_front_wheel_nodes: Array[Node3D] = []
+var imported_steering_node: Node3D
 var imported_doors_open := false
 
 func _ready() -> void:
@@ -489,6 +490,7 @@ func _try_load_vehicle_asset(style: String) -> bool:
 	imported_animation_player = null
 	imported_wheel_nodes.clear()
 	imported_front_wheel_nodes.clear()
+	imported_steering_node = null
 	imported_doors_open = false
 	hood_open = false
 	trunk_open = false
@@ -551,6 +553,8 @@ func _try_load_vehicle_asset(style: String) -> bool:
 			imported_wheel_nodes.append(rig_node)
 			if node_name.begins_with("wheel-front-"):
 				imported_front_wheel_nodes.append(rig_node)
+		if node_name in ["steering", "steering-wheel", "steering_wheel"]:
+			imported_steering_node = rig_node
 	if imported_wheel_nodes.size() < 4:
 		push_warning("Fewer than four named wheel pivots: " + path)
 	return true
@@ -885,6 +889,8 @@ func _physics_process(delta: float) -> void:
 		imported_wheel.rotate_object_local(Vector3.RIGHT, current_speed * delta / 0.31)
 	for imported_front_wheel in imported_front_wheel_nodes:
 		imported_front_wheel.rotation.y = active_steer * 0.42
+	if imported_steering_node:
+		imported_steering_node.rotation.z = -active_steer * 0.65
 	if steering_wheel:
 		steering_wheel.rotation.z = -active_steer * 0.65
 	if climate_mode != "off":
