@@ -20,6 +20,7 @@ func _fail(message: String) -> void:
 	quit(1)
 
 func _run() -> void:
+	var raw_heights: Array[float] = []
 	for spec in VEHICLES:
 		var packed := load(str(spec.path)) as PackedScene
 		if packed == null:
@@ -46,6 +47,7 @@ func _run() -> void:
 		if not has_bounds or bounds.size.x < 1.2 or bounds.size.x > 3.2 or bounds.size.y < 0.8 or bounds.size.y > 4.5 or bounds.size.z < 2.5 or bounds.size.z > 7.0:
 			_fail("Unexpected real-world metre bounds for " + str(spec.slot) + ": " + str(bounds.size))
 			return
+		raw_heights.append(bounds.size.y)
 		print("VEHICLE_DIMENSIONS_PASS: " + str(spec.slot) + " " + str(bounds.size))
 		var animation_players := model.find_children("*", "AnimationPlayer", true, false)
 		if animation_players.is_empty():
@@ -84,33 +86,12 @@ func _run() -> void:
 				return
 		model.queue_free()
 		print("VEHICLE_ASSET_SOURCE_PASS: " + str(spec.slot))
-		var raw_height := bounds.size.y
 
 	var vehicle_script := load("res://scripts/vehicle_controller.gd") as Script
 	if vehicle_script == null:
 		_fail("Vehicle controller script failed to load")
 		return
 	var car := CharacterBody3D.new()
-	var raw_heights: Array[float] = []
-	for spec in VEHICLES:
-		var packed_for_height := load(str(spec.path)) as PackedScene
-		var height_root := packed_for_height.instantiate()
-		root.add_child(height_root)
-		await process_frame
-		var height_bounds := AABB()
-		var has_height_bounds := false
-		for mesh_variant in height_root.find_children("*", "MeshInstance3D", true, false):
-			var mesh_node := mesh_variant as MeshInstance3D
-			var relative_transform: Transform3D = height_root.global_transform.affine_inverse() * mesh_node.global_transform
-			var mesh_bounds: AABB = mesh_node.mesh.get_aabb() * relative_transform
-			if not has_height_bounds:
-				height_bounds = mesh_bounds
-				has_height_bounds = true
-			else:
-				height_bounds = height_bounds.merge(mesh_bounds)
-		raw_heights.append(height_bounds.size.y)
-		height_root.queue_free()
-	await process_frame
 	car.set_script(vehicle_script)
 	root.add_child(car)
 	await process_frame
