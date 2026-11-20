@@ -1,4 +1,4 @@
-name: MPFB Human Creator Check
+name: MPFB Human Creator and Asset Library Check
 
 on:
   workflow_dispatch:
@@ -7,13 +7,14 @@ on:
     paths:
       - ".github/workflows/mpfb-check.yml"
       - "tools/blender/check_mpfb.py"
+      - "assets/characters/mpfb/README.md"
 
 permissions:
   contents: read
 
 jobs:
   mpfb:
-    name: Install and verify MPFB in Blender 4.5 LTS
+    name: Install MPFB and verify free CC0 character assets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout LIFE CITY
@@ -40,8 +41,42 @@ jobs:
           blender --version
           blender --online-mode --command extension install --sync --enable mpfb
 
-      - name: Verify MPFB can be imported and exposes its version
+      - name: Download official CC0 MPFB asset packs
         shell: bash
         run: |
           set -euo pipefail
-          blender --background --python tools/blender/check_mpfb.py
+          base="https://files2.makehumancommunity.org/asset_packs"
+          mkdir -p "$RUNNER_TEMP/mpfb-packs"
+          declare -A packs=(
+            ["makehuman_system_assets"]="makehuman_system_assets/makehuman_system_assets_cc0.zip"
+            ["skins01"]="skins01/skins01_cc0.zip"
+            ["skins02"]="skins02/skins02_cc0.zip"
+            ["shirts01"]="shirts01/shirts01_cc0.zip"
+            ["pants01"]="pants01/pants01_cc0.zip"
+            ["shoes01"]="shoes01/shoes01_cc0.zip"
+            ["hats01"]="hats01/hats01_cc0.zip"
+            ["poses01"]="poses01/poses01_cc0.zip"
+          )
+          for pack in "${!packs[@]}"; do
+            echo "Downloading CC0 pack: $pack"
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$base/${packs[$pack]}" \
+              -o "$RUNNER_TEMP/mpfb-packs/$pack.zip"
+            unzip -tq "$RUNNER_TEMP/mpfb-packs/$pack.zip"
+          done
+
+      - name: Install packs into MPFB library and verify asset categories
+        id: verify_assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          blender --background --python tools/blender/check_mpfb.py -- "$RUNNER_TEMP/mpfb-packs"
+
+      - name: Upload reusable MPFB asset library
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecity-mpfb-cc0-asset-library
+          path: ${{ steps.verify_assets.outputs.asset_data_dir }}/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
