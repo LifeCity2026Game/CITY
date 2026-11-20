@@ -113,6 +113,9 @@ func _run() -> void:
 		if car.imported_wheel_nodes.size() < 4:
 			_fail("Controller did not bind four wheel pivots at catalog index %d" % index)
 			return
+		if car.imported_steering_node == null:
+			_fail("Controller did not bind the steering wheel pivot at catalog index %d" % index)
+			return
 		var collision := car.get_node_or_null("CollisionShape3D") as CollisionShape3D
 		if collision == null or not collision.shape is BoxShape3D:
 			_fail("Vehicle collision proxy missing at catalog index %d" % index)
