@@ -12,7 +12,7 @@ func _run() -> void:
 	if vehicle_script == null:
 		_fail("Vehicle controller script could not be loaded")
 		return
-	var car := CharacterBody3D.new()
+	var car: Variant = CharacterBody3D.new()
 	car.name = "DenaPlusAcceptanceVehicle"
 	car.set_script(vehicle_script)
 	root.add_child(car)
