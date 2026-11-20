@@ -1,0 +1,51 @@
+name: ProtonScatter Addon Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - ".github/workflows/protonscatter-check.yml"
+      - "tools/proton_scatter/**"
+      - "docs/proton_scatter/**"
+      - "project.godot"
+
+permissions:
+  contents: read
+
+jobs:
+  protonscatter:
+    name: Verify ProtonScatter for Godot 4
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+      - name: Download pinned upstream ProtonScatter source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none https://github.com/HungryProton/scatter.git /tmp/proton-scatter
+          git -C /tmp/proton-scatter checkout 7198cc00078ebde61307578137c3f35223c6e438
+          mkdir -p addons/proton_scatter
+          cp -a /tmp/proton-scatter/addons/proton_scatter/. addons/proton_scatter/
+      - name: Verify addon package and license
+        run: python3 tools/proton_scatter/verify_release.py addons/proton_scatter
+      - name: Import project and load editor plugin
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --editor --quit 2>&1 | tee protonscatter-godot.log
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" protonscatter-godot.log; then
+            echo "ProtonScatter editor plugin reported errors."
+            exit 1
+          fi
+          echo "PROTON_SCATTER_GODOT_IMPORT_PASS"
+      - name: Upload ProtonScatter addon package
+        uses: actions/upload-artifact@v4
+        with:
+          name: LIFE-CITY-ProtonScatter-Addon
+          path: addons/proton_scatter/
+          if-no-files-found: error
+          retention-days: 30
