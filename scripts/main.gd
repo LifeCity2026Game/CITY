@@ -32,6 +32,7 @@ func _ready() -> void:
 	_build_firebase_client()
 	_build_life_city_services()
 	_build_military_command()
+	LifeCityUI.apply_to_tree(self)
 
 func _material(color: Color, roughness_value: float = 0.82) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
