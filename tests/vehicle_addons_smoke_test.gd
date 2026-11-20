@@ -24,7 +24,7 @@ func _run() -> void:
 		if cfg.load(path) != OK:
 			_fail("Could not parse plugin config: " + path)
 			return
-		var script_path := path.get_base_dir() + "/" + str(cfg.get_value("plugin", "script", ""))
+		var script_path: String = path.get_base_dir() + "/" + str(cfg.get_value("plugin", "script", ""))
 		if not FileAccess.file_exists(script_path) or load(script_path) == null:
 			_fail("Plugin script could not be loaded: " + script_path)
 			return
