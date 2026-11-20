@@ -489,6 +489,9 @@ func _try_load_vehicle_asset(style: String) -> bool:
 	imported_animation_player = null
 	imported_wheel_nodes.clear()
 	imported_front_wheel_nodes.clear()
+	imported_doors_open = false
+	hood_open = false
+	trunk_open = false
 	_set_procedural_vehicle_visible(true)
 	if style_root:
 		style_root.visible = true
@@ -544,9 +547,9 @@ func _try_load_vehicle_asset(style: String) -> bool:
 		if rig_node == null:
 			continue
 		var node_name := rig_node.name.to_lower()
-		if node_name.contains("wheel-front-left") or node_name.contains("wheel-front-right") or node_name.contains("wheel-rear-left") or node_name.contains("wheel-rear-right"):
+		if node_name in ["wheel-front-left", "wheel-front-right", "wheel-rear-left", "wheel-rear-right"]:
 			imported_wheel_nodes.append(rig_node)
-			if node_name.contains("wheel-front-"):
+			if node_name.begins_with("wheel-front-"):
 				imported_front_wheel_nodes.append(rig_node)
 	if imported_wheel_nodes.size() < 4:
 		push_warning("Fewer than four named wheel pivots: " + path)
