@@ -10,6 +10,7 @@ const VEHICLE_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const JOYSTICK_SCRIPT = preload("res://scripts/virtual_joystick.gd")
 const SERVICES_SCRIPT = preload("res://scripts/life_city_services.gd")
 const MILITARY_SCRIPT = preload("res://scripts/military_command.gd")
+const FIREBASE_SCRIPT = preload("res://scripts/firebase_client.gd")
 var player: CharacterBody3D
 var network_manager: Node
 var ownership_ledger: Node
@@ -28,6 +29,7 @@ func _ready() -> void:
 	_build_graphics_settings()
 	_build_stage_two()
 	_build_network()
+	_build_firebase_client()
 	_build_life_city_services()
 	_build_military_command()
 
@@ -494,3 +496,9 @@ func _build_military_command() -> void:
 	military_system.set_script(MILITARY_SCRIPT)
 	add_child(military_system)
 	military_system.configure(player, ownership_ledger)
+
+func _build_firebase_client() -> void:
+	var firebase := Node.new()
+	firebase.name = "FirebaseClient"
+	firebase.set_script(FIREBASE_SCRIPT)
+	add_child(firebase)
