@@ -7,6 +7,7 @@ on:
       - "assets/vehicles/**"
       - "scripts/vehicle_controller.gd"
       - "tests/vehicle_asset_integration_test.gd"
+      - "tests/dena_plus_vehicle_test.gd"
       - "tests/vehicle_asset_validation_stamp.txt"
       - "tools/import_free_vehicles.py"
       - "project.godot"
@@ -60,6 +61,20 @@ jobs:
           godot --headless --path . --editor --import --quit 2>&1 | tee vehicle-godot-import.log
           if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" vehicle-godot-import.log; then
             echo "Godot resource import reported errors."
+            exit 1
+          fi
+      - name: Test Dena Plus model, touch steering, gearbox and driving
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/dena_plus_vehicle_test.gd 2>&1 | tee dena-plus-test.log
+          if ! grep -q "DENA_PLUS_VEHICLE_TEST_PASS" dena-plus-test.log; then
+            echo "Dena Plus acceptance test did not pass."
+            exit 1
+          fi
+          if grep -E "SCRIPT ERROR|Parse Error|Compile Error|ERROR:" dena-plus-test.log; then
+            echo "Dena Plus test reported script or runtime errors."
             exit 1
           fi
       - name: Test all nine GLB rigs, dimensions, wheel pivots and controller loading
