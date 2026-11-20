@@ -522,7 +522,7 @@ func _try_load_vehicle_asset(style: String) -> bool:
 		if mesh_node == null or mesh_node.mesh == null:
 			continue
 		var relative_transform: Transform3D = imported_model_root.global_transform.affine_inverse() * mesh_node.global_transform
-		var mesh_bounds: AABB = mesh_node.get_aabb() * relative_transform
+		var mesh_bounds: AABB = mesh_node.mesh.get_aabb() * relative_transform
 		if not has_bounds:
 			bounds = mesh_bounds
 			has_bounds = true
