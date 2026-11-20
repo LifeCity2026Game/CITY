@@ -83,7 +83,7 @@ func _ready() -> void:
 	_build_cameras()
 	_build_controls()
 	vehicle_name = "دنا"
-	_apply_vehicle_style("sedan", Color(0.12, 0.30, 0.66))
+	_apply_vehicle_style("dena", Color(0.12, 0.30, 0.66))
 	_apply_interior_profile(Color(0.12, 0.30, 0.66), 0)
 	_try_load_vehicle_asset("dena")
 	var selector := controls_layer.get_node_or_null("ModelSelector") as Button
