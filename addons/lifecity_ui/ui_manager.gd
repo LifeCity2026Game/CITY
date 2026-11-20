@@ -12,6 +12,20 @@ func apply_to_tree(root: Node) -> void:
 		apply_to_tree(child)
 
 func _style_control(control: Control) -> void:
+	# Keep the main touch HUD and modal service panel inside the phone safe area.
+	if control.name == "ServicesPanel":
+		apply_safe_panel_layout(control)
+	elif control.name == "CharacterJoystick":
+		dock_touch_control(control, &"bottom_left", 176.0, 28.0)
+	elif control.name == "MainMenuButtons":
+		control.anchor_left = 0.025
+		control.anchor_top = 0.0
+		control.anchor_right = 0.975
+		control.anchor_bottom = 0.0
+		control.offset_left = 0.0
+		control.offset_top = 10.0
+		control.offset_right = 0.0
+		control.offset_bottom = 66.0
 	if control is Button:
 		var button := control as Button
 		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, MIN_TOUCH_HEIGHT)
