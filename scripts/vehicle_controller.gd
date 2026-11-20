@@ -13,6 +13,8 @@ var driver: CharacterBody3D
 var occupied := false
 var throttle := 0.0
 var steering := 0.0
+var steering_left_pressed := false
+var steering_right_pressed := false
 var current_speed := 0.0
 var gear := "P"
 var lights_on := false
@@ -370,11 +372,18 @@ func _set_control(action: String, pressed: bool) -> void:
 	match action:
 		"accelerate": throttle = 1.0 if pressed else 0.0
 		"brake": brake_pressed = pressed
-		"left": steering = -1.0 if pressed else 0.0
-		"right": steering = 1.0 if pressed else 0.0
+		"left":
+			steering_left_pressed = pressed
+			_refresh_steering_input()
+		"right":
+			steering_right_pressed = pressed
+			_refresh_steering_input()
 		"handbrake": handbrake = pressed
 		"clutch": clutch_pressed = pressed
 
+
+func _refresh_steering_input() -> void:
+	steering = float(steering_right_pressed) - float(steering_left_pressed)
 
 func _toggle_clutch() -> void:
 	if not occupied or transmission_mode != "manual":
@@ -550,7 +559,8 @@ func _try_load_vehicle_asset(style: String) -> bool:
 		collision.position = Vector3(0, target_height * 0.44, 0)
 	_set_procedural_vehicle_visible(false)
 	if style_root:
-		style_root.visible = false
+		# The Dena-specific trim overlay remains visible over the imported saloon mesh.
+		style_root.visible = style == "dena"
 	var players := imported_model_root.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		imported_animation_player = players[0] as AnimationPlayer
@@ -571,7 +581,7 @@ func _try_load_vehicle_asset(style: String) -> bool:
 
 func _set_procedural_vehicle_visible(visible_value: bool) -> void:
 	for child in get_children():
-		if child == imported_model_root:
+		if child == imported_model_root or child == style_root:
 			continue
 		if child is MeshInstance3D:
 			(child as MeshInstance3D).visible = visible_value
@@ -602,10 +612,17 @@ func _apply_vehicle_style(style: String, paint: Color) -> void:
 	match style:
 		"dena":
 			_box(profile, "DenaWideChromeGrille", Vector3(0, 0.78, -2.075), Vector3(1.02, 0.16, 0.05), chrome, 0.9)
+			_box(profile, "DenaLowerAirIntake", Vector3(0, 0.49, -2.105), Vector3(1.28, 0.15, 0.055), dark_trim, 0.35)
+			_box(profile, "DenaCentralEmblem", Vector3(0, 0.79, -2.112), Vector3(0.16, 0.13, 0.035), chrome, 0.95)
 			for side in [-1.0, 1.0]:
 				_box(profile, "DenaHoodCrease", Vector3(side * 0.56, 1.145, -1.30), Vector3(0.035, 0.025, 1.05), paint.lightened(0.12), 0.5)
 				_box(profile, "DenaFogLamp", Vector3(side * 0.78, 0.55, -2.12), Vector3(0.20, 0.12, 0.045), Color(0.85, 0.88, 0.82), 0.1)
+				_box(profile, "DenaRearLampAccent", Vector3(side * 0.73, 0.86, 2.105), Vector3(0.31, 0.19, 0.05), Color(0.62, 0.025, 0.02), 0.15)
+				_box(profile, "DenaSideChrome", Vector3(side * 0.985, 0.88, 0.10), Vector3(0.025, 0.035, 1.25), chrome, 0.8)
+				_box(profile, "DenaDoorHandleFront", Vector3(side * 1.005, 1.05, -0.48), Vector3(0.035, 0.045, 0.19), chrome, 0.85)
+				_box(profile, "DenaDoorHandleRear", Vector3(side * 1.005, 1.05, 0.78), Vector3(0.035, 0.045, 0.19), chrome, 0.85)
 			_box(profile, "DenaTrunkGarnish", Vector3(0, 0.91, 2.075), Vector3(1.22, 0.07, 0.045), chrome, 0.8)
+			_box(profile, "DenaRearBadge", Vector3(0, 0.96, 2.112), Vector3(0.20, 0.07, 0.025), chrome, 0.9)
 		"peugeot_207":
 			_box(profile, "Peugeot207UpperGrille", Vector3(0, 0.77, -2.08), Vector3(1.22, 0.12, 0.045), dark_trim, 0.35)
 			_box(profile, "Peugeot207LowerIntake", Vector3(0, 0.48, -2.12), Vector3(1.35, 0.18, 0.05), dark_trim, 0.25)
@@ -731,6 +748,8 @@ func _toggle_vehicle() -> void:
 			driver.set_body_temperature(22.0)
 		throttle = 0.0
 		steering = 0.0
+		steering_left_pressed = false
+		steering_right_pressed = false
 		brake_pressed = false
 		handbrake = false
 		gear = "P"
