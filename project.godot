@@ -19,3 +19,9 @@ textures/vram_compression/import_etc2_astc=true
 
 [physics]
 3d/default_gravity=9.8
+
+[autoload]
+LifeCityUI="*res://addons/lifecity_ui/ui_manager.gd"
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/lifecity_ui/plugin.cfg")
