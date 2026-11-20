@@ -180,18 +180,26 @@ func _apply_quality_preset(preset: String) -> void:
 			sun_light.shadow_enabled = false
 			sun_light.light_energy = 0.98
 			world_environment.environment.ambient_light_energy = 0.82
+			world_environment.environment.glow_enabled = false
+			world_environment.environment.fog_density = 0.0007
 			viewport.scaling_3d_scale = 0.72
 			viewport.msaa_3d = Viewport.MSAA_DISABLED
 		"medium":
 			sun_light.shadow_enabled = true
 			sun_light.light_energy = 1.08
 			world_environment.environment.ambient_light_energy = 0.74
+			world_environment.environment.glow_enabled = true
+			world_environment.environment.glow_intensity = 0.16
+			world_environment.environment.fog_density = 0.0010
 			viewport.scaling_3d_scale = 0.85
 			viewport.msaa_3d = Viewport.MSAA_2X
 		"high":
 			sun_light.shadow_enabled = true
 			sun_light.light_energy = 1.15
 			world_environment.environment.ambient_light_energy = 0.68
+			world_environment.environment.glow_enabled = true
+			world_environment.environment.glow_intensity = 0.28
+			world_environment.environment.fog_density = 0.0015
 			viewport.scaling_3d_scale = 1.0
 			viewport.msaa_3d = Viewport.MSAA_4X
 	current_quality = preset
