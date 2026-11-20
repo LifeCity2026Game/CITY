@@ -37,7 +37,7 @@ func _run() -> void:
 		for mesh_variant in meshes:
 			var mesh_node := mesh_variant as MeshInstance3D
 			var relative_transform: Transform3D = model.global_transform.affine_inverse() * mesh_node.global_transform
-			var mesh_bounds: AABB = mesh_node.get_aabb() * relative_transform
+			var mesh_bounds: AABB = mesh_node.mesh.get_aabb() * relative_transform
 			if not has_bounds:
 				bounds = mesh_bounds
 				has_bounds = true
