@@ -32,6 +32,13 @@ For each model, the asset package should provide:
 - Pride: a free Pride model is listed on Free3D, but its page specifies a Personal Use License and no textures/materials; this is not approved for a commercial game without permission: https://free3d.com/3d-model/pride-54576.html
 - Pride: 3D Warehouse also lists downloadable Pride models; license/redistribution rights and cabin completeness must be checked before use: https://embed-3dwarehouse-classic.sketchup.com/model/2c40fcf8-b74d-4b85-a76b-d17210db00db/Pride-Silver
 
+## Free CC0 test asset source (selected; not yet downloaded/imported)
+- Grab3D compact car: https://grab3d.com/models/vehicles/compact-car/
+- Listed package: `compact-car.glb`, approximately 1.1 MB, 17,338 triangles, 2K PBR textures, stated dimensions 1.76 × 3.72 × 1.48 m. The page describes a visible cabin with front seats, rear bench and steering wheel, plus four independently rolling wheels.
+- License: CC0 1.0; the source states free commercial use, no login and no attribution required. Preserve the source page and any included `LICENSE.txt` / `manifest.json` with the imported asset.
+- Important limitation: this is a stylized generic compact car, not a Dena, Tiba, Pride or any other exact real-world model. It is approved only as a technical integration/test vehicle, not as a replacement for the named fleet.
+- Current status: source identified and technical details recorded; direct file retrieval has not yet succeeded in the development environment. Do not mark it integrated until the GLB is committed and tested in Godot.
+
 ## Import layout
 Place reviewed, licensed exports here:
 - `assets/vehicles/dena/dena.glb`
