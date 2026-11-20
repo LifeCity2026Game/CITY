@@ -1,0 +1,11 @@
+{
+  "vehicle_slot": "Saipa Pride 131",
+  "source_asset_name": "Multi-storey car park deck (Car Park and Road Vehicle Fleet)",
+  "model_file": "saipa_pride_131.glb",
+  "model_url": "https://cdn.3dassets.dev/assets/32562/v1/model.glb",
+  "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-car-park-87480e33-starter-scene",
+  "license": "CC0 1.0 Universal",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "source": "3DAssets.dev",
+  "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+}

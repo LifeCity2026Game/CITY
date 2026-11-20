@@ -1,0 +1,11 @@
+{
+  "vehicle_slot": "Lexus RX 2023",
+  "source_asset_name": "Mid-size SUV (Car Park and Road Vehicle Fleet)",
+  "model_file": "lexus_rx_2023.glb",
+  "model_url": "https://cdn.3dassets.dev/assets/32500/v1/model.glb",
+  "asset_page": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-mid-size-suv-949ce491",
+  "license": "CC0 1.0 Universal",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "source": "3DAssets.dev",
+  "note": "Generic body-style placeholder, not an exact Dena/Peugeot/Toyota/Lexus/Ferrari/Lamborghini/Saipa replica. Requires in-engine inspection, collision setup, and vehicle physics integration."
+}
