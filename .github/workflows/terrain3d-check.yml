@@ -1,0 +1,51 @@
+name: Terrain3D Terrain Tool Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["godot-migration"]
+    paths:
+      - ".github/workflows/terrain3d-check.yml"
+      - "tools/terrain3d/**"
+      - "docs/terrain3d/**"
+
+permissions:
+  contents: read
+
+jobs:
+  terrain3d:
+    name: Download and verify Terrain3D 1.1.0
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.7.2
+    steps:
+      - name: Checkout LIFE CITY
+        uses: actions/checkout@v4
+
+      - name: Verify Godot version
+        run: godot --version
+
+      - name: Download official Terrain3D release
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/TokisanGames/Terrain3D/releases/download/v1.1.0-stable/Terrain3D_v1.1.0-stable.zip"
+          wget -q "$url" -O /tmp/Terrain3D_v1.1.0-stable.zip
+          echo "51b78bc758f5759cbc8eaaab14e5cf4e8661717e265fdd760f5abf945f15b243  /tmp/Terrain3D_v1.1.0-stable.zip" | sha256sum -c -
+          mkdir -p addons/terrain_3d
+          unzip -q /tmp/Terrain3D_v1.1.0-stable.zip -d addons/terrain_3d
+
+      - name: Verify plugin files and native extension package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/terrain3d/verify_release.py addons/terrain_3d
+          echo "TERRAIN3D_RELEASE_VERIFICATION_PASS"
+
+      - name: Upload verified Terrain3D package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecity-terrain3d-1.1.0
+          path: addons/terrain_3d/
+          if-no-files-found: error
+          retention-days: 30
