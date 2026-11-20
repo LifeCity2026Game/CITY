@@ -383,7 +383,7 @@ func _set_control(action: String, pressed: bool) -> void:
 
 
 func _refresh_steering_input() -> void:
-	steering = float(steering_right_pressed) - float(steering_left_pressed)
+	steering = (1.0 if steering_right_pressed else 0.0) - (1.0 if steering_left_pressed else 0.0)
 
 func _toggle_clutch() -> void:
 	if not occupied or transmission_mode != "manual":
