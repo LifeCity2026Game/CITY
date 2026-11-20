@@ -99,6 +99,8 @@ def validate_vehicle_glb(path, display_name):
         raise RuntimeError(f"{display_name}: missing GLB animation clips: {missing_clips}")
     if missing_pivots:
         raise RuntimeError(f"{display_name}: missing named wheel pivots: {missing_pivots}")
+    if not any(name in {"steering", "steering-wheel", "steering_wheel"} for name in nodes):
+        raise RuntimeError(f"{display_name}: missing named steering wheel pivot")
     if not document.get("meshes"):
         raise RuntimeError(f"{display_name}: GLB contains no meshes")
     return animations, nodes
