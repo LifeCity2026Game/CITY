@@ -624,10 +624,26 @@ func _apply_vehicle_style(style: String, paint: Color) -> void:
 			_box(profile, "DenaTrunkGarnish", Vector3(0, 0.91, 2.075), Vector3(1.22, 0.07, 0.045), chrome, 0.8)
 			_box(profile, "DenaRearBadge", Vector3(0, 0.96, 2.112), Vector3(0.20, 0.07, 0.025), chrome, 0.9)
 		"peugeot_207":
-			_box(profile, "Peugeot207UpperGrille", Vector3(0, 0.77, -2.08), Vector3(1.22, 0.12, 0.045), dark_trim, 0.35)
-			_box(profile, "Peugeot207LowerIntake", Vector3(0, 0.48, -2.12), Vector3(1.35, 0.18, 0.05), dark_trim, 0.25)
+			# 207 five-door hatchback identity: swept lamps, broad lower mouth and compact rear.
+			_box(profile, "Peugeot207UpperGrille", Vector3(0, 0.78, -2.085), Vector3(1.02, 0.13, 0.055), dark_trim, 0.35)
+			_box(profile, "Peugeot207LionBadge", Vector3(0, 0.91, -2.105), Vector3(0.17, 0.14, 0.045), chrome, 0.9)
+			_box(profile, "Peugeot207LowerIntake", Vector3(0, 0.48, -2.12), Vector3(1.38, 0.20, 0.055), dark_trim, 0.25)
+			_box(profile, "Peugeot207FrontLip", Vector3(0, 0.36, -2.16), Vector3(1.72, 0.075, 0.12), dark_trim, 0.35)
+			_box(profile, "Peugeot207BonnetCreaseL", Vector3(-0.52, 1.145, -1.35), Vector3(0.035, 0.025, 0.90), paint.lightened(0.13), 0.45)
+			_box(profile, "Peugeot207BonnetCreaseR", Vector3(0.52, 1.145, -1.35), Vector3(0.035, 0.025, 0.90), paint.lightened(0.13), 0.45)
+			for side in [-1.0, 1.0]:
+				var headlamp := _box(profile, "Peugeot207SweptHeadlamp", Vector3(side * 0.70, 0.91, -2.105), Vector3(0.48, 0.16, 0.055), Color(0.82, 0.88, 0.91), 0.25)
+				headlamp.rotation.y = side * -0.10
+				_box(profile, "Peugeot207FogLampSurround", Vector3(side * 0.78, 0.53, -2.13), Vector3(0.22, 0.13, 0.055), chrome, 0.65)
+				_box(profile, "Peugeot207SideMoulding", Vector3(side * 0.985, 0.72, 0.08), Vector3(0.035, 0.09, 1.72), dark_trim, 0.15)
+				_box(profile, "Peugeot207FrontDoorHandle", Vector3(side * 1.01, 1.05, -0.50), Vector3(0.035, 0.045, 0.18), chrome, 0.65)
+				_box(profile, "Peugeot207RearDoorHandle", Vector3(side * 1.01, 1.05, 0.80), Vector3(0.035, 0.045, 0.18), chrome, 0.65)
+				_box(profile, "Peugeot207MirrorCap", Vector3(side * 1.02, 1.31, -0.67), Vector3(0.22, 0.14, 0.27), paint.darkened(0.08), 0.45)
+				_box(profile, "Peugeot207RearLamp", Vector3(side * 0.77, 0.90, 2.105), Vector3(0.27, 0.30, 0.055), Color(0.68, 0.035, 0.025), 0.2)
 			_box(profile, "Peugeot207HatchSpoiler", Vector3(0, 1.78, 1.28), Vector3(1.28, 0.10, 0.32), paint.darkened(0.12), 0.35)
 			_box(profile, "Peugeot207RearGlass", Vector3(0, 1.48, 1.06), Vector3(1.38, 0.48, 0.045), glass, 0.25)
+			_box(profile, "Peugeot207RearHatchGarnish", Vector3(0, 0.92, 2.09), Vector3(0.78, 0.08, 0.045), chrome, 0.75)
+			_box(profile, "Peugeot207RearBadge", Vector3(0.38, 0.98, 2.12), Vector3(0.20, 0.06, 0.03), chrome, 0.8)
 		"land_cruiser":
 			for side in [-1.0, 1.0]:
 				_box(profile, "LandCruiserRoofRail", Vector3(side * 0.63, 1.91, 0.05), Vector3(0.075, 0.07, 2.05), chrome, 0.8)
