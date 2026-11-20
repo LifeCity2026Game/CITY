@@ -65,6 +65,14 @@ func _run() -> void:
 		var node_names: Array[String] = []
 		for node in model.find_children("*", "Node3D", true, false):
 			node_names.append(node.name.to_lower())
+		var has_steering_pivot := false
+		for node_name in node_names:
+			if node_name in ["steering", "steering-wheel", "steering_wheel"]:
+				has_steering_pivot = true
+				break
+		if not has_steering_pivot:
+			_fail("Missing steering wheel pivot for " + str(spec.slot))
+			return
 		for pivot in ["wheel-front-left", "wheel-front-right", "wheel-rear-left", "wheel-rear-right"]:
 			var found_pivot := false
 			for node_name in node_names:
