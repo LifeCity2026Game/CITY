@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "ranks": [
+    {
+      "name": "سرباز",
+      "level": 1,
+      "permissions": [
+        "view_own_branch_status"
+      ]
+    },
+    {
+      "name": "گروهبان",
+      "level": 2,
+      "permissions": [
+        "view_own_branch_status",
+        "assign_patrol"
+      ]
+    },
+    {
+      "name": "ستوان",
+      "level": 3,
+      "permissions": [
+        "view_own_branch_status",
+        "assign_patrol",
+        "dispatch_branch_support"
+      ]
+    },
+    {
+      "name": "سرهنگ",
+      "level": 4,
+      "permissions": [
+        "view_own_branch_status",
+        "assign_patrol",
+        "dispatch_branch_support",
+        "manage_branch_roster"
+      ]
+    },
+    {
+      "name": "فرمانده شاخه",
+      "level": 5,
+      "permissions": [
+        "view_own_branch_status",
+        "assign_patrol",
+        "dispatch_branch_support",
+        "manage_branch_roster",
+        "command_own_branch"
+      ]
+    },
+    {
+      "name": "فرمانده کل ارتش",
+      "level": 6,
+      "permissions": [
+        "view_all_branches",
+        "assign_patrol",
+        "dispatch_branch_support",
+        "manage_branch_roster",
+        "command_all_branches",
+        "view_military_audit"
+      ]
+    }
+  ],
+  "security": {
+    "creator_account_only": [
+      "grant_rank",
+      "revoke_rank",
+      "override_permissions"
+    ],
+    "server_validation_required": true,
+    "client_ui_is_not_authority": true
+  }
+}
