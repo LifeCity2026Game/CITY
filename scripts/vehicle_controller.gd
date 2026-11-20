@@ -531,13 +531,22 @@ func _try_load_vehicle_asset(style: String) -> bool:
 	if not has_bounds or bounds.size.length() < 0.1:
 		push_warning("Invalid vehicle bounds: " + path)
 		return false
-	imported_model_root.position = Vector3(-bounds.get_center().x, -bounds.position.y, -bounds.get_center().z)
+	# Normalize vertical scale to the asset page dimensions (metres).
+	var target_heights := {
+		"dena": 1.403, "peugeot_207": 1.464, "land_cruiser": 1.921,
+		"lexus_rx": 1.821, "ferrari": 1.33, "lamborghini": 1.33,
+		"tiba": 1.43, "tiba_2": 1.46, "pride": 1.533
+	}
+	var target_height := float(target_heights.get(style, bounds.size.y))
+	var vertical_scale := target_height / maxf(bounds.size.y, 0.01)
+	imported_model_root.scale = Vector3(1.0, vertical_scale, 1.0)
+	imported_model_root.position = Vector3(-bounds.get_center().x, -bounds.position.y * vertical_scale, -bounds.get_center().z)
 	var collision := get_node_or_null("CollisionShape3D") as CollisionShape3D
 	if collision:
 		var shape := BoxShape3D.new()
-		shape.size = Vector3(maxf(1.35, bounds.size.x * 0.88), maxf(0.65, bounds.size.y * 0.72), maxf(2.4, bounds.size.z * 0.88))
+		shape.size = Vector3(maxf(1.35, bounds.size.x * 0.88), maxf(0.65, target_height * 0.72), maxf(2.4, bounds.size.z * 0.88))
 		collision.shape = shape
-		collision.position = Vector3(0, bounds.size.y * 0.44, 0)
+		collision.position = Vector3(0, target_height * 0.44, 0)
 	_set_procedural_vehicle_visible(false)
 	if style_root:
 		style_root.visible = false
