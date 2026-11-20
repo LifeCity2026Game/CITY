@@ -37,6 +37,23 @@ jobs:
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
           echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> "$GITHUB_PATH"
 
+      - name: Create Firebase client configuration
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_WEB_API_KEY}" ]; then
+            echo "FIREBASE_WEB_API_KEY repository secret is missing."
+            exit 1
+          fi
+          cat > firebase_config.cfg <<EOF
+          [firebase]
+          api_key="${FIREBASE_WEB_API_KEY}"
+          project_id="life-city-test"
+          database_url="https://life-city-test-default-rtdb.firebaseio.com/"
+          EOF
+
       - name: Check Godot project
         shell: bash
         run: |
