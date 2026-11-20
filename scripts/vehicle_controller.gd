@@ -50,8 +50,8 @@ const VEHICLE_CATALOG := [
 	{"name":"فراری","color":Color(0.78,0.025,0.02),"scale":Vector3(1.02,0.78,1.08),"speed":49.0,"accel":17.0,"style":"ferrari"},
 	{"name":"لامبورگینی","color":Color(0.82,0.66,0.02),"scale":Vector3(1.04,0.74,1.12),"speed":52.0,"accel":18.0,"style":"lamborghini"},
 	{"name":"تیبا","color":Color(0.68,0.70,0.72),"scale":Vector3(0.91,0.90,0.94),"speed":28.0,"accel":8.5,"style":"tiba"},
-	{"name":"تیبا ۲","color":Color(0.08,0.36,0.24),"scale":Vector3(0.92,0.92,0.90),"speed":29.0,"accel":9.0,"style":"hatch"},
-	{"name":"پراید","color":Color(0.80,0.80,0.76),"scale":Vector3(0.86,0.86,0.88),"speed":25.0,"accel":7.5,"style":"compact"}
+	{"name":"تیبا ۲","color":Color(0.08,0.36,0.24),"scale":Vector3(0.92,0.92,0.90),"speed":29.0,"accel":9.0,"style":"tiba_2"},
+	{"name":"پراید","color":Color(0.80,0.80,0.76),"scale":Vector3(0.86,0.86,0.88),"speed":25.0,"accel":7.5,"style":"pride"}
 ]
 var model_index := 0
 var transmission_mode := "automatic"
@@ -463,7 +463,7 @@ func _cycle_vehicle_model() -> void:
 
 func _apply_vehicle_style(style: String, paint: Color) -> void:
 	if style_root:
-		style_root.queue_free()
+		style_root.free()
 	style_root = Node3D.new()
 	style_root.name = "VehicleStyleParts"
 	add_child(style_root)
