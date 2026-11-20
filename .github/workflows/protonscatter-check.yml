@@ -39,7 +39,26 @@ jobs:
           python3 --version
       - name: Verify addon package and license
         run: python3 tools/proton_scatter/verify_release.py addons/proton_scatter
-      - name: Import project and load editor plugin
+      - name: Import addon resources before loading plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp project.godot project.godot.ci-backup
+          # The upstream demo .blend file is not needed by the runtime addon,
+          # and Godot's headless GLTF importer cannot invoke Blender.
+          find addons/proton_scatter -type f -name '*.blend' -delete
+          # First import textures with the plugin disabled so its editor UI
+          # does not request SVG cache files before Godot has imported them.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("project.godot")
+          s = p.read_text()
+          s = s.replace(', "res://addons/proton_scatter/plugin.cfg"', '')
+          p.write_text(s)
+          PY
+          godot --headless --path . --editor --import --quit 2>&1 | tee protonscatter-import.log
+          cp project.godot.ci-backup project.godot
+      - name: Load ProtonScatter editor plugin
         shell: bash
         run: |
           set -o pipefail
