@@ -31,6 +31,7 @@ var cash_transactions: Dictionary = {}
 func _ready() -> void:
 	_load_ledger()
 	_seed_citizens()
+	_seed_store_inventory()
 
 func is_owner_peer(peer_id: int) -> bool:
 	return peer_id == 1
@@ -444,6 +445,9 @@ var ownership_transfer_offers: Dictionary = {}
 var marriage_proposals: Dictionary = {}
 var marriage_records: Dictionary = {}
 var next_social_number: int = 1
+var store_inventory: Dictionary = {}
+var store_orders: Dictionary = {}
+var next_store_order_number: int = 1
 
 const GAME_DAY_SECONDS := 1440.0
 
@@ -452,6 +456,7 @@ func _process(delta: float) -> void:
 		return
 	game_clock_seconds += delta
 	_settle_due_cheques()
+	_store_process_deliveries(game_clock_seconds)
 	var expired_records: Array[String] = []
 	for record_id in prison_records.keys():
 		var record: Dictionary = prison_records[record_id]
@@ -767,6 +772,107 @@ func _account_purchase(peer_id: int, account_number: String, pin: String, item_i
 	if is_shared:
 		_send_notice(owner_peer, "بازیکن %d با اجازه تو خرید کرد؛ مبلغ %d سکه از حساب %s کم شد." % [peer_id, price, account_number])
 	citizen_record_changed.emit(str(account.citizen_id))
+
+# --- LIFE CITY online store: server-authoritative stock, checkout and delivery ---
+const STORE_CATEGORIES := {
+	"موبایل و فناوری": ["گوشی هوشمند", "گوشی پرچمدار", "کامپیوتر گیمینگ", "مانیتور گیمینگ"],
+	"سرگرمی": ["کنسول بازی", "دسته بازی"],
+	"خانه و لوازم خانگی": ["مبل", "تخت خواب", "یخچال", "تلویزیون", "میز ناهارخوری", "کمد"]
+}
+
+func _seed_store_inventory() -> void:
+	if not _is_authority():
+		return
+	for category_items in STORE_CATEGORIES.values():
+		for item_id in category_items:
+			if not store_inventory.has(item_id):
+				store_inventory[item_id] = 25
+
+func request_store_checkout(account_number: String, pin: String, item_id: String, quantity: int = 1) -> void:
+	var peer_id := _local_peer_id()
+	if _is_authority():
+		_store_checkout(peer_id, account_number, pin, item_id, quantity)
+	else:
+		rpc_id(1, "rpc_request_store_checkout", account_number, pin, item_id, quantity)
+
+@rpc("any_peer", "call_remote", "reliable")
+func rpc_request_store_checkout(account_number: String, pin: String, item_id: String, quantity: int) -> void:
+	if multiplayer.is_server():
+		_store_checkout(multiplayer.get_remote_sender_id(), account_number, pin, item_id, quantity)
+
+func _store_checkout(peer_id: int, account_number: String, pin: String, item_id: String, quantity: int) -> void:
+	if quantity < 1 or quantity > 10 or not STORE_CATEGORIES.values().any(func(items): return items.has(item_id)):
+		_send_notice(peer_id, "کالا یا تعداد سفارش معتبر نیست.")
+		return
+	if not bank_accounts.has(account_number):
+		_send_notice(peer_id, "حساب بانکی پیدا نشد.")
+		return
+	var account: Dictionary = bank_accounts[account_number]
+	if str(account.get("owner_type", "")) != "player" or int(account.get("owner_peer_id", -1)) != peer_id:
+		_send_notice(peer_id, "برای پرداخت فروشگاه باید از حساب بانکی خودت استفاده کنی.")
+		return
+	if not _account_pin_matches(account_number, pin):
+		_send_notice(peer_id, "رمز حساب بانکی اشتباه است.")
+		return
+	var stock := int(store_inventory.get(item_id, 0))
+	if stock < quantity:
+		_send_notice(peer_id, "موجودی انبار کافی نیست؛ موجودی فعلی: %d" % stock)
+		return
+	var unit_price := int(CATALOG.get(item_id, 0))
+	var total_price := unit_price * quantity
+	var unlimited := bool(account.get("unlimited_balance", false))
+	if unit_price <= 0 or (not unlimited and int(account.get("balance", 0)) < total_price):
+		_send_notice(peer_id, "موجودی حساب برای این سفارش کافی نیست.")
+		return
+	var tax := int(ceil(float(total_price) * 0.10))
+	if not unlimited:
+		account["balance"] = int(account.get("balance", 0)) - total_price
+	bank_accounts[account_number] = account
+	store_inventory[item_id] = stock - quantity
+	central_bank_treasury += tax
+	var doc := _new_document(item_id, peer_id, total_price, "online_store_purchase", account_number)
+	doc["quantity"] = quantity
+	doc["paid_by_peer_id"] = peer_id
+	doc["payment_account"] = account_number
+	doc["tax_paid"] = tax
+	documents[doc.document_id] = doc
+	var order_id := "LC-ORD-%06d" % next_store_order_number
+	next_store_order_number += 1
+	store_orders[order_id] = {
+		"order_id": order_id, "item_id": item_id, "quantity": quantity,
+		"unit_price": unit_price, "total_price": total_price,
+		"buyer_peer_id": peer_id, "document_id": str(doc.document_id),
+		"status": "در حال ارسال", "created_game_time": game_clock_seconds,
+		"deliver_at": game_clock_seconds + 45.0, "created_unix": int(Time.get_unix_time_from_system())
+	}
+	cash_transactions[order_id] = {"transaction_id": order_id, "type": "online_store_purchase", "peer_id": peer_id, "account_number": account_number, "item_id": item_id, "quantity": quantity, "amount": total_price, "tax_paid": tax, "status": "completed", "time": int(Time.get_unix_time_from_system())}
+	_save_ledger()
+	_send_own_accounts(peer_id)
+	_send_receipt(peer_id, doc)
+	_send_notice(peer_id, "سفارش %s ثبت شد؛ %s عدد %s. مبلغ %d سکه؛ تحویل در ۴۵ ثانیه بازی." % [order_id, quantity, item_id, total_price])
+	citizen_record_changed.emit(str(account.get("citizen_id", "")))
+
+func _store_process_deliveries(now_game_time: float) -> void:
+	if not _is_authority():
+		return
+	var changed := false
+	for order_id in store_orders.keys():
+		var order: Dictionary = store_orders[order_id]
+		if str(order.get("status", "")) == "در حال ارسال" and now_game_time >= float(order.get("deliver_at", INF)):
+			order["status"] = "تحویل شد"
+			order["delivered_game_time"] = now_game_time
+			store_orders[order_id] = order
+			_send_notice(int(order.get("buyer_peer_id", -1)), "سفارش %s تحویل شد: %s" % [order_id, str(order.get("item_id", ""))])
+			changed = true
+	if changed:
+		_save_ledger()
+
+func _store_restock(actor_peer: int, item_id: String, quantity: int) -> bool:
+	if not _is_authority() or actor_peer != 1 or quantity <= 0 or quantity > 10000 or not store_inventory.has(item_id):
+		return false
+	store_inventory[item_id] = int(store_inventory[item_id]) + quantity
+	_save_ledger()
+	return true
 
 func request_issue_cheque(account_number: String, pin: String, face_value: int) -> void:
 	var peer_id := _local_peer_id()
@@ -1445,7 +1551,7 @@ func _save_ledger() -> void:
 	var saved_balances: Dictionary = {}
 	for peer_key in balances.keys():
 		saved_balances[str(peer_key)] = balances[peer_key]
-	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions, "bank_accounts": bank_accounts, "citizen_registry": citizen_registry, "citizen_accounts": citizen_accounts, "cheque_book": cheque_book, "prison_records": prison_records, "central_bank_treasury": central_bank_treasury, "next_account_number": next_account_number, "next_citizen_number": next_citizen_number, "game_clock_seconds": game_clock_seconds, "role_permissions": role_permissions, "cheque_spending_ban": cheque_spending_ban, "shared_account_access": shared_account_access, "ownership_transfer_offers": ownership_transfer_offers, "marriage_proposals": marriage_proposals, "marriage_records": marriage_records, "next_social_number": next_social_number}
+	var payload := {"balances": saved_balances, "documents": documents, "next_document_number": next_document_number, "cash_transactions": cash_transactions, "bank_accounts": bank_accounts, "citizen_registry": citizen_registry, "citizen_accounts": citizen_accounts, "cheque_book": cheque_book, "prison_records": prison_records, "central_bank_treasury": central_bank_treasury, "next_account_number": next_account_number, "next_citizen_number": next_citizen_number, "game_clock_seconds": game_clock_seconds, "role_permissions": role_permissions, "cheque_spending_ban": cheque_spending_ban, "shared_account_access": shared_account_access, "ownership_transfer_offers": ownership_transfer_offers, "marriage_proposals": marriage_proposals, "marriage_records": marriage_records, "next_social_number": next_social_number, "store_inventory": store_inventory, "store_orders": store_orders, "next_store_order_number": next_store_order_number}
 	var file := FileAccess.open("user://ownership_ledger.json", FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify(payload))
@@ -1481,3 +1587,6 @@ func _load_ledger() -> void:
 		marriage_proposals = parsed.get("marriage_proposals", {})
 		marriage_records = parsed.get("marriage_records", {})
 		next_social_number = int(parsed.get("next_social_number", next_social_number))
+		store_inventory = parsed.get("store_inventory", store_inventory)
+		store_orders = parsed.get("store_orders", store_orders)
+		next_store_order_number = int(parsed.get("next_store_order_number", next_store_order_number))
