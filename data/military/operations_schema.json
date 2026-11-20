@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "required_fields": [
+    "event_id",
+    "timestamp_unix",
+    "actor_peer_id",
+    "actor_role",
+    "department",
+    "action",
+    "target",
+    "result"
+  ],
+  "allowed_results": [
+    "accepted",
+    "rejected",
+    "completed",
+    "cancelled"
+  ],
+  "retention_limit": 500,
+  "server_authoritative": true
+}
