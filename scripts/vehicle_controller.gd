@@ -43,13 +43,13 @@ var controls_layer: CanvasLayer
 var controls_panel: PanelContainer
 
 const VEHICLE_CATALOG := [
-	{"name":"دنا","color":Color(0.12,0.30,0.66),"scale":Vector3(1.0,1.0,1.0),"speed":34.0,"accel":11.0,"style":"sedan"},
-	{"name":"پژو ۲۰۷","color":Color(0.72,0.12,0.10),"scale":Vector3(0.92,0.94,0.82),"speed":31.0,"accel":12.0,"style":"hatch"},
-	{"name":"لندکروزر","color":Color(0.16,0.23,0.18),"scale":Vector3(1.12,1.16,1.12),"speed":32.0,"accel":9.0,"style":"suv"},
-	{"name":"لکسوس RX","color":Color(0.18,0.20,0.23),"scale":Vector3(1.08,1.08,1.04),"speed":36.0,"accel":10.5,"style":"luxury"},
-	{"name":"فراری","color":Color(0.78,0.025,0.02),"scale":Vector3(1.02,0.78,1.08),"speed":49.0,"accel":17.0,"style":"sport"},
-	{"name":"لامبورگینی","color":Color(0.82,0.66,0.02),"scale":Vector3(1.04,0.74,1.12),"speed":52.0,"accel":18.0,"style":"supercar"},
-	{"name":"تیبا","color":Color(0.68,0.70,0.72),"scale":Vector3(0.91,0.90,0.94),"speed":28.0,"accel":8.5,"style":"compact"},
+	{"name":"دنا","color":Color(0.12,0.30,0.66),"scale":Vector3(1.0,1.0,1.0),"speed":34.0,"accel":11.0,"style":"dena"},
+	{"name":"پژو ۲۰۷","color":Color(0.72,0.12,0.10),"scale":Vector3(0.92,0.94,0.82),"speed":31.0,"accel":12.0,"style":"peugeot_207"},
+	{"name":"لندکروزر","color":Color(0.16,0.23,0.18),"scale":Vector3(1.12,1.16,1.12),"speed":32.0,"accel":9.0,"style":"land_cruiser"},
+	{"name":"لکسوس RX","color":Color(0.18,0.20,0.23),"scale":Vector3(1.08,1.08,1.04),"speed":36.0,"accel":10.5,"style":"lexus_rx"},
+	{"name":"فراری","color":Color(0.78,0.025,0.02),"scale":Vector3(1.02,0.78,1.08),"speed":49.0,"accel":17.0,"style":"ferrari"},
+	{"name":"لامبورگینی","color":Color(0.82,0.66,0.02),"scale":Vector3(1.04,0.74,1.12),"speed":52.0,"accel":18.0,"style":"lamborghini"},
+	{"name":"تیبا","color":Color(0.68,0.70,0.72),"scale":Vector3(0.91,0.90,0.94),"speed":28.0,"accel":8.5,"style":"tiba"},
 	{"name":"تیبا ۲","color":Color(0.08,0.36,0.24),"scale":Vector3(0.92,0.92,0.90),"speed":29.0,"accel":9.0,"style":"hatch"},
 	{"name":"پراید","color":Color(0.80,0.80,0.76),"scale":Vector3(0.86,0.86,0.88),"speed":25.0,"accel":7.5,"style":"compact"}
 ]
@@ -463,37 +463,72 @@ func _cycle_vehicle_model() -> void:
 
 func _apply_vehicle_style(style: String, paint: Color) -> void:
 	if style_root:
-		style_root.free()
+		style_root.queue_free()
 	style_root = Node3D.new()
 	style_root.name = "VehicleStyleParts"
 	add_child(style_root)
+	var profile := Node3D.new()
+	profile.name = "Profile_" + style
+	style_root.add_child(profile)
 	var dark_trim := Color(0.035, 0.04, 0.05)
-	var chrome := Color(0.62, 0.66, 0.70)
+	var chrome := Color(0.68, 0.70, 0.73)
+	var glass := Color(0.045, 0.12, 0.16)
 	match style:
-		"suv":
+		"dena":
+			_box(profile, "DenaWideChromeGrille", Vector3(0, 0.78, -2.075), Vector3(1.02, 0.16, 0.05), chrome, 0.9)
 			for side in [-1.0, 1.0]:
-				_box(style_root, "RoofRail", Vector3(side * 0.62, 1.92, 0.12), Vector3(0.075, 0.07, 1.82), chrome, 0.8)
-				_box(style_root, "WheelArch", Vector3(side * 1.02, 0.72, -1.28), Vector3(0.10, 0.34, 0.95), dark_trim)
-				_box(style_root, "WheelArch", Vector3(side * 1.02, 0.72, 1.28), Vector3(0.10, 0.34, 0.95), dark_trim)
-			_box(style_root, "SUVFrontGuard", Vector3(0, 0.40, -2.18), Vector3(1.72, 0.16, 0.16), chrome, 0.75)
-		"sport", "supercar":
-			_box(style_root, "FrontSplitter", Vector3(0, 0.34, -2.20), Vector3(2.02, 0.10, 0.32), dark_trim, 0.4)
-			_box(style_root, "RearWing", Vector3(0, 1.60, 1.82), Vector3(1.72, 0.09, 0.28), paint, 0.45)
+				_box(profile, "DenaHoodCrease", Vector3(side * 0.56, 1.145, -1.30), Vector3(0.035, 0.025, 1.05), paint.lightened(0.12), 0.5)
+				_box(profile, "DenaFogLamp", Vector3(side * 0.78, 0.55, -2.12), Vector3(0.20, 0.12, 0.045), Color(0.85, 0.88, 0.82), 0.1)
+			_box(profile, "DenaTrunkGarnish", Vector3(0, 0.91, 2.075), Vector3(1.22, 0.07, 0.045), chrome, 0.8)
+		"peugeot_207":
+			_box(profile, "Peugeot207UpperGrille", Vector3(0, 0.77, -2.08), Vector3(1.22, 0.12, 0.045), dark_trim, 0.35)
+			_box(profile, "Peugeot207LowerIntake", Vector3(0, 0.48, -2.12), Vector3(1.35, 0.18, 0.05), dark_trim, 0.25)
+			_box(profile, "Peugeot207HatchSpoiler", Vector3(0, 1.78, 1.28), Vector3(1.28, 0.10, 0.32), paint.darkened(0.12), 0.35)
+			_box(profile, "Peugeot207RearGlass", Vector3(0, 1.48, 1.06), Vector3(1.38, 0.48, 0.045), glass, 0.25)
+		"land_cruiser":
 			for side in [-1.0, 1.0]:
-				_box(style_root, "WingSupport", Vector3(side * 0.58, 1.48, 1.82), Vector3(0.07, 0.26, 0.08), chrome, 0.7)
-				_box(style_root, "SideIntake", Vector3(side * 0.94, 0.90, 0.48), Vector3(0.06, 0.22, 0.68), dark_trim)
-		"hatch":
-			_box(style_root, "HatchSpoiler", Vector3(0, 1.76, 1.16), Vector3(1.35, 0.10, 0.34), paint, 0.45)
-			_box(style_root, "RearDiffuser", Vector3(0, 0.36, 2.17), Vector3(1.35, 0.12, 0.16), dark_trim)
-		"luxury":
-			_box(style_root, "ChromeGrille", Vector3(0, 0.78, -2.065), Vector3(0.94, 0.18, 0.045), chrome, 0.9)
+				_box(profile, "LandCruiserRoofRail", Vector3(side * 0.63, 1.91, 0.05), Vector3(0.075, 0.07, 2.05), chrome, 0.8)
+				_box(profile, "LandCruiserWheelArchFront", Vector3(side * 1.02, 0.69, -1.30), Vector3(0.13, 0.36, 1.02), dark_trim, 0.15)
+				_box(profile, "LandCruiserWheelArchRear", Vector3(side * 1.02, 0.69, 1.30), Vector3(0.13, 0.36, 1.02), dark_trim, 0.15)
+				_box(profile, "LandCruiserSideStep", Vector3(side * 1.02, 0.38, 0.0), Vector3(0.14, 0.13, 2.25), chrome, 0.75)
+			_box(profile, "LandCruiserFrontGuard", Vector3(0, 0.39, -2.20), Vector3(1.78, 0.20, 0.18), chrome, 0.8)
+			var spare := _cylinder(profile, "LandCruiserRearSpareWheel", Vector3(0, 1.02, 2.20), 0.39, 0.16, dark_trim)
+			spare.rotation.x = PI / 2.0
+		"lexus_rx":
+			_box(profile, "LexusSpindleGrilleUpper", Vector3(0, 0.76, -2.085), Vector3(0.88, 0.22, 0.055), dark_trim, 0.55)
+			_box(profile, "LexusSpindleGrilleLower", Vector3(0, 0.56, -2.085), Vector3(0.66, 0.18, 0.055), dark_trim, 0.55)
 			for side in [-1.0, 1.0]:
-				_box(style_root, "ChromeTrim", Vector3(side * 0.99, 0.76, 0.0), Vector3(0.035, 0.055, 2.8), chrome, 0.9)
-		"compact":
-			_box(style_root, "CompactFrontGrille", Vector3(0, 0.76, -2.06), Vector3(0.58, 0.16, 0.045), chrome, 0.65)
-			_box(style_root, "CompactRearTrim", Vector3(0, 0.68, 2.08), Vector3(0.92, 0.08, 0.04), dark_trim)
-		_:
-			_box(style_root, "SedanChromeGrille", Vector3(0, 0.78, -2.06), Vector3(0.82, 0.12, 0.04), chrome, 0.85)
+				_box(profile, "LexusChromeWindowLine", Vector3(side * 0.83, 1.70, 0.08), Vector3(0.035, 0.035, 1.75), chrome, 0.9)
+				_box(profile, "LexusRoofRail", Vector3(side * 0.61, 1.91, 0.08), Vector3(0.055, 0.05, 1.65), chrome, 0.8)
+				_box(profile, "LexusRearReflector", Vector3(side * 0.78, 0.70, 2.09), Vector3(0.20, 0.08, 0.045), Color(0.72, 0.035, 0.025), 0.2)
+		"ferrari":
+			_box(profile, "FerrariLowFrontSplitter", Vector3(0, 0.34, -2.22), Vector3(2.02, 0.09, 0.30), dark_trim, 0.4)
+			for side in [-1.0, 1.0]:
+				_box(profile, "FerrariSideIntake", Vector3(side * 0.96, 0.82, 0.48), Vector3(0.07, 0.22, 0.70), dark_trim, 0.2)
+				_box(profile, "FerrariHoodVent", Vector3(side * 0.48, 1.15, -1.42), Vector3(0.26, 0.035, 0.42), dark_trim, 0.25)
+				_cylinder(profile, "FerrariTwinExhaust", Vector3(side * 0.52, 0.39, 2.17), 0.075, 0.16, chrome, 0.85).rotation.x = PI / 2.0
+			_box(profile, "FerrariRearDiffuser", Vector3(0, 0.35, 2.13), Vector3(1.45, 0.12, 0.20), dark_trim, 0.35)
+		"lamborghini":
+			_box(profile, "LamborghiniAngularNose", Vector3(0, 0.63, -2.13), Vector3(1.70, 0.22, 0.34), paint.darkened(0.12), 0.55)
+			_box(profile, "LamborghiniFrontSplitter", Vector3(0, 0.32, -2.22), Vector3(2.05, 0.08, 0.34), dark_trim, 0.4)
+			for side in [-1.0, 1.0]:
+				var intake := _box(profile, "LamborghiniHexIntake", Vector3(side * 0.76, 0.77, -2.12), Vector3(0.34, 0.24, 0.05), dark_trim, 0.25)
+				intake.rotation.z = side * -0.16
+				_box(profile, "LamborghiniSideVent", Vector3(side * 0.96, 0.83, 0.48), Vector3(0.06, 0.26, 0.72), dark_trim, 0.25)
+				_box(profile, "LamborghiniWingSupport", Vector3(side * 0.58, 1.47, 1.82), Vector3(0.07, 0.25, 0.08), chrome, 0.7)
+			_box(profile, "LamborghiniRearWing", Vector3(0, 1.62, 1.82), Vector3(1.78, 0.09, 0.28), paint, 0.5)
+		"tiba":
+			_box(profile, "TibaNarrowGrille", Vector3(0, 0.77, -2.075), Vector3(0.68, 0.14, 0.045), chrome, 0.75)
+			_box(profile, "TibaLowerIntake", Vector3(0, 0.48, -2.10), Vector3(1.20, 0.13, 0.05), dark_trim, 0.3)
+			_box(profile, "TibaRearGarnish", Vector3(0, 0.78, 2.08), Vector3(0.95, 0.09, 0.045), dark_trim, 0.3)
+		"tiba_2":
+			_box(profile, "Tiba2HatchSpoiler", Vector3(0, 1.77, 1.23), Vector3(1.22, 0.09, 0.27), paint.darkened(0.08), 0.35)
+			_box(profile, "Tiba2RearGlass", Vector3(0, 1.48, 1.07), Vector3(1.38, 0.44, 0.045), glass, 0.2)
+			_box(profile, "Tiba2WideGrille", Vector3(0, 0.76, -2.075), Vector3(1.12, 0.14, 0.045), dark_trim, 0.35)
+		"pride":
+			_box(profile, "PrideSimpleGrille", Vector3(0, 0.77, -2.075), Vector3(0.62, 0.12, 0.045), dark_trim, 0.25)
+			_box(profile, "PrideFrontBumperTrim", Vector3(0, 0.43, -2.12), Vector3(1.55, 0.12, 0.07), dark_trim, 0.25)
+			_box(profile, "PrideRearBumperTrim", Vector3(0, 0.43, 2.12), Vector3(1.55, 0.12, 0.07), dark_trim, 0.25)
 
 func _apply_interior_profile(paint: Color, profile_index: int) -> void:
 	var cabin := get_node_or_null("CabinInterior")
