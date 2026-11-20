@@ -43,6 +43,8 @@ var inside_owned_home := false
 var selected_role: String = "وزیر"
 var firebase_email_field: LineEdit
 var firebase_password_field: LineEdit
+var store_quantity_input: LineEdit
+var store_cart: Dictionary = {}
 
 const GAME_DAY_LENGTH := 1440.0
 const ONLINE_PRODUCTS := {
@@ -52,6 +54,7 @@ const ONLINE_PRODUCTS := {
 	"مبل": 1800, "تخت خواب": 2400, "یخچال": 3200,
 	"تلویزیون": 2800, "میز ناهارخوری": 1500, "کمد": 1100
 }
+const ONLINE_STORE_CATEGORIES := {"موبایل و فناوری": ["گوشی هوشمند", "گوشی پرچمدار", "کامپیوتر گیمینگ", "مانیتور گیمینگ"], "سرگرمی": ["کنسول بازی", "دسته بازی"], "خانه و لوازم خانگی": ["مبل", "تخت خواب", "یخچال", "تلویزیون", "میز ناهارخوری", "کمد"]}
 const HOME_CATALOG := {"خانه اقتصادی": 18000, "آپارتمان اقتصادی": 22000, "خانه جنوب شهر": 30000, "آپارتمان شهری": 48000, "خانه شمال شهر": 65000, "خانه ساحلی": 80000, "ویلای ساحلی": 95000, "پنت‌هاوس": 140000}
 const CAR_PRICES := {"دنا": 14000, "پژو ۲۰۷": 16000, "لندکروزر": 95000, "لکسوس RX": 78000, "فراری": 240000, "لامبورگینی": 320000, "تیبا": 8000, "تیبا ۲": 9000, "پراید": 6000}
 const ROLES := ["وزیر", "وزیر اطلاعات", "رئیس بانک مرکزی", "رئیس‌جمهور", "فرمانده کل ارتش", "فرمانده نیروی زمینی", "فرمانده نیروی هوایی", "فرمانده نیروی دریایی", "فرمانده نیروی فضایی", "فرمانده گارد ساحلی", "فرمانده تفنگداران دریایی", "فرمانده گارد ملی", "شهردار"]
@@ -420,6 +423,22 @@ func _action(action: String, arg: String = "") -> void:
 		if ledger and target_input: ledger.request_cheque_purchase(target_input.text.strip_edges(), arg)
 	elif action == "cash_item_purchase":
 		if ledger and account_input and pin_input: ledger.request_account_purchase(account_input.text.strip_edges(), pin_input.text, arg)
+	elif action == "store_add_cart":
+		var quantity := 1
+		if store_quantity_input and store_quantity_input.text.is_valid_int():
+			quantity = clampi(int(store_quantity_input.text), 1, 10)
+		store_cart[arg] = mini(10, int(store_cart.get(arg, 0)) + quantity)
+		notice_changed.emit("%s به سبد خرید اضافه شد. تعداد: %d" % [arg, int(store_cart[arg])])
+		_render_page()
+	elif action == "store_checkout":
+		if ledger and account_input and pin_input:
+			if store_cart.is_empty():
+				notice_changed.emit("سبد خرید خالی است.")
+			else:
+				for item_id in store_cart.keys():
+					ledger.request_store_checkout(account_input.text.strip_edges(), pin_input.text, str(item_id), int(store_cart[item_id]))
+				store_cart.clear()
+				_render_page()
 	elif action == "search_citizen":
 		if ledger and target_input: ledger.request_citizen_record(target_input.text.strip_edges())
 	elif action == "pardon_ban":
@@ -611,15 +630,31 @@ func _render_page() -> void:
 				for transaction in ledger.cash_transactions.values():
 					layout.add_child(_label(str(transaction)))
 		"online_shop":
-			notice_changed.emit("فروشگاه آنلاین | پرداخت نقدی از حساب یا پرداخت با چک.")
-			account_input = _add_input("شماره حساب ۸ رقمی برای پرداخت نقدی")
-			pin_input = _add_input("رمز حساب")
-			target_input = _add_input("کد چک برای پرداخت با چک")
-			for item in ONLINE_PRODUCTS:
-				_add_button(layout, "خرید نقدی %s | %d سکه" % [item, ONLINE_PRODUCTS[item]], "cash_item_purchase", item)
-				_add_button(layout, "خرید چکی %s | %d سکه" % [item, ONLINE_PRODUCTS[item]], "cheque_purchase", item)
+			notice_changed.emit("فروشگاه اینترنتی LIFE CITY | سبد خرید، پرداخت بانکی، موجودی انبار و ارسال سفارش.")
+			account_input = _add_input("شماره حساب بانکی خودت (۸ رقمی)")
+			pin_input = _add_input("رمز حساب بانکی")
+			store_quantity_input = _add_input("تعداد هر کالا (۱ تا ۱۰؛ پیش‌فرض ۱)")
+			for category_name in ONLINE_STORE_CATEGORIES:
+				layout.add_child(_label("━━ %s ━━" % category_name))
+				for item in ONLINE_STORE_CATEGORIES[category_name]:
+					var stock := int(ledger.store_inventory.get(item, 0)) if ledger else 0
+					_add_button(layout, "%s | %d سکه | موجودی انبار: %d | افزودن به سبد" % [item, ONLINE_PRODUCTS[item], stock], "store_add_cart", item)
+			layout.add_child(_label("سبد خرید:"))
+			var cart_total := 0
+			for cart_item in store_cart.keys():
+				var line_total := int(ONLINE_PRODUCTS.get(str(cart_item), 0)) * int(store_cart[cart_item])
+				cart_total += line_total
+				layout.add_child(_label("%s × %d = %d سکه" % [str(cart_item), int(store_cart[cart_item]), line_total]))
+			layout.add_child(_label("جمع کل: %d سکه" % cart_total))
+			_add_button(layout, "ثبت سفارش و پرداخت از حساب بانکی", "store_checkout")
 			_add_button(layout, "سفارش‌های من", "page", "orders")
 		"orders":
+			if ledger:
+				var local_store_peer := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+				for order_id in ledger.store_orders.keys():
+					var store_order: Dictionary = ledger.store_orders[order_id]
+					if int(store_order.get("buyer_peer_id", -1)) == local_store_peer:
+						layout.add_child(_label("%s | %s × %d | %d سکه | %s" % [str(order_id), str(store_order.get("item_id", "")), int(store_order.get("quantity", 1)), int(store_order.get("total_price", 0)), str(store_order.get("status", "ثبت‌شده"))]))
 			for order in order_list:
 				var status := "تحویل شد" if bool(order.delivered) else "در انتظار تحویل: %.0f ثانیه بازی" % float(order.remaining)
 				layout.add_child(_label("%s | %s" % [order.item, status]))
