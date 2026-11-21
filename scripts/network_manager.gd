@@ -69,6 +69,10 @@ func join_game(address: String) -> void:
 	if leave_button:
 		leave_button.disabled = false
 
+func leave_game() -> void:
+	_close_existing_peer()
+	status_changed.emit("از بازی دونفره خارج شدی.")
+
 func _close_existing_peer() -> void:
 	connected = false
 	if multiplayer.multiplayer_peer != null:
