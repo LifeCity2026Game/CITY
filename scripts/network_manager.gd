@@ -13,6 +13,7 @@ var address_input: LineEdit
 var status_label: Label
 var host_button: Button
 var join_button: Button
+var leave_button: Button
 
 func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
@@ -75,6 +76,8 @@ func _close_existing_peer() -> void:
 		host_button.disabled = false
 	if join_button:
 		join_button.disabled = false
+	if leave_button:
+		leave_button.disabled = true
 
 func _get_lan_ipv4_addresses() -> PackedStringArray:
 	var addresses := PackedStringArray()
@@ -130,6 +133,8 @@ func _on_connection_failed() -> void:
 		host_button.disabled = false
 	if join_button:
 		join_button.disabled = false
+	if leave_button:
+		leave_button.disabled = true
 
 func _on_server_disconnected() -> void:
 	connected = false
@@ -138,6 +143,8 @@ func _on_server_disconnected() -> void:
 		host_button.disabled = false
 	if join_button:
 		join_button.disabled = false
+	if leave_button:
+		leave_button.disabled = true
 
 func _spawn_remote(peer_id: int) -> void:
 	if local_player == null or peer_id == multiplayer.get_unique_id() or remote_players.has(peer_id):
@@ -228,6 +235,11 @@ func _build_network_panel() -> void:
 	join_button.text = "اتصال به میزبان (گوشی دوم)"
 	join_button.pressed.connect(func(): join_game(address_input.text))
 	layout.add_child(join_button)
+	leave_button = Button.new()
+	leave_button.text = "قطع اتصال"
+	leave_button.disabled = true
+	leave_button.pressed.connect(leave_game)
+	layout.add_child(leave_button)
 	status_label = Label.new()
 	status_label.name = "NetworkStatus"
 	status_label.text = "هر دو گوشی به یک وای‌فای وصل باشند. گوشی اول میزبان شود و IP نمایش‌داده‌شده را به گوشی دوم بدهد."
