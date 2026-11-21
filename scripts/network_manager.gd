@@ -46,6 +46,8 @@ func host_game() -> void:
 		host_button.disabled = true
 	if join_button:
 		join_button.disabled = false
+	if leave_button:
+		leave_button.disabled = false
 
 func join_game(address: String) -> void:
 	var host_address := address.strip_edges()
@@ -64,6 +66,8 @@ func join_game(address: String) -> void:
 		host_button.disabled = false
 	if join_button:
 		join_button.disabled = true
+	if leave_button:
+		leave_button.disabled = false
 
 func _close_existing_peer() -> void:
 	connected = false
