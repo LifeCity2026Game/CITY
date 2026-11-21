@@ -19,6 +19,16 @@ func _make_network() -> void:
 	manager.set_script(NETWORK_SCRIPT)
 	root.add_child(manager)
 	manager.set_local_player(local_player)
+	var lobby := manager.get_node_or_null("LocalMultiplayerLobbyUI/WifiLobbyPanel")
+	assert(lobby != null, "Wi-Fi multiplayer lobby panel was not created")
+	assert(manager.has_method("host_game") and manager.has_method("join_game") and manager.has_method("leave_game"), "LAN lobby actions are missing")
+	var lan_addresses: PackedStringArray = manager._get_lan_ipv4_addresses()
+	assert(lan_addresses is PackedStringArray, "LAN IPv4 discovery did not return an address list")
+	var lobby_layout := lobby.get_child(0) as VBoxContainer
+	assert(lobby_layout != null and lobby_layout.get_child_count() >= 5, "Wi-Fi lobby controls are incomplete")
+	assert((lobby_layout.get_child(2) as Button).text.contains("میزبان"), "Host button is not labeled for the first phone")
+	assert((lobby_layout.get_child(3) as Button).text.contains("اتصال"), "Join button is not labeled for the second phone")
+	print("LAN_LOBBY_UI_TEST_PASS")
 
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
